@@ -1,0 +1,24 @@
+{
+  "name": "openai",
+  "version": "0.1.0",
+  "docs": "./README.md",
+  "capabilities": {
+    "tasks": ["text", "summarize", "summarization", "classification"],
+    "modalities": ["text"],
+    "structured_output": true
+  },
+  "pricing": {
+    "unit": "mock-token",
+    "input": 0.000001,
+    "output": 0.000003
+  },
+  "limits": {
+    "max_input_tokens": 128000,
+    "max_output_tokens": 4096,
+    "requests_per_minute": 500
+  },
+  "performance": {
+    "latency": "fast",
+    "reliability": "high"
+  }
+}

@@ -1,0 +1,24 @@
+{
+  "name": "comfyui",
+  "version": "0.1.0",
+  "docs": "./README.md",
+  "capabilities": {
+    "tasks": ["image", "photo", "picture"],
+    "modalities": ["image"],
+    "structured_output": false
+  },
+  "pricing": {
+    "unit": "mock-job",
+    "input": 0.01,
+    "output": 0.02
+  },
+  "limits": {
+    "max_width": 2048,
+    "max_height": 2048,
+    "requests_per_minute": 60
+  },
+  "performance": {
+    "latency": "quality",
+    "reliability": "medium"
+  }
+}
