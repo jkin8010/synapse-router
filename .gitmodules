@@ -1,0 +1,3 @@
+[submodule "apps/comfy-node"]
+	path = apps/comfy-node
+	url = ../synapse-router-comfy-node
