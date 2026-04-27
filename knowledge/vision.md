@@ -1,22 +1,22 @@
-# Vision
+# 愿景
 
-Synapse Router is a controlled schema negotiation and multi-provider routing layer for AI agents.
+Synapse Router 是面向 AI Agent 的受控 Schema 协商与多 Provider 路由层。
 
-Its job is not to be another agent framework. It sits between agents, tools, models, and provider APIs so that every request has an explicit contract before execution.
+它不是另一个 Agent 框架。它位于 Agent、工具、模型和 Provider API 之间，确保每次请求在执行前都有明确契约。
 
-## Developer Goal
+## 开发者目标
 
-Developers should be able to:
+开发者应该能够：
 
-- Declare the shape of an intended AI operation.
-- Negotiate the closest supported schema across providers.
-- Route execution to the provider best suited for that contract.
-- Receive normalized, typed outputs that can be trusted by downstream code.
+- 声明一次 AI 操作需要的输入与输出形态。
+- 在不同 Provider 能力之间协商最接近的可支持 Schema。
+- 将执行路由到最适合该契约的 Provider。
+- 获得可被下游代码信任的标准化、类型化输出。
 
-## Non-Goals
+## 非目标
 
-- No hidden prompt orchestration.
-- No implicit provider-specific behavior leaking into application code.
-- No business workflow logic in the routing layer.
+- 不做隐藏的 prompt 编排。
+- 不让 Provider 私有行为泄漏到业务代码。
+- 不在路由层实现业务工作流逻辑。
 
-The router should make provider choice and schema compatibility observable, testable, and replaceable.
+Router 应让 Provider 选择和 Schema 兼容性变得可观察、可测试、可替换。

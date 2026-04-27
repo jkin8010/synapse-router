@@ -1,8 +1,8 @@
-# DSL Spec
+# DSL 规范
 
-The Synapse Router DSL describes an AI operation as a contract, not as provider-specific API parameters.
+Synapse Router DSL 将一次 AI 操作描述为契约，而不是 Provider 私有 API 参数。
 
-## Route Contract
+## 路由契约
 
 ```ts
 type RouteContract = {
@@ -15,9 +15,9 @@ type RouteContract = {
 };
 ```
 
-## Schema References
+## Schema 引用
 
-Schemas should be addressable and versioned.
+Schema 应可寻址、可版本化。
 
 ```ts
 type SchemaRef = {
@@ -27,9 +27,9 @@ type SchemaRef = {
 };
 ```
 
-## Capability Requirements
+## 能力要求
 
-Capabilities describe what the provider must support to satisfy the contract.
+能力要求描述 Provider 为满足契约必须支持什么。
 
 ```ts
 type CapabilityRequirement =
@@ -39,9 +39,9 @@ type CapabilityRequirement =
   | { kind: "streaming"; required: boolean };
 ```
 
-## Route Policy
+## 路由策略
 
-Policy constrains acceptable routing decisions.
+策略用于约束可接受的路由决策。
 
 ```ts
 type RoutePolicy = {
@@ -53,9 +53,9 @@ type RoutePolicy = {
 };
 ```
 
-## Negotiation Result
+## 协商结果
 
-Negotiation must produce a structured result before execution.
+协商必须在执行前产出结构化结果。
 
 ```ts
 type NegotiationResult =

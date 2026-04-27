@@ -1,30 +1,30 @@
-# Roadmap
+# 路线图
 
-## Phase 1: Contract Foundation
+## 阶段 1：契约基础
 
-- Define core TypeScript types for route contracts, schemas, capabilities, policies, and negotiation results.
-- Add validation helpers for contract shape.
-- Keep execution out of scope until contracts are stable.
+- 定义路由契约、Schema、能力、策略和协商结果的核心 TypeScript 类型。
+- 添加契约形态校验工具。
+- 在契约稳定前，不实现真实执行逻辑。
 
-## Phase 2: Negotiation Engine
+## 阶段 2：协商引擎
 
-- Implement provider capability matching.
-- Return accepted, adapted, or rejected negotiation results.
-- Add reason codes for incompatibility and downgrade decisions.
+- 实现 Provider 能力匹配。
+- 返回 accepted、adapted 或 rejected 协商结果。
+- 为不兼容和降级决策添加原因码。
 
-## Phase 3: Provider Adapter Boundary
+## 阶段 3：Provider Adapter 边界
 
-- Define a minimal provider adapter interface.
-- Add mock provider adapters for deterministic tests.
-- Keep real provider SDKs isolated from `packages/core`.
+- 定义最小 Provider Adapter 接口。
+- 添加 mock Provider Adapter，保证测试可预测。
+- 将真实 Provider SDK 隔离在 `packages/core` 之外。
 
-## Phase 4: Routing Policy
+## 阶段 4：路由策略
 
-- Add selection rules for capability fit, cost, latency, and explicit provider preference.
-- Emit route decision metadata for debugging and audit.
+- 添加基于能力匹配度、成本、延迟和显式 Provider 偏好的选择规则。
+- 输出路由决策元数据，便于调试和审计。
 
-## Phase 5: Server and Playground
+## 阶段 5：Server 与 Playground
 
-- Expose contract submission through `apps/server`.
-- Use `apps/playground` to test negotiation outcomes before real provider calls.
-- Add examples that show schema adaptation and rejection paths.
+- 通过 `apps/server` 暴露契约提交接口。
+- 在真实 Provider 调用前，使用 `apps/playground` 测试协商结果。
+- 添加展示 Schema 适配路径和拒绝路径的示例。
