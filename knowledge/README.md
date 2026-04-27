@@ -18,6 +18,8 @@
 - [[01-产品规划/synapse-router-product-vision|产品愿景与定位]]
 - [[01-产品规划/synapse-router-product-principles|产品原则]]
 - [[01-产品规划/synapse-router-roadmap|产品路线图]]
+- [[01-产品规划/synapse-router-dual-schema-design|双 Schema 契约设计]] ⭐ 核心设计
+- [[01-产品规划/synapse-router-phase1-design|Phase 1 实施设计]] ⭐ 当前执行
 
 ### 技术架构
 
