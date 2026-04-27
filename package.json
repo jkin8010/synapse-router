@@ -1,15 +1,11 @@
 {
   "name": "synapse-router",
-  "version": "0.0.0",
+  "version": "0.1.0",
   "private": true,
   "packageManager": "pnpm@10.0.0",
-  "workspaces": [
-    "apps/*",
-    "packages/*"
-  ],
   "scripts": {
     "build": "pnpm -r build",
-    "dev": "pnpm --filter @synapse-router/server dev",
+    "dev": "pnpm --filter @synapse-router/api dev",
     "test": "pnpm -r --if-present test",
     "typecheck": "pnpm -r typecheck"
   },

@@ -1,0 +1,11 @@
+{
+  "name": "@synapse-router/cli",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "test": "tsx --test src/**/*.test.ts",
+    "typecheck": "tsc --noEmit -p tsconfig.json"
+  }
+}
