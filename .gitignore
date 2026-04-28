@@ -1,7 +1,15 @@
 node_modules/
 dist/
+**/src/*.js
+**/src/*.js.map
+**/src/*.d.ts
 *.tsbuildinfo
 .env
 .DS_Store
 *.log
 .omc/
+debug-*
+test-derive.*
+test-lock*
+test-dependency*
+.debug-vault/

@@ -230,6 +230,9 @@ export function createVault(config?: Partial<VaultConfig>): Vault {
     }
   }
 
+  // Use a simple semaphore to ensure only one persist call is active at a time
+  let persistActive = false;
+
   async function loadData(): Promise<VaultData> {
     await ensureInitialized();
     const d = await readVaultDataAsync(vaultDir);
@@ -237,23 +240,52 @@ export function createVault(config?: Partial<VaultConfig>): Vault {
     return { salt: salt!, entries: {} };
   }
 
-  async function persist(data: VaultData): Promise<void> {
-    await ensureInitialized();
-    const unlock = await acquireLock(vaultDir, instanceId);
+  async function persist(transform: (currentData: VaultData, currentDerivedKey: string) => VaultData): Promise<void> {
+    // Wait until previous persist completes
+    while (persistActive) {
+      await new Promise(r => setTimeout(r, 50));
+    }
+    
+    persistActive = true;
     try {
-      audit.log({ action: "lock_acquired", success: true });
-      const current = await readVaultDataAsync(vaultDir);
-      const merged: VaultData = current
-        ? { ...data, salt: data.salt ?? current.salt }
-        : { ...data, salt: data.salt ?? salt! };
-      await writeVaultDataAtomic(vaultDir, merged);
-    } finally {
-      await unlock();
+      await ensureInitialized();
+      const unlock = await acquireLock(vaultDir, instanceId);
       try {
-        audit.log({ action: "lock_released", success: true });
-      } catch {
-        // best-effort
+        audit.log({ action: "lock_acquired", success: true });
+        const current = await readVaultDataAsync(vaultDir);
+        const baseData: VaultData = current 
+          ? current 
+          : { salt: salt!, entries: {} };
+        
+        let currentDerivedKey = derivedKey!;
+        // If read salt differs from our existing salt, re-derive the key
+        if (baseData.salt && baseData.salt !== salt) {
+          const password = await passwordPromise;
+          const machineId = (await getMachineIdAsync()) ?? undefined;
+          const derivation = deriveKey(password, baseData.salt, machineId);
+          currentDerivedKey = derivation.key;
+          // Update instance variables only after verification
+          derivedKey = currentDerivedKey;
+          salt = derivation.salt;
+        }
+        
+        const newData = transform(baseData, currentDerivedKey);
+        const merged: VaultData = {
+          ...newData,
+          salt: newData.salt ?? baseData.salt
+        };
+        
+        await writeVaultDataAtomic(vaultDir, merged);
+      } finally {
+        await unlock();
+        try {
+          audit.log({ action: "lock_released", success: true });
+        } catch {
+          // best-effort
+        }
       }
+    } finally {
+      persistActive = false;
     }
   }
 
@@ -264,39 +296,31 @@ export function createVault(config?: Partial<VaultConfig>): Vault {
       authType: "Bearer" | "APIKey" | "OAuth2",
       ttl?: number
     ): Promise<void> {
-      try {
-        await ensureInitialized();
-        const data = await loadData();
+      // DO NOT encrypt or do any work outside the persist function
+      // so that we don't have any closure-related issues
+      await persist((vdata, currentDerivedKey) => {
+        const encrypted = encrypt(key, currentDerivedKey);
         const now = new Date().toISOString();
-        const encrypted = encrypt(key, derivedKey!);
-
-        const existing = data.entries[provider];
         const entry: VaultEntry = {
           provider,
           encrypted_key: encrypted,
           auth_type: authType,
-          created_at: existing?.created_at ?? now,
+          created_at: vdata.entries[provider]?.created_at ?? now,
           updated_at: now,
-          last_verified_at: existing?.last_verified_at,
+          last_verified_at: vdata.entries[provider]?.last_verified_at,
         };
-
-        if (ttl !== undefined && ttl > 0) {
+        if (ttl && ttl > 0) {
           entry.expires_at = new Date(Date.now() + ttl * 1000).toISOString();
         }
-
-        data.entries[provider] = entry;
-        data.salt = data.salt ?? salt!;
-        await persist(data);
-        audit.log({ action: "set_key", provider, success: true });
-      } catch (err) {
-        audit.log({
-          action: "set_key",
-          provider,
-          success: false,
-          error: String(err),
-        });
-        throw err;
-      }
+        return {
+          ...vdata,
+          entries: {
+            ...vdata.entries,
+            [provider]: entry
+          }
+        };
+      });
+      audit.log({ action: "set_key", provider, success: true });
     },
 
     async getKey(provider: string): Promise<string | null> {
@@ -346,15 +370,21 @@ export function createVault(config?: Partial<VaultConfig>): Vault {
     async removeKey(provider: string): Promise<boolean> {
       try {
         await ensureInitialized();
-        const data = await loadData();
-        if (!(provider in data.entries)) {
-          audit.log({ action: "remove_key", provider, success: true });
-          return false;
-        }
-        delete data.entries[provider];
-        await persist(data);
+        let removed = false;
+        await persist((data) => {
+          if (!(provider in data.entries)) {
+            removed = false;
+            return data;
+          }
+          removed = true;
+          const { [provider]: _, ...remainingEntries } = data.entries;
+          return {
+            ...data,
+            entries: remainingEntries
+          };
+        });
         audit.log({ action: "remove_key", provider, success: true });
-        return true;
+        return removed;
       } catch (err) {
         audit.log({
           action: "remove_key",

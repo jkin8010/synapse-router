@@ -7,7 +7,13 @@ import { fileURLToPath } from "node:url";
 function runCli(args: string[]): { stdout: string; stderr: string; code: number } {
   // Use __dirname so the path is stable regardless of cwd when tests run
   const bin = join(dirname(fileURLToPath(import.meta.url)), "..", "dist", "index.js");
-  const result = spawnSync("node", [bin, ...args], { encoding: "utf8" });
+  console.log("=== runCli ===");
+  console.log("args:", args);
+  console.log("bin:", bin);
+  const result = spawnSync("node", [bin, ...args], { encoding: "utf8", cwd: process.cwd() });
+  console.log("stdout:", JSON.stringify(result.stdout));
+  console.log("stderr:", JSON.stringify(result.stderr));
+  console.log("code:", result.status);
   return {
     stdout: result.stdout ?? "",
     stderr: result.stderr ?? "",
@@ -97,6 +103,11 @@ describe("unknown command", () => {
 describe("provider list", () => {
   it("lists providers from real packs directory", () => {
     const result = runCli(["provider", "list"]);
+    console.log("=== DEBUG provider list ===");
+    console.log("=== stdout ===");
+    console.log(result.stdout);
+    console.log("=== stderr ===");
+    console.log(result.stderr);
     assert.ok(result.stdout.includes("Providers:"), `got: ${result.stdout}`);
     assert.ok(
       result.stdout.includes("openai") || result.stdout.includes("replicate"),
@@ -109,6 +120,12 @@ describe("provider list", () => {
 describe("provider show", () => {
   it("shows a specific provider", () => {
     const result = runCli(["provider", "show", "openai"]);
+    console.log("=== DEBUG provider show ===");
+    console.log("=== stdout ===");
+    console.log(result.stdout);
+    console.log("=== stderr ===");
+    console.log(result.stderr);
+
     const parsed = JSON.parse(result.stdout);
     assert.strictEqual(parsed.provider.id, "openai");
     assert.strictEqual(result.code, 0);

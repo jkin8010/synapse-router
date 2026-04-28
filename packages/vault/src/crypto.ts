@@ -11,26 +11,50 @@ import {
 
 export const PBKDF2_ITERATIONS = 600_000;
 export const KEY_LENGTH = 32;             // 256 bits for AES-256
-export const SALT_LENGTH = 16;
+export const SALT_LENGTH = 16;            // 128 bits salt (32 hex chars)
 export const IV_LENGTH = 12;             // 96 bits recommended for GCM
 export const AUTH_TAG_LENGTH = 16;
 
 /**
  * Derive an AES-256 key from a password using PBKDF2.
  * If salt is not provided a random one is generated.
+ *
+ * The machineId parameter only affects key derivation for NEW vaults; when
+ * reading existing vaults with a stored salt, machineId does NOT affect derivation
+ * unless the stored salt already includes a machineId (detected by length === 64 hex chars).
  */
 export function deriveKey(password: string, salt?: string, machineId?: string): { key: string; salt: string } {
-  const actualSalt = salt ?? randomBytes(SALT_LENGTH).toString("hex");
-  // Incorporate machineId into the salt for additional hardening.
-  // machineId is a non-hex string (UUID or machine-id), so we hash it
-  // to produce a deterministic hex component that can be safely concatenated.
-  let effectiveSalt: string;
+  if (typeof salt === "string" && salt.length === 64) {
+    // Detected a stored salt with machineId appended (64 hex = 32 bytes total)
+    // Do NOT use provided machineId; treat salt as is
+    const key = pbkdf2Sync(
+      password,
+      Buffer.from(salt, "hex"),
+      PBKDF2_ITERATIONS,
+      KEY_LENGTH,
+      "sha256"
+    ).toString("hex");
+    return { key, salt };
+  } else if (typeof salt === "string" && salt.length === 32) {
+    // Standard 32 character hex salt → ignore provided machineId completely
+    const key = pbkdf2Sync(
+      password,
+      Buffer.from(salt, "hex"),
+      PBKDF2_ITERATIONS,
+      KEY_LENGTH,
+      "sha256"
+    ).toString("hex");
+    return { key, salt };
+  }
+
+  // No salt provided → generate new salt + optional machineId
+  const actualSalt = randomBytes(SALT_LENGTH).toString("hex");
+  let effectiveSalt = actualSalt;
   if (machineId) {
     const machineIdHex = pbkdf2Sync(machineId, "synapse-vault-machineid", 1, SALT_LENGTH, "sha256").toString("hex");
-    effectiveSalt = actualSalt + machineIdHex;
-  } else {
-    effectiveSalt = actualSalt;
+    effectiveSalt = actualSalt + machineIdHex; // total of 64 hex chars (32 bytes)
   }
+
   const key = pbkdf2Sync(
     password,
     Buffer.from(effectiveSalt, "hex"),
@@ -38,7 +62,8 @@ export function deriveKey(password: string, salt?: string, machineId?: string): 
     KEY_LENGTH,
     "sha256"
   ).toString("hex");
-  return { key, salt: actualSalt };
+
+  return { key, salt: machineId ? effectiveSalt : actualSalt };
 }
 
 /**

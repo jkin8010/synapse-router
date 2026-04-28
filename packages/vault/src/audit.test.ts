@@ -83,17 +83,20 @@ describe("FileAuditLogger", () => {
 
   it("getEvents filters by since (ISO timestamp)", async () => {
     const logger = new FileAuditLogger(tmpDir);
-    logger.clear();
-    // Capture beforeTime BEFORE the first event so that event's timestamp < beforeTime
-    const beforeTime = new Date(Date.now() - 1000).toISOString();
-    await new Promise((r) => setTimeout(r, 50));
+    logger.clear(); // Clear any previous audit lines from other tests
+    // Wait a little bit to ensure timestamps are distinct
+    await new Promise((r) => setTimeout(r, 10));
     logger.log({ action: "set_key", provider: "openai", success: true });
+    await new Promise((r) => setTimeout(r, 10));
+    const sinceTime = new Date().toISOString();
+    await new Promise((r) => setTimeout(r, 10));
     logger.log({ action: "get_key", provider: "replicate", success: true });
+    logger.log({ action: "remove_key", provider: "anthropic", success: true });
 
-    // Only get_key (logged after beforeTime) should be returned
-    const events = logger.getEvents({ since: beforeTime });
-    assert.equal(events.length, 1);
+    const events = logger.getEvents({ since: sinceTime });
+    assert.equal(events.length, 2);
     assert.equal(events[0].action, "get_key");
+    assert.equal(events[1].action, "remove_key");
   });
 
   it("clear removes the audit file", () => {

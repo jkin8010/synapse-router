@@ -99,15 +99,22 @@ describe("deriveKey", () => {
     assert.ok(key.length > 0);
   });
 
-  it("deriveKey with machineId produces different key than without", () => {
+  it("deriveKey ignores machineId when salt is provided", () => {
     const { key: k1, salt } = deriveKey("pw");
     const { key: k2 } = deriveKey("pw", salt, "test-machine-id");
+    assert.equal(k1, k2);
+  });
+
+  it("deriveKey with machineId produces different key when salt is generated", () => {
+    const { key: k1 } = deriveKey("pw", undefined, "test-machine-id");
+    const { key: k2 } = deriveKey("pw");
     assert.notEqual(k1, k2);
   });
 
-  it("deriveKey with same machineId is deterministic", () => {
-    const { key: k1, salt } = deriveKey("pw", undefined, "test-machine-id");
-    const { key: k2 } = deriveKey("pw", salt, "test-machine-id");
+  it("deriveKey with same generated salt and same machineId produces identical key", () => {
+    // Since salt is generated randomly on first call, use the first salt for the second call
+    const { key: k1, salt } = deriveKey("test-pw-123", undefined, "test-machine-id");
+    const { key: k2 } = deriveKey("test-pw-123", salt, "test-machine-id");
     assert.equal(k1, k2);
   });
 });

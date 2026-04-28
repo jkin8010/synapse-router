@@ -2,8 +2,9 @@
 // @synapse-router/cli — CLI tool
 
 import { readdir, readFile } from "node:fs/promises";
-import { join } from "node:path";
+import { join, dirname } from "node:path";
 import { homedir } from "node:os";
+import { fileURLToPath } from "node:url";
 import { createVault } from "@synapse-router/vault";
 
 // ---------------------------------------------------------------------------
@@ -72,8 +73,13 @@ Options:
 // ---------------------------------------------------------------------------
 
 async function findPacksDir(): Promise<string> {
-  const cwd = process.cwd();
-  return join(cwd, "packs");
+  const dir = fileURLToPath(import.meta.url); // file://...
+  const absolutePath = dir;
+  if (absolutePath.includes("/dist/")) {
+    return join(dirname(dirname(dirname(dirname(absolutePath)))), "packs"); // 4 levels up from dist/index.js
+  } else {
+    return join(dirname(dirname(dirname(absolutePath))), "packs"); // 3 levels up from src/index.ts
+  }
 }
 
 // ---------------------------------------------------------------------------
@@ -280,13 +286,15 @@ async function negotiate(schemaFile: string): Promise<void> {
 async function main(): Promise<void> {
   const { command, args, flags } = parseArgs(process.argv);
 
-  if (flags.has("help") || flags.has("h") || command === "help") {
-    printHelp();
+  // Handle --version / -v / version command first
+  if (flags.has("version") || flags.has("v") || command === "version") {
+    console.log("synapse-router CLI v0.1.0");
     return;
   }
 
-  if (flags.has("version") || flags.has("v")) {
-    console.log("synapse-router CLI v0.1.0");
+  // Handle --help / -h / help command
+  if (flags.has("help") || flags.has("h") || command === "help") {
+    printHelp();
     return;
   }
 

@@ -1,2 +1,0 @@
-import { execFile } from "node:child_process";
-export declare const execFileAsync: typeof execFile.__promisify__;
