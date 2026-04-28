@@ -1,0 +1,53 @@
+{
+  "agent_id": "stability-sd15-img2img",
+  "agent_name": "Stability AI Image to Image",
+  "version": "1.0.0",
+  "access_protocol": {
+    "kind": "api",
+    "auth_type": "APIKey"
+  },
+  "features": [
+    {
+      "feature_id": "image_to_image_post_v1_generation_img2img",
+      "feature_name": "Image to Image",
+      "intent": "image-to-image",
+      "input_schema": {
+        "name": "ImageToImageInput",
+        "fields": [
+          { "name": "text_prompts", "type": "array", "required": true, "description": "Array of {text: string, weight: number}" },
+          { "name": "init_image", "type": "string", "required": true, "description": "Base64 encoded source image" },
+          { "name": "init_image_mode", "type": "string", "required": false, "enum": ["image_strength", "step_count"] },
+          { "name": "image_strength", "type": "number", "required": false, "description": "How much to transform the image" },
+          { "name": "width", "type": "number", "required": false },
+          { "name": "height", "type": "number", "required": false },
+          { "name": "samples", "type": "number", "required": false },
+          { "name": "steps", "type": "number", "required": false },
+          { "name": "seed", "type": "number", "required": false },
+          { "name": "cfg_scale", "type": "number", "required": false }
+        ]
+      },
+      "output_schema": {
+        "name": "ImageToImageOutput",
+        "fields": [
+          { "name": "artifacts", "type": "array" },
+          { "name": "finish_reasons", "type": "array" }
+        ]
+      },
+      "field_mappings": [
+        { "canonical_field": "prompt", "provider_field": "text_prompts", "required": true },
+        { "canonical_field": "source_image", "provider_field": "init_image", "required": true, "transform": "base64_decode" },
+        { "canonical_field": "init_image_mode", "provider_field": "init_image_mode", "required": false },
+        { "canonical_field": "image_strength", "provider_field": "image_strength", "required": false },
+        { "canonical_field": "width", "provider_field": "width", "required": false },
+        { "canonical_field": "height", "provider_field": "height", "required": false },
+        { "canonical_field": "samples", "provider_field": "samples", "required": false, "fallback": 1 },
+        { "canonical_field": "steps", "provider_field": "steps", "required": false },
+        { "canonical_field": "seed", "provider_field": "seed", "required": false },
+        { "canonical_field": "cfg_scale", "provider_field": "cfg_scale", "required": false }
+      ],
+      "capabilities": [
+        { "kind": "image-generation", "modalities": ["image"] }
+      ]
+    }
+  ]
+}

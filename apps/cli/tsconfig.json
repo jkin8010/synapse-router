@@ -5,6 +5,9 @@
     "rootDir": "src",
     "outDir": "dist"
   },
+  "references": [
+    { "path": "../../packages/vault" }
+  ],
   "include": [
     "src/**/*.ts"
   ],

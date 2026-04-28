@@ -1,0 +1,49 @@
+{
+  "agent_id": "stability-sd15",
+  "agent_name": "Stability AI Stable Diffusion",
+  "version": "1.0.0",
+  "access_protocol": {
+    "kind": "api",
+    "auth_type": "APIKey"
+  },
+  "features": [
+    {
+      "feature_id": "text_to_image_post_v1_generation_text2img",
+      "feature_name": "Text to Image",
+      "intent": "text-to-image",
+      "input_schema": {
+        "name": "TextToImageInput",
+        "fields": [
+          { "name": "text_prompts", "type": "array", "required": true, "description": "Array of {text: string, weight: number}" },
+          { "name": "width", "type": "number", "required": false, "description": "Image width in pixels" },
+          { "name": "height", "type": "number", "required": false, "description": "Image height in pixels" },
+          { "name": "samples", "type": "number", "required": false, "description": "Number of images to generate" },
+          { "name": "steps", "type": "number", "required": false, "description": "Number of diffusion steps" },
+          { "name": "seed", "type": "number", "required": false, "description": "Random seed for reproducibility" },
+          { "name": "cfg_scale", "type": "number", "required": false, "description": "Classifier free guidance scale" },
+          { "name": "model", "type": "string", "required": false, "description": "Model engine to use" }
+        ]
+      },
+      "output_schema": {
+        "name": "TextToImageOutput",
+        "fields": [
+          { "name": "artifacts", "type": "array" },
+          { "name": "finish_reasons", "type": "array" }
+        ]
+      },
+      "field_mappings": [
+        { "canonical_field": "prompt", "provider_field": "text_prompts", "required": true },
+        { "canonical_field": "width", "provider_field": "width", "required": false },
+        { "canonical_field": "height", "provider_field": "height", "required": false },
+        { "canonical_field": "samples", "provider_field": "samples", "required": false, "fallback": 1 },
+        { "canonical_field": "steps", "provider_field": "steps", "required": false },
+        { "canonical_field": "seed", "provider_field": "seed", "required": false },
+        { "canonical_field": "cfg_scale", "provider_field": "cfg_scale", "required": false },
+        { "canonical_field": "model", "provider_field": "model", "required": false }
+      ],
+      "capabilities": [
+        { "kind": "image-generation", "modalities": ["image"] }
+      ]
+    }
+  ]
+}

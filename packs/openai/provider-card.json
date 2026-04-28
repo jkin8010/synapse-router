@@ -1,0 +1,157 @@
+{
+  "provider": {
+    "id": "openai",
+    "name": "OpenAI",
+    "version": "1.0.0",
+    "api_version": "2024-01-01",
+    "base_url": "https://api.openai.com/v1",
+    "auth_type": "Bearer",
+    "docs_url": "https://platform.openai.com/docs/api-reference"
+  },
+  "features": [
+    {
+      "id": "chat_post_v1_chat_completions",
+      "intent": "chat",
+      "name": "Chat Completions",
+      "description": "Generate chat-based language model responses",
+      "input": {
+        "name": "ChatCompletionInput",
+        "fields": [
+          { "name": "messages", "type": "array", "required": true, "description": "Message array" },
+          { "name": "model", "type": "string", "required": true },
+          { "name": "temperature", "type": "number", "required": false },
+          { "name": "max_tokens", "type": "number", "required": false },
+          { "name": "top_p", "type": "number", "required": false },
+          { "name": "stop", "type": "array", "required": false },
+          { "name": "presence_penalty", "type": "number", "required": false },
+          { "name": "frequency_penalty", "type": "number", "required": false },
+          { "name": "user", "type": "string", "required": false }
+        ]
+      },
+      "output": {
+        "name": "ChatCompletionOutput",
+        "fields": [
+          { "name": "id", "type": "string" },
+          { "name": "object", "type": "string" },
+          { "name": "created", "type": "number" },
+          { "name": "model", "type": "string" },
+          { "name": "choices", "type": "array" },
+          { "name": "usage", "type": "object" }
+        ]
+      },
+      "field_mappings": [
+        { "canonical_field": "prompt", "provider_field": "messages", "required": true },
+        { "canonical_field": "model", "provider_field": "model", "required": true },
+        { "canonical_field": "temperature", "provider_field": "temperature", "required": false, "fallback": 0.7 },
+        { "canonical_field": "max_tokens", "provider_field": "max_tokens", "required": false, "fallback": 1024 },
+        { "canonical_field": "top_p", "provider_field": "top_p", "required": false },
+        { "canonical_field": "stop", "provider_field": "stop", "required": false },
+        { "canonical_field": "presence_penalty", "provider_field": "presence_penalty", "required": false },
+        { "canonical_field": "frequency_penalty", "provider_field": "frequency_penalty", "required": false },
+        { "canonical_field": "user", "provider_field": "user", "required": false }
+      ],
+      "pricing": { "input": 0.0015, "output": 0.002, "unit": "1k tokens" },
+      "limits": { "rpm": 500, "tpm": 150000 }
+    },
+    {
+      "id": "embeddings_post_v1_embeddings",
+      "intent": "embeddings",
+      "name": "Embeddings",
+      "description": "Generate vector embeddings for text",
+      "input": {
+        "name": "EmbeddingsInput",
+        "fields": [
+          { "name": "input", "type": "array", "required": true, "description": "Text or array of texts" },
+          { "name": "model", "type": "string", "required": true },
+          { "name": "encoding_format", "type": "string", "required": false, "enum": ["float", "base64"] }
+        ]
+      },
+      "output": {
+        "name": "EmbeddingsOutput",
+        "fields": [
+          { "name": "object", "type": "string" },
+          { "name": "data", "type": "array" },
+          { "name": "model", "type": "string" },
+          { "name": "usage", "type": "object" }
+        ]
+      },
+      "field_mappings": [
+        { "canonical_field": "texts", "provider_field": "input", "required": true },
+        { "canonical_field": "model", "provider_field": "model", "required": true },
+        { "canonical_field": "encoding_format", "provider_field": "encoding_format", "required": false }
+      ],
+      "pricing": { "input": 0.0001, "output": 0.0, "unit": "1k tokens" },
+      "limits": { "rpm": 1000, "tpm": 1000000 }
+    },
+    {
+      "id": "images_generations_post_v1_images_generations",
+      "intent": "text-to-image",
+      "name": "Image Generations",
+      "description": "Generate images from text prompts using DALL-E",
+      "input": {
+        "name": "ImageGenerationInput",
+        "fields": [
+          { "name": "prompt", "type": "string", "required": true, "description": "Text description of the desired image" },
+          { "name": "model", "type": "string", "required": false },
+          { "name": "n", "type": "number", "required": false },
+          { "name": "quality", "type": "string", "required": false, "enum": ["standard", "hd"] },
+          { "name": "response_format", "type": "string", "required": false, "enum": ["url", "b64_json"] },
+          { "name": "size", "type": "string", "required": false, "enum": ["1024x1024", "1792x1024", "1024x1792", "256x256", "512x512"] }
+        ]
+      },
+      "output": {
+        "name": "ImageGenerationOutput",
+        "fields": [
+          { "name": "created", "type": "number" },
+          { "name": "data", "type": "array" }
+        ]
+      },
+      "field_mappings": [
+        { "canonical_field": "prompt", "provider_field": "prompt", "required": true },
+        { "canonical_field": "model", "provider_field": "model", "required": false },
+        { "canonical_field": "n", "provider_field": "n", "required": false, "fallback": 1 },
+        { "canonical_field": "quality", "provider_field": "quality", "required": false },
+        { "canonical_field": "response_format", "provider_field": "response_format", "required": false },
+        { "canonical_field": "size", "provider_field": "size", "required": false }
+      ],
+      "pricing": { "input": 0.04, "output": 0.0, "unit": "per image" },
+      "limits": { "rpm": 50 }
+    },
+    {
+      "id": "audio_transcriptions_post_v1_audio_transcriptions",
+      "intent": "speech-to-text",
+      "name": "Audio Transcriptions",
+      "description": "Transcribe audio to text using Whisper",
+      "input": {
+        "name": "AudioTranscriptionInput",
+        "fields": [
+          { "name": "file", "type": "object", "required": true, "description": "Audio file object" },
+          { "name": "model", "type": "string", "required": true },
+          { "name": "language", "type": "string", "required": false },
+          { "name": "prompt", "type": "string", "required": false },
+          { "name": "temperature", "type": "number", "required": false },
+          { "name": "response_format", "type": "string", "required": false, "enum": ["json", "text", "srt", "verbose_json", "vtt"] }
+        ]
+      },
+      "output": {
+        "name": "AudioTranscriptionOutput",
+        "fields": [
+          { "name": "text", "type": "string" },
+          { "name": "language", "type": "string" },
+          { "name": "duration", "type": "number" },
+          { "name": "segments", "type": "array" }
+        ]
+      },
+      "field_mappings": [
+        { "canonical_field": "audio_data", "provider_field": "file", "required": true, "transform": "base64_decode" },
+        { "canonical_field": "model", "provider_field": "model", "required": true },
+        { "canonical_field": "language", "provider_field": "language", "required": false },
+        { "canonical_field": "prompt", "provider_field": "prompt", "required": false },
+        { "canonical_field": "temperature", "provider_field": "temperature", "required": false },
+        { "canonical_field": "response_format", "provider_field": "response_format", "required": false }
+      ],
+      "pricing": { "input": 0.006, "output": 0.0, "unit": "per minute" },
+      "limits": { "rpm": 50 }
+    }
+  ]
+}

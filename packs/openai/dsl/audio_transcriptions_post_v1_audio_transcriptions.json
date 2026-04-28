@@ -1,0 +1,47 @@
+{
+  "agent_id": "openai-whisper",
+  "agent_name": "OpenAI Whisper",
+  "version": "1.0.0",
+  "access_protocol": {
+    "kind": "api",
+    "auth_type": "Bearer"
+  },
+  "features": [
+    {
+      "feature_id": "audio_transcriptions_post_v1_audio_transcriptions",
+      "feature_name": "Audio Transcriptions",
+      "intent": "speech-to-text",
+      "input_schema": {
+        "name": "AudioTranscriptionInput",
+        "fields": [
+          { "name": "file", "type": "object", "required": true, "description": "Audio file object" },
+          { "name": "model", "type": "string", "required": true, "description": "Model identifier e.g. whisper-1" },
+          { "name": "language", "type": "string", "required": false, "description": "Source language" },
+          { "name": "prompt", "type": "string", "required": false, "description": "Optional prompt to guide transcription" },
+          { "name": "temperature", "type": "number", "required": false, "description": "Sampling temperature" },
+          { "name": "response_format", "type": "string", "required": false, "enum": ["json", "text", "srt", "verbose_json", "vtt"], "description": "Output format" }
+        ]
+      },
+      "output_schema": {
+        "name": "AudioTranscriptionOutput",
+        "fields": [
+          { "name": "text", "type": "string" },
+          { "name": "language", "type": "string" },
+          { "name": "duration", "type": "number" },
+          { "name": "segments", "type": "array" }
+        ]
+      },
+      "field_mappings": [
+        { "canonical_field": "audio_data", "provider_field": "file", "required": true, "transform": "base64_decode" },
+        { "canonical_field": "model", "provider_field": "model", "required": true },
+        { "canonical_field": "language", "provider_field": "language", "required": false },
+        { "canonical_field": "prompt", "provider_field": "prompt", "required": false },
+        { "canonical_field": "temperature", "provider_field": "temperature", "required": false },
+        { "canonical_field": "response_format", "provider_field": "response_format", "required": false }
+      ],
+      "capabilities": [
+        { "kind": "audio-understanding", "modalities": ["audio"] }
+      ]
+    }
+  ]
+}

@@ -27,9 +27,23 @@ importers:
         specifier: ^5.2.0
         version: 5.8.5
 
-  apps/cli: {}
+  apps/cli:
+    dependencies:
+      '@synapse-router/vault':
+        specifier: workspace:*
+        version: link:../../packages/vault
 
-  apps/mcp-server: {}
+  apps/mcp-server:
+    dependencies:
+      '@synapse-router/negotiator':
+        specifier: workspace:*
+        version: link:../../packages/negotiator
+      '@synapse-router/providers':
+        specifier: workspace:*
+        version: link:../../packages/providers
+      '@synapse-router/vault':
+        specifier: workspace:*
+        version: link:../../packages/vault
 
   apps/playground: {}
 

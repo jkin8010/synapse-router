@@ -1,0 +1,45 @@
+{
+  "agent_id": "replicate-training",
+  "agent_name": "Replicate Training",
+  "version": "1.0.0",
+  "access_protocol": {
+    "kind": "api",
+    "auth_type": "Bearer"
+  },
+  "features": [
+    {
+      "feature_id": "trainings_post_v1_trainings",
+      "feature_name": "Trainings",
+      "intent": "fine-tuning",
+      "input_schema": {
+        "name": "TrainingInput",
+        "fields": [
+          { "name": "version", "type": "string", "required": true, "description": "Base model version ID" },
+          { "name": "input", "type": "object", "required": true, "description": "Training parameters including training data" },
+          { "name": "trainer", "type": "string", "required": false, "description": "Trainer type to use" },
+          { "name": "webhook", "type": "string", "required": false, "description": "Webhook URL for async callback" }
+        ]
+      },
+      "output_schema": {
+        "name": "TrainingOutput",
+        "fields": [
+          { "name": "id", "type": "string" },
+          { "name": "status", "type": "string" },
+          { "name": "input", "type": "object" },
+          { "name": "output", "type": "object" },
+          { "name": "metrics", "type": "object" },
+          { "name": "error", "type": "string" }
+        ]
+      },
+      "field_mappings": [
+        { "canonical_field": "model_version", "provider_field": "version", "required": true },
+        { "canonical_field": "input", "provider_field": "input", "required": true },
+        { "canonical_field": "trainer", "provider_field": "trainer", "required": false },
+        { "canonical_field": "webhook", "provider_field": "webhook", "required": false }
+      ],
+      "capabilities": [
+        { "kind": "fine-tuning" }
+      ]
+    }
+  ]
+}

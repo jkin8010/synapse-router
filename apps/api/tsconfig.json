@@ -2,14 +2,18 @@
   "extends": "../../tsconfig.base.json",
   "compilerOptions": {
     "composite": true,
-    "rootDir": "src",
-    "outDir": "dist"
+    "outDir": "dist",
+    "rootDir": "."
   },
-  "include": ["src/**/*.ts"],
-  "exclude": ["src/**/*.test.ts"],
   "references": [
-    {
-      "path": "../../packages/negotiator"
-    }
+    { "path": "../../packages/vault" },
+    { "path": "../../packages/negotiator" },
+    { "path": "../../packages/providers" }
+  ],
+  "include": [
+    "src/**/*.ts"
+  ],
+  "exclude": [
+    "src/**/*.test.ts"
   ]
 }

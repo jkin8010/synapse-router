@@ -15,5 +15,10 @@
     "build": "tsc -p tsconfig.json",
     "test": "tsx --test src/**/*.test.ts",
     "typecheck": "tsc --noEmit -p tsconfig.json"
+  },
+  "dependencies": {
+    "@synapse-router/vault": "workspace:*",
+    "@synapse-router/providers": "workspace:*",
+    "@synapse-router/negotiator": "workspace:*"
   }
 }

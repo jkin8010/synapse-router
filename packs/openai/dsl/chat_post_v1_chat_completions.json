@@ -1,0 +1,55 @@
+{
+  "agent_id": "openai-gpt4",
+  "agent_name": "OpenAI GPT-4",
+  "version": "1.0.0",
+  "access_protocol": {
+    "kind": "api",
+    "auth_type": "Bearer"
+  },
+  "features": [
+    {
+      "feature_id": "chat_post_v1_chat_completions",
+      "feature_name": "Chat Completions",
+      "intent": "chat",
+      "input_schema": {
+        "name": "ChatCompletionInput",
+        "fields": [
+          { "name": "messages", "type": "array", "required": true, "description": "Message array with role and content" },
+          { "name": "model", "type": "string", "required": true, "description": "Model identifier e.g. gpt-4, gpt-3.5-turbo" },
+          { "name": "temperature", "type": "number", "required": false, "description": "Sampling temperature 0-2" },
+          { "name": "max_tokens", "type": "number", "required": false, "description": "Maximum tokens to generate" },
+          { "name": "top_p", "type": "number", "required": false, "description": "Nucleus sampling threshold" },
+          { "name": "stop", "type": "array", "required": false, "description": "Stop sequences" },
+          { "name": "presence_penalty", "type": "number", "required": false, "description": "Presence penalty" },
+          { "name": "frequency_penalty", "type": "number", "required": false, "description": "Frequency penalty" },
+          { "name": "user", "type": "string", "required": false, "description": "User identifier" }
+        ]
+      },
+      "output_schema": {
+        "name": "ChatCompletionOutput",
+        "fields": [
+          { "name": "id", "type": "string" },
+          { "name": "object", "type": "string" },
+          { "name": "created", "type": "number" },
+          { "name": "model", "type": "string" },
+          { "name": "choices", "type": "array" },
+          { "name": "usage", "type": "object" }
+        ]
+      },
+      "field_mappings": [
+        { "canonical_field": "prompt", "provider_field": "messages", "required": true },
+        { "canonical_field": "model", "provider_field": "model", "required": true },
+        { "canonical_field": "temperature", "provider_field": "temperature", "required": false, "fallback": 0.7 },
+        { "canonical_field": "max_tokens", "provider_field": "max_tokens", "required": false, "fallback": 1024 },
+        { "canonical_field": "top_p", "provider_field": "top_p", "required": false },
+        { "canonical_field": "stop", "provider_field": "stop", "required": false },
+        { "canonical_field": "presence_penalty", "provider_field": "presence_penalty", "required": false },
+        { "canonical_field": "frequency_penalty", "provider_field": "frequency_penalty", "required": false },
+        { "canonical_field": "user", "provider_field": "user", "required": false }
+      ],
+      "capabilities": [
+        { "kind": "text-generation", "modalities": ["text"] }
+      ]
+    }
+  ]
+}

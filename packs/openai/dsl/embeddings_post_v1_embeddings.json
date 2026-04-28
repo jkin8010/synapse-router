@@ -1,0 +1,43 @@
+{
+  "agent_id": "openai-embeddings",
+  "agent_name": "OpenAI Embeddings",
+  "version": "1.0.0",
+  "access_protocol": {
+    "kind": "api",
+    "auth_type": "Bearer"
+  },
+  "features": [
+    {
+      "feature_id": "embeddings_post_v1_embeddings",
+      "feature_name": "Embeddings",
+      "intent": "embeddings",
+      "input_schema": {
+        "name": "EmbeddingsInput",
+        "fields": [
+          { "name": "input", "type": "array", "required": true, "description": "Text or array of texts to embed" },
+          { "name": "model", "type": "string", "required": true, "description": "Model identifier e.g. text-embedding-3-large" },
+          { "name": "encoding_format", "type": "string", "required": false, "enum": ["float", "base64"], "description": "Output format" },
+          { "name": "dimensions", "type": "number", "required": false, "description": "Number of dimensions for output" }
+        ]
+      },
+      "output_schema": {
+        "name": "EmbeddingsOutput",
+        "fields": [
+          { "name": "object", "type": "string" },
+          { "name": "data", "type": "array" },
+          { "name": "model", "type": "string" },
+          { "name": "usage", "type": "object" }
+        ]
+      },
+      "field_mappings": [
+        { "canonical_field": "texts", "provider_field": "input", "required": true },
+        { "canonical_field": "model", "provider_field": "model", "required": true },
+        { "canonical_field": "encoding_format", "provider_field": "encoding_format", "required": false },
+        { "canonical_field": "dimensions", "provider_field": "dimensions", "required": false }
+      ],
+      "capabilities": [
+        { "kind": "embedding", "modalities": ["text"] }
+      ]
+    }
+  ]
+}

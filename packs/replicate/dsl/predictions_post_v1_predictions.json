@@ -1,0 +1,48 @@
+{
+  "agent_id": "replicate-inference",
+  "agent_name": "Replicate Inference",
+  "version": "1.0.0",
+  "access_protocol": {
+    "kind": "api",
+    "auth_type": "Bearer"
+  },
+  "features": [
+    {
+      "feature_id": "predictions_post_v1_predictions",
+      "feature_name": "Predictions",
+      "intent": "inference",
+      "input_schema": {
+        "name": "PredictionInput",
+        "fields": [
+          { "name": "version", "type": "string", "required": true, "description": "Model version ID or model name" },
+          { "name": "input", "type": "object", "required": true, "description": "Model input parameters as key-value pairs" },
+          { "name": "webhook", "type": "string", "required": false, "description": "Webhook URL for async callback" },
+          { "name": "webhook_events_filter", "type": "array", "required": false, "description": "Events to trigger webhook" }
+        ]
+      },
+      "output_schema": {
+        "name": "PredictionOutput",
+        "fields": [
+          { "name": "id", "type": "string" },
+          { "name": "status", "type": "string" },
+          { "name": "input", "type": "object" },
+          { "name": "output", "type": "object" },
+          { "name": "error", "type": "string" },
+          { "name": "logs", "type": "string" },
+          { "name": "urls", "type": "object" }
+        ]
+      },
+      "field_mappings": [
+        { "canonical_field": "model_version", "provider_field": "version", "required": true },
+        { "canonical_field": "input", "provider_field": "input", "required": true },
+        { "canonical_field": "webhook", "provider_field": "webhook", "required": false },
+        { "canonical_field": "webhook_events_filter", "provider_field": "webhook_events_filter", "required": false }
+      ],
+      "capabilities": [
+        { "kind": "text-generation", "modalities": ["text"] },
+        { "kind": "image-generation", "modalities": ["image"] },
+        { "kind": "audio-generation", "modalities": ["audio"] }
+      ]
+    }
+  ]
+}

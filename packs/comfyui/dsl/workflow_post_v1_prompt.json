@@ -1,0 +1,41 @@
+{
+  "agent_id": "comfyui-workflow",
+  "agent_name": "ComfyUI Workflow",
+  "version": "1.0.0",
+  "access_protocol": {
+    "kind": "api",
+    "auth_type": "APIKey"
+  },
+  "features": [
+    {
+      "feature_id": "workflow_post_v1_prompt",
+      "feature_name": "Workflow Execution",
+      "intent": "workflow-execution",
+      "input_schema": {
+        "name": "WorkflowInput",
+        "fields": [
+          { "name": "prompt", "type": "object", "required": true, "description": "Workflow definition with node ID as key and node data as value" },
+          { "name": "prompt_id", "type": "string", "required": false, "description": "Unique identifier for this prompt" },
+          { "name": "extra_data", "type": "object", "required": false, "description": "Extra data passed to nodes" }
+        ]
+      },
+      "output_schema": {
+        "name": "WorkflowOutput",
+        "fields": [
+          { "name": "prompt_id", "type": "string" },
+          { "name": "number", "type": "number" },
+          { "name": "node_errors", "type": "object" }
+        ]
+      },
+      "field_mappings": [
+        { "canonical_field": "workflow_graph", "provider_field": "prompt", "required": true },
+        { "canonical_field": "prompt_id", "provider_field": "prompt_id", "required": false },
+        { "canonical_field": "extra_data", "provider_field": "extra_data", "required": false }
+      ],
+      "capabilities": [
+        { "kind": "image-generation", "modalities": ["image"] },
+        { "kind": "text-generation", "modalities": ["text"] }
+      ]
+    }
+  ]
+}

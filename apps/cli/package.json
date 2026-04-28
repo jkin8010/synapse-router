@@ -3,9 +3,17 @@
   "version": "0.1.0",
   "private": true,
   "type": "module",
+  "main": "dist/index.js",
+  "bin": {
+    "synapse": "./dist/index.js"
+  },
   "scripts": {
     "build": "tsc -p tsconfig.json",
+    "start": "node ./dist/index.js",
     "test": "tsx --test src/**/*.test.ts",
     "typecheck": "tsc --noEmit -p tsconfig.json"
+  },
+  "dependencies": {
+    "@synapse-router/vault": "workspace:*"
   }
 }
