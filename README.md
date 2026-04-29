@@ -15,51 +15,19 @@ Synapse Router 位于 Agent、工具、模型和 Provider API 之间，确保每
 - 🛣️ **策略路由** — 按 cheap/fast/quality 策略选择最优 Provider，支持 fallback
 - 🔌 **多接入方式** — CLI、HTTP API、MCP Server，适配不同 Agent 架构
 
-## 架构
+## 📖 快速开始
 
-```
-┌─────────────────────────────────────────────────────────┐
-│                       AI Agent                          │
-│  "我需要 text-to-image, 1024x1024, 偏好质量"             │
-└──────────────────────┬──────────────────────────────────┘
-                       │ Agent Schema（需求声明）
-                       ▼
-┌─────────────────────────────────────────────────────────┐
-│                   Synapse Router                        │
-│  ┌─────────────┐  ┌──────────┐  ┌───────────────────┐  │
-│  │  Negotiator  │  │   Vault  │  │  Provider Packs   │  │
-│  │ Schema 协商  │  │ Key 加密 │  │  OpenAI/Replicate │  │
-│  └──────┬──────┘  └────┬─────┘  │  Stability/ComfyUI│  │
-│         │              │        └─────────┬─────────┘  │
-│         └──────┬───────┘                   │            │
-│                ▼                           │            │
-│  ┌─────────────────────────────────────────┐            │
-│  │          Router（策略路由 + 执行引擎）   │◄───────────┘  │
-│  └──────────────────┬──────────────────────┘            │
-└─────────────────────┼───────────────────────────────────┘
-                      │ Server Schema（锁定契约）
-                      ▼
-        ┌─────────────┬──────────────┬──────────────┐
-        │   OpenAI    │  Replicate   │  Stability   │  ...
-        │   API       │  API         │  AI API      │
-        └─────────────┴──────────────┴──────────────┘
-```
-
-## 快速开始
-
-### 安装
+### 1. 安装
 
 ```bash
 npm install -g @synapse-router/cli
 ```
 
-### 配置 API Key
+### 2. 配置 API Key
 
 ```bash
-# 存储 OpenAI Key（自动从 Pack 检测 auth_type）
+# 存储 API Key（自动从 Pack 检测 auth_type）
 synapse vault set openai sk-your-key-here
-
-# 存储 Stability AI Key
 synapse vault set stability sk-your-key-here
 
 # 验证 Key 格式
@@ -67,9 +35,10 @@ synapse vault verify openai
 # ✓ openai key format is valid
 ```
 
-### 查看 Provider
+### 3. 使用示例
 
 ```bash
+# 查看可用 Provider
 synapse provider list
 # Providers:
 #   openai       OpenAI                https://api.openai.com/v1
@@ -77,23 +46,13 @@ synapse provider list
 #   stability    Stability AI          https://api.stability.ai/v1
 #   comfyui      ComfyUI               http://127.0.0.1:8188
 
-# 查看某个 Provider 的详细信息
-synapse provider show openai
-```
-
-### 启动 HTTP API
-
-```bash
-# 使用 CLI
+# 启动 HTTP API
 synapse serve
-# 或直接启动
-npx @synapse-router/api
+# Listening on http://0.0.0.0:3000
 ```
 
-### 协商 + 执行示例
-
 ```bash
-# 1. 准备 Agent Schema 文件
+# 准备 Agent Schema 并协商
 cat > my-agent.json << 'EOF'
 {
   "agent_id": "my-image-agent",
@@ -115,9 +74,7 @@ cat > my-agent.json << 'EOF'
       },
       "output_schema": {
         "name": "image_output",
-        "fields": [
-          { "name": "image_url", "type": "string" }
-        ]
+        "fields": [{ "name": "image_url", "type": "string" }]
       },
       "capabilities": [{ "kind": "image-generation", "modalities": ["png"] }]
     }
@@ -125,27 +82,129 @@ cat > my-agent.json << 'EOF'
 }
 EOF
 
-# 2. 通过 CLI 协商
 synapse negotiate my-agent.json
 # Matched providers:
 #   stability: text_to_image_post_v1_generation_text2img
 #   openai: images_generations_post_v1_images_generations
-
-# 3. 通过 HTTP API 协商 + 执行
-curl -X POST http://localhost:3000/negotiate \
-  -H "Content-Type: application/json" \
-  -d '{"agent_schema": <上面 Agent Schema 的内容>}'
-
-# 响应返回 negotiation_id，用于执行
-curl -X POST http://localhost:3000/execute \
-  -H "Content-Type: application/json" \
-  -d '{
-    "negotiation_id": "<返回的 ID>",
-    "input": { "prompt": "A cat in space", "width": 1024, "height": 1024 }
-  }'
 ```
 
-## API 概览
+```bash
+# 从 OpenAPI Spec 生成 Provider Pack
+synapse generate ./openapi.json --provider my-api
+# ✓ Pack generated: packs/my-api/
+```
+
+> 📚 更多示例见下方 [🔧 接入端](#-接入端) 章节
+
+## 🔑 核心概念
+
+### Provider / Service / Pack 的关系
+
+| 概念 | 角色 | 说明 |
+|------|------|------|
+| **Provider** | 身份标识 | Provider 的唯一 ID、名称、文档链接 |
+| **Service** | 服务配置 | 服务地址、API 版本、认证方式等运行参数 |
+| **Pack** | 打包单元 | 一个目录 = 一个 Provider Pack，包含 `provider-card.json` + `dsl/` 文件 |
+
+每个 Provider Pack 的结构：
+
+```
+packs/<provider-id>/
+├── provider-card.json   # Provider 身份 + Service 配置 + Features 声明
+└── dsl/                 # 每个 Feature 一个 Agent Schema DSL 文件
+    ├── feature_1.json
+    └── feature_2.json
+```
+
+**工作流程**：
+
+```
+Agent 发出 AgentSchema（"我需要什么"）
+  → Router 匹配 Provider Pack 的 Features（按 Intent + 能力）
+  → 生成 ServerSchema（"我承诺提供什么"）
+  → Agent 按锁定契约执行调用
+```
+
+### 双 Schema 契约
+
+| Schema | 角色 | 类比 |
+|--------|------|------|
+| **AgentSchema** | Agent 持有的需求声明 | `package.json` |
+| **ServerSchema** | 服务端锁定的契约 | `package-lock.json` |
+
+协商流程：Agent 发出 `AgentSchema` → Router 匹配 Provider → 生成 `ServerSchema` → 后续执行严格遵循锁定契约。
+
+## 📐 架构
+
+```
+┌─────────────────────────────────────────────────────────┐
+│                       AI Agent                          │
+│  "我需要 text-to-image, 1024x1024, 偏好质量"             │
+└──────────────────────┬──────────────────────────────────┘
+                       │ AgentSchema（需求声明）
+                       ▼
+┌─────────────────────────────────────────────────────────┐
+│                   Synapse Router                        │
+│  ┌─────────────┐  ┌──────────┐  ┌───────────────────┐  │
+│  │  Negotiator  │  │   Vault  │  │  Provider Packs   │  │
+│  │ Schema 协商  │  │ Key 加密 │  │  OpenAI/Replicate │  │
+│  └──────┬──────┘  └────┬─────┘  │  Stability/ComfyUI│  │
+│         │              │        └─────────┬─────────┘  │
+│         └──────┬───────┘                   │            │
+│                ▼                           │            │
+│  ┌─────────────────────────────────────────┐            │
+│  │          Router（策略路由 + 执行引擎）   │◄───────────┘  │
+│  └──────────────────┬──────────────────────┘            │
+└─────────────────────┼───────────────────────────────────┘
+                      │ ServerSchema（锁定契约）
+                      ▼
+        ┌─────────────┬──────────────┬──────────────┐
+        │   OpenAI    │  Replicate   │  Stability   │  ...
+        │   API       │  API         │  AI API      │
+        └─────────────┴──────────────┴──────────────┘
+```
+
+### 组件架构
+
+```
+synapse-router/
+├── packages/
+│   ├── core/              # Schema 类型定义 + 校验 + 规范化
+│   ├── negotiator/        # Schema 协商引擎（Intent 匹配 + 能力验证）
+│   ├── providers/         # Provider Registry + Adapter 接口
+│   ├── router/            # 路由策略（cheap/fast/quality）+ 执行引擎
+│   ├── vault/             # API Key 加密存储（AES-256-GCM + OS Keychain）
+│   ├── pack-generator/    # 从 OpenAPI Spec 自动生成 Provider Pack
+│   └── sdk/               # 客户端 SDK（TypeScript）
+├── apps/
+│   ├── api/               # HTTP API Server（Express）
+│   ├── cli/               # CLI 工具（Commander）
+│   ├── mcp-server/        # MCP Server（Model Context Protocol）
+│   └── playground/        # 本地可视化调试界面
+└── packs/                 # 预置 Provider Pack
+    ├── openai/
+    ├── replicate/
+    ├── stability/
+    └── comfyui/
+```
+
+## 🔧 接入端
+
+### CLI
+
+```bash
+synapse provider list                       # 列出所有 Provider Pack
+synapse provider show <id>                  # 查看 Provider 详情
+synapse vault set <provider> <key>          # 存储 API Key
+synapse vault list                          # 列出已存储的 Key
+synapse vault verify <provider>            # 验证 Key 格式
+synapse negotiate <schema-file>            # 运行 Schema 协商
+synapse execute <provider> <feature> <input>  # 执行 Provider 调用
+```
+
+> 完整 CLI 参考 → [apps/cli/README.md](apps/cli/README.md)
+
+### HTTP API
 
 | 方法   | 路径                    | 说明                |
 |--------|------------------------|---------------------|
@@ -159,13 +218,11 @@ curl -X POST http://localhost:3000/execute \
 | POST   | `/vault/verify/:provider` | 验证 Key 格式      |
 | GET    | `/health`              | 健康检查             |
 
-> 完整 API 参考 → [apps/api/README.md](apps/api/README.md)
+> 完整 API 参考 → [docs/API.md](docs/API.md)
 
-## MCP Server
+### MCP Server
 
-Synapse Router 提供 [MCP (Model Context Protocol)](https://modelcontextprotocol.io/) Server，支持 stdio 传输。
-
-### 集成到 Claude Desktop / Cursor 等 MCP 客户端
+在 Claude Desktop / Cursor 等 MCP 客户端中配置：
 
 ```json
 {
@@ -178,8 +235,6 @@ Synapse Router 提供 [MCP (Model Context Protocol)](https://modelcontextprotoco
 }
 ```
 
-### 7 个 Tools
-
 | Tool             | 说明                  |
 |------------------|-----------------------|
 | `vault_set_key`  | 存储 Provider API Key  |
@@ -190,96 +245,20 @@ Synapse Router 提供 [MCP (Model Context Protocol)](https://modelcontextprotoco
 | `negotiate`      | 运行 Schema 协商       |
 | `execute`        | 执行 Provider 调用     |
 
-### 2 个 Resources
-
-| URI                | 说明                  |
-|--------------------|-----------------------|
-| `providers://list` | 所有 Provider Pack 摘要 |
-| `vault://status`   | Vault 状态与 Key 计数   |
-
 > 完整 MCP 参考 → [apps/mcp-server/README.md](apps/mcp-server/README.md)
 
-## CLI 命令参考
+## 📦 预置 Provider Pack
 
-```bash
-synapse provider list                       # 列出所有 provider packs
-synapse provider show <id>                  # 查看 provider 详情
+| Provider     | 功能                                                 | Auth    |
+|-------------|------------------------------------------------------|---------|
+| **OpenAI**   | Chat, Embeddings, Image Generation, Audio Transcription | Bearer  |
+| **Replicate**| Predictions, Trainings                               | Bearer  |
+| **Stability AI**| Text to Image, Image to Image                     | APIKey  |
+| **ComfyUI**  | Workflow Execution                                   | APIKey  |
 
-synapse vault set <provider> <key>          # 存储 API key
-synapse vault list                          # 列出存储的 keys
-synapse vault get <provider>               # 获取 key 值
-synapse vault remove <provider>            # 删除 key
-synapse vault verify <provider>            # 验证 key 格式
-synapse vault rotate <provider>            # 轮换加密密码
+> Pack 开发指南 → [docs/PACKS.md](docs/PACKS.md)
 
-synapse negotiate <schema-file>            # 运行 schema 协商
-synapse execute <provider> <feature> <input>  # 执行 provider feature
-
-synapse --help                             # 帮助
-synapse --version                          # 版本号
-```
-
-> 完整 CLI 参考 → [apps/cli/README.md](apps/cli/README.md)
-
-## Provider Pack 体系
-
-Provider Pack 是 Synapse Router 的核心抽象——每个 Provider 一个 Pack，声明其能力、字段映射和定价信息。
-
-```
-packs/
-└── openai/
-    ├── provider-card.json    # Provider 核心卡片（能力声明）
-    └── dsl/                  # Agent Schema DSL 文件
-        └── chat_post_v1_chat_completions.json
-```
-
-### 预置 Pack
-
-| Provider     | 功能                                                 |
-|-------------|------------------------------------------------------|
-| **OpenAI**   | Chat Completions, Embeddings, Audio Transcriptions, Image Generations |
-| **Replicate**| Predictions, Trainings                               |
-| **Stability AI**| Text to Image, Image to Image                     |
-| **ComfyUI**  | Workflow (post_v1_prompt)                            |
-
-### 创建自定义 Pack
-
-```bash
-# 从 OpenAPI Spec 生成
-npx @synapse-router/pack-generator --from-url https://api.example.com/openapi.json
-
-# 或手动创建 provider-card.json
-```
-
-> 完整 Pack 参考 → [packs/README.md](packs/README.md)
-
-## 项目结构
-
-```
-synapse-router/
-├── packages/
-│   ├── core/                  # Schema 类型 + 校验 + 规范化
-│   ├── negotiator/            # Schema 协商引擎
-│   ├── providers/             # Provider Registry + Adapter 接口
-│   ├── router/                # 路由策略 + 执行引擎
-│   ├── vault/                 # API Key 加密存储
-│   ├── pack-generator/        # Provider Pack 生成器（从 OpenAPI Spec）
-│   └── sdk/                   # 客户端 SDK
-├── packs/                     # 预置 Provider Pack
-│   ├── openai/
-│   ├── replicate/
-│   ├── stability/
-│   └── comfyui/
-├── apps/
-│   ├── api/                   # HTTP API Server
-│   ├── cli/                   # CLI 工具
-│   ├── mcp-server/            # MCP Server
-│   └── playground/            # 本地 Playground
-├── knowledge/                 # 知识库（产品规划 + 技术架构文档）
-└── package.json
-```
-
-## 开发指南
+## 🧪 开发指南
 
 ### 环境准备
 
@@ -293,11 +272,40 @@ pnpm install
 
 ```bash
 pnpm build          # 构建所有包
-pnpm test           # 运行所有测试（250 tests, 0 fail）
+pnpm test           # 运行测试（250 tests, 0 fail）
 pnpm typecheck      # 类型检查
 ```
 
-### 如何贡献
+### 如何添加新 Provider Pack
+
+#### 方法一：从 OpenAPI Spec 自动生成（推荐）
+
+```bash
+# CLI 方式
+npx @synapse-router/pack-generator --from-url https://api.example.com/openapi.json
+
+# 编程方式
+npx tsx -e '
+import { generatePackFromURL, writePack } from "@synapse-router/pack-generator";
+
+const { providerCard, dslFiles } = await generatePackFromURL(
+  "https://api.example.com/openapi.json",
+  { providerId: "my-api", providerName: "My API" }
+);
+await writePack("./packs/my-api", providerCard, dslFiles);
+'
+```
+
+#### 方法二：手动创建
+
+1. 在 `packs/` 下创建目录：`mkdir -p packs/my-provider/dsl`
+2. 编写 `provider-card.json`（定义 Provider 身份 + Service 配置 + Features）
+3. 在 `dsl/` 下为每个 Feature 创建 Agent Schema 文件
+4. 运行测试验证 Pack 格式
+
+> 📚 完整 Pack 开发指南 → [docs/PACKS.md](docs/PACKS.md)
+
+### 提交 Pull Request
 
 1. Fork 本仓库
 2. 创建功能分支：`git checkout -b feature/my-feature`
@@ -305,45 +313,6 @@ pnpm typecheck      # 类型检查
 4. 推送分支：`git push origin feature/my-feature`
 5. 创建 Pull Request
 
-### 创建新的 Provider Pack
-
-1. 在 `packs/` 下创建目录：`packs/my-provider/`
-2. 编写 `provider-card.json`，声明 Provider 信息和功能列表
-3. 在 `dsl/` 下为每个功能创建 Agent Schema 文件
-4. 运行测试确保 Pack 格式正确
-
-或使用 Pack Generator 从 OpenAPI Spec 自动生成：
-
-```typescript
-import { generatePackFromURL, writePack } from "@synapse-router/pack-generator";
-
-const { providerCard, dslFiles } = await generatePackFromURL(
-  "https://api.example.com/openapi.json",
-  { providerId: "my-provider", providerName: "My Provider" }
-);
-
-await writePack("./packs/my-provider", providerCard, dslFiles);
-```
-
-> Pack Generator 详细用法 → [packages/pack-generator/README.md](packages/pack-generator/README.md)
-
-## 双 Schema 设计
-
-Synapse Router 的核心是 **双 Schema 契约设计**：
-
-| Schema        | 角色         | 类比                |
-|---------------|-------------|---------------------|
-| **AgentSchema** | Agent 持有的需求声明 | `package.json`  |
-| **ServerSchema** | 服务端锁定的契约 | `package-lock.json` |
-
-协商流程：Agent 发出 `AgentSchema`（"我需要什么"），Router 匹配 Provider 能力后生成 `ServerSchema`（"我承诺提供什么"），后续执行严格遵循锁定契约。
-
-```
-AgentSchema                  Negotiation                 ServerSchema
-(需求声明)        ────────►  (匹配 + 锁定)  ────────►    (锁定契约)
-```
-
 ## License
 
 [Apache License 2.0](LICENSE)
-
