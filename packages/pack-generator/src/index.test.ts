@@ -197,10 +197,10 @@ describe("generatePack", () => {
 
     assert.strictEqual(providerCard.provider.id, "miniai_test_provider");
     assert.strictEqual(providerCard.provider.name, "MiniAI Test Provider");
-    assert.strictEqual(providerCard.provider.version, "1.0.0");
-    assert.strictEqual(providerCard.provider.api_version, "1.0.0");
-    assert.strictEqual(providerCard.provider.base_url, "https://api.miniai.test/v1");
-    assert.strictEqual(providerCard.provider.auth_type, "APIKey");
+    assert.strictEqual(providerCard.service.version, "1.0.0");
+    assert.strictEqual(providerCard.service.api_version, "1.0.0");
+    assert.strictEqual(providerCard.service.base_url, "https://api.miniai.test/v1");
+    assert.strictEqual(providerCard.service.auth_type, "APIKey");
   });
 
   it("generates features for each path+method", () => {
@@ -343,7 +343,7 @@ describe("generatePack", () => {
   it("handles empty servers array", () => {
     const specWithoutServers = { ...miniSpec, servers: [] };
     const { providerCard } = generatePack(specWithoutServers);
-    assert.strictEqual(providerCard.provider.base_url, "");
+    assert.strictEqual(providerCard.service.base_url, "");
   });
 
   it("infers fallback intent from operationId containing 'generate'", () => {

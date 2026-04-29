@@ -220,7 +220,7 @@ function negotiate(
           id: randomUUID(),
           capability_id: bestMatch.feature.id,
           provider_id: providerId,
-          version: card.provider.version,
+          version: card.service.version,
           fields: bestMatch.mapping,
           reverse_fields: bestMatch.mapping.map((m) => ({
             provider_field: m.canonical_field,
@@ -409,8 +409,8 @@ async function handleRequest(
         // In production this would be the actual provider API response
         // For now, return a structured mock that reflects the request was processed
         _meta: {
-          provider_base_url: card.provider.base_url,
-          auth_type: card.provider.auth_type,
+          provider_base_url: card.service.base_url,
+          auth_type: card.service.auth_type,
           feature_intent: matchedFeature.intent,
         },
       };

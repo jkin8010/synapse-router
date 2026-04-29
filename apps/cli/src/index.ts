@@ -6,6 +6,7 @@ import { join, dirname } from "node:path";
 import { homedir } from "node:os";
 import { fileURLToPath } from "node:url";
 import { createVault } from "@synapse-router/vault";
+import { handleGenerateCommand } from "./commands/generate.js";
 
 // ---------------------------------------------------------------------------
 // Argument parsing
@@ -53,6 +54,7 @@ Usage:
 Commands:
   provider list                       List all provider packs
   provider show <id>                 Show provider details
+  generate <source>                   Generate a Provider Pack from OpenAPI spec
   vault set <provider> <key>          Store an API key
   vault list                         List stored keys (values hidden)
   vault get <provider>               Get key value for a provider
@@ -61,6 +63,13 @@ Commands:
   vault rotate <provider>            Rotate key password (interactive)
   negotiate <schema-file>            Run schema negotiation
   execute <provider> <feature> <input>  Execute a provider feature
+
+Generate Options:
+  --provider <id>           Override provider ID
+  --name <name>             Override provider display name
+  --output <dir>            Output directory (default: ./generated-packs/<id>)
+  --no-validate             Skip validation step
+  --no-tarball              Skip tarball build
 
 Options:
   --help, -h               Show this help
@@ -105,7 +114,7 @@ async function providerList(): Promise<void> {
       const content = await readFile(cardPath, "utf8");
       const card = JSON.parse(content);
       console.log(
-        `  ${card.provider.id.padEnd(12)} ${card.provider.name.padEnd(20)} ${card.provider.base_url}`
+        `  ${card.provider.id.padEnd(12)} ${card.provider.name.padEnd(20)} ${card.service.base_url}`
       );
       found = true;
     } catch {
@@ -322,6 +331,9 @@ async function main(): Promise<void> {
         }
         break;
       }
+      case "generate":
+        await handleGenerateCommand(args);
+        break;
       case "negotiate":
         await negotiate(args[0]);
         break;
