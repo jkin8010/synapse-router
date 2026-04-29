@@ -309,6 +309,11 @@ export interface ProviderCard {
   provider: {
     id: string;
     name: string;
+    docs_url?: string;
+  };
+  service: {
+    id: string;
+    name: string;
     version: string;
     api_version: string;
     base_url: string;
@@ -324,6 +329,7 @@ export interface SchemaMapping {
   id: string;
   capability_id: string;
   provider_id: string;
+  service_id: string;
   version: string;
   fields: SchemaMappingField[];
   reverse_fields: SchemaMappingField[];

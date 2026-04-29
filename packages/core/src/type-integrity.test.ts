@@ -197,6 +197,11 @@ describe("ProviderCard type integrity", () => {
       provider: {
         id: "openai",
         name: "OpenAI",
+        docs_url: "https://platform.openai.com/docs/api-reference",
+      },
+      service: {
+        id: "openai",
+        name: "OpenAI",
         version: "1.0.0",
         api_version: "v1",
         base_url: "https://api.openai.com",
@@ -231,6 +236,7 @@ describe("ProviderCard type integrity", () => {
       ],
     };
     assert.equal(card.provider.id, "openai");
+    assert.equal(card.service.id, "openai");
     assert.equal(card.features.length, 1);
   });
 });
@@ -243,6 +249,7 @@ describe("SchemaMapping type integrity", () => {
       id: "map-001",
       capability_id: "text-to-image",
       provider_id: "openai",
+      service_id: "openai",
       version: "1.0.0",
       fields: [
         {
@@ -262,6 +269,7 @@ describe("SchemaMapping type integrity", () => {
       reverse_fields: [],
     };
     assert.equal(mapping.id, "map-001");
+    assert.equal(mapping.service_id, "openai");
     assert.equal(mapping.fields.length, 2);
     assert.equal(mapping.fields[1].transform, "extract_url");
   });
@@ -292,6 +300,10 @@ describe("Type cross-reference", () => {
       provider: {
         id: "openai",
         name: "OpenAI",
+      },
+      service: {
+        id: "openai",
+        name: "OpenAI",
         version: "1.0.0",
         api_version: "v1",
         base_url: "https://api.openai.com",
@@ -315,6 +327,7 @@ describe("Type cross-reference", () => {
       id: "map-xref",
       capability_id: "text-to-image",
       provider_id: "openai",
+      service_id: "openai",
       version: "1.0.0",
       fields: [
         { provider_field: "prompt", canonical_field: "prompt", transform: "passthrough", required: true },
@@ -326,6 +339,7 @@ describe("Type cross-reference", () => {
     assert.equal(agent.features[0].intent, provider.features[0].intent);
     assert.equal(provider.features[0].intent, mapping.capability_id);
     assert.equal(mapping.provider_id, provider.provider.id);
+    assert.equal(mapping.service_id, provider.service.id);
   });
 
   it("ApiKeyWebhookEvent discriminated union types work", () => {

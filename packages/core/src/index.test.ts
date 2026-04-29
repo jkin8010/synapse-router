@@ -999,6 +999,11 @@ describe("ProviderCard", () => {
       provider: {
         id: "openai",
         name: "OpenAI",
+        docs_url: "https://platform.openai.com/docs/api-reference"
+      },
+      service: {
+        id: "openai",
+        name: "OpenAI",
         version: "1.0.0",
         api_version: "v1",
         base_url: "https://api.openai.com",
@@ -1008,13 +1013,18 @@ describe("ProviderCard", () => {
     };
     assert.equal(card.provider.id, "openai");
     assert.equal(card.provider.name, "OpenAI");
-    assert.equal(card.provider.auth_type, "Bearer");
+    assert.equal(card.service.id, "openai");
+    assert.equal(card.service.auth_type, "Bearer");
     assert.equal(card.features.length, 0);
   });
 
   test("creates a provider card with features", () => {
     const card: ProviderCard = {
       provider: {
+        id: "anthropic",
+        name: "Anthropic"
+      },
+      service: {
         id: "anthropic",
         name: "Anthropic",
         version: "1.0.0",
@@ -1039,6 +1049,10 @@ describe("ProviderCard", () => {
     const card: ProviderCard = {
       provider: {
         id: "google",
+        name: "Google AI"
+      },
+      service: {
+        id: "google",
         name: "Google AI",
         version: "1.0.0",
         api_version: "v1",
@@ -1047,7 +1061,29 @@ describe("ProviderCard", () => {
       },
       features: []
     };
-    assert.equal(card.provider.auth_type, "OAuth2");
+    assert.equal(card.service.auth_type, "OAuth2");
+  });
+
+  test("creates a multi-pack provider card (bytedance + seedream)", () => {
+    const card: ProviderCard = {
+      provider: {
+        id: "bytedance",
+        name: "字节跳动",
+        docs_url: "https://www.bytedance.com/docs"
+      },
+      service: {
+        id: "seedream",
+        name: "SeedReam",
+        version: "1.0.0",
+        api_version: "v1",
+        base_url: "https://seedream.bytedance.com/v1",
+        auth_type: "Bearer"
+      },
+      features: []
+    };
+    assert.equal(card.provider.id, "bytedance");
+    assert.equal(card.service.id, "seedream");
+    assert.notEqual(card.provider.id, card.service.id);
   });
 });
 
@@ -1057,6 +1093,7 @@ describe("SchemaMapping", () => {
       id: "mapping-001",
       capability_id: "text-generation",
       provider_id: "openai",
+      service_id: "openai",
       version: "1.0.0",
       fields: [{
         provider_field: "model_prompt",
@@ -1072,6 +1109,7 @@ describe("SchemaMapping", () => {
     assert.equal(mapping.id, "mapping-001");
     assert.equal(mapping.capability_id, "text-generation");
     assert.equal(mapping.provider_id, "openai");
+    assert.equal(mapping.service_id, "openai");
     assert.equal(mapping.fields.length, 1);
     assert.equal(mapping.reverse_fields.length, 1);
   });
@@ -1081,6 +1119,7 @@ describe("SchemaMapping", () => {
       id: "mapping-002",
       capability_id: "image-gen",
       provider_id: "stability",
+      service_id: "stability",
       version: "1.0.0",
       fields: [{
         provider_field: "encoded_image",
@@ -1104,6 +1143,7 @@ describe("SchemaMapping", () => {
       id: "mapping-003",
       capability_id: "text-gen",
       provider_id: "openai",
+      service_id: "openai",
       version: "1.0.0",
       fields: [{
         provider_field: "temp",
@@ -1118,5 +1158,20 @@ describe("SchemaMapping", () => {
       }]
     };
     assert.equal(mapping.fields[0].fallback, 0.7);
+  });
+
+  test("creates with provider_id and service_id differing (multi-pack)", () => {
+    const mapping: SchemaMapping = {
+      id: "mapping-004",
+      capability_id: "image-gen",
+      provider_id: "bytedance",
+      service_id: "seedream",
+      version: "1.0.0",
+      fields: [],
+      reverse_fields: []
+    };
+    assert.equal(mapping.provider_id, "bytedance");
+    assert.equal(mapping.service_id, "seedream");
+    assert.notEqual(mapping.provider_id, mapping.service_id);
   });
 });

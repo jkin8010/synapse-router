@@ -427,6 +427,10 @@ export function generatePack(
     provider: {
       id: providerId,
       name: providerName,
+    },
+    service: {
+      id: providerId, // 1:1 默认与 provider 相同
+      name: providerName,
       version: openApiSpec.info.version,
       api_version: apiVersion,
       base_url: baseUrl,

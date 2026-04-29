@@ -2,10 +2,6 @@
   "provider": {
     "id": "comfyui",
     "name": "ComfyUI",
-    "version": "1.0.0",
-    "api_version": "2024-01-01",
-    "base_url": "http://localhost:8188",
-    "auth_type": "APIKey",
     "docs_url": "https://docs.comfy.org"
   },
   "features": [
@@ -17,25 +13,71 @@
       "input": {
         "name": "WorkflowInput",
         "fields": [
-          { "name": "prompt", "type": "object", "required": true, "description": "Workflow graph with node definitions" },
-          { "name": "prompt_id", "type": "string", "required": false, "description": "Optional prompt ID for tracking" },
-          { "name": "extra_data", "type": "object", "required": false, "description": "Extra data for nodes" }
+          {
+            "name": "prompt",
+            "type": "object",
+            "required": true,
+            "description": "Workflow graph with node definitions"
+          },
+          {
+            "name": "prompt_id",
+            "type": "string",
+            "required": false,
+            "description": "Optional prompt ID for tracking"
+          },
+          {
+            "name": "extra_data",
+            "type": "object",
+            "required": false,
+            "description": "Extra data for nodes"
+          }
         ]
       },
       "output": {
         "name": "WorkflowOutput",
         "fields": [
-          { "name": "prompt_id", "type": "string" },
-          { "name": "number", "type": "number" },
-          { "name": "node_errors", "type": "object" }
+          {
+            "name": "prompt_id",
+            "type": "string"
+          },
+          {
+            "name": "number",
+            "type": "number"
+          },
+          {
+            "name": "node_errors",
+            "type": "object"
+          }
         ]
       },
       "field_mappings": [
-        { "canonical_field": "workflow_graph", "provider_field": "prompt", "required": true },
-        { "canonical_field": "prompt_id", "provider_field": "prompt_id", "required": false },
-        { "canonical_field": "extra_data", "provider_field": "extra_data", "required": false }
+        {
+          "canonical_field": "workflow_graph",
+          "provider_field": "prompt",
+          "required": true
+        },
+        {
+          "canonical_field": "prompt_id",
+          "provider_field": "prompt_id",
+          "required": false
+        },
+        {
+          "canonical_field": "extra_data",
+          "provider_field": "extra_data",
+          "required": false
+        }
       ],
-      "limits": { "rpm": 30 }
+      "limits": {
+        "rpm": 30
+      }
     }
-  ]
+  ],
+  "service": {
+    "id": "comfyui",
+    "name": "ComfyUI",
+    "version": "1.0.0",
+    "api_version": "2024-01-01",
+    "base_url": "http://localhost:8188",
+    "auth_type": "APIKey"
+  }
 }
