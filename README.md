@@ -347,6 +347,3 @@ AgentSchema                  Negotiation                 ServerSchema
 
 [Apache License 2.0](LICENSE)
 
----
-
-> **Registry 闭源说明**：本仓库开源核心路由、协商、加密等代码。接入各个 Provider API 的适配层（Registry）由平台闭源提供，包含 API 对接、错误处理、重试策略等"脏活累活"。
