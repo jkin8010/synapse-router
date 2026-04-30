@@ -25,6 +25,8 @@
 
 - [[04-技术架构/synapse-router-architecture|系统架构]]
 - [[04-技术架构/synapse-router-dsl-spec|DSL 规范]]
+- [[01-产品规划/synapse-router-usage-guide|使用指南]]
+- [[01-产品规划/synapse-p1-redefinition|P1 重新定义]]
 
 ---
 

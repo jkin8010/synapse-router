@@ -29,6 +29,9 @@ importers:
 
   apps/cli:
     dependencies:
+      '@synapse-router/connector':
+        specifier: workspace:*
+        version: link:../../packages/connector
       '@synapse-router/vault':
         specifier: workspace:*
         version: link:../../packages/vault
@@ -46,6 +49,12 @@ importers:
         version: link:../../packages/vault
 
   apps/playground: {}
+
+  packages/connector:
+    dependencies:
+      '@synapse-router/core':
+        specifier: workspace:*
+        version: link:../core
 
   packages/core: {}
 

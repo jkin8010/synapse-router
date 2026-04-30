@@ -1,12 +1,15 @@
 #!/usr/bin/env node
 // @synapse-router/cli — CLI tool
 
-import { readdir, readFile } from "node:fs/promises";
+import { readdir, readFile, writeFile, mkdir } from "node:fs/promises";
 import { join, dirname } from "node:path";
 import { homedir } from "node:os";
 import { fileURLToPath } from "node:url";
 import { createVault } from "@synapse-router/vault";
 import { handleGenerateCommand } from "./commands/generate.js";
+import { handleConnectCommand, printConnectHelp } from "./commands/connect.js";
+import { handleSetupCommand, printSetupHelp } from "./commands/setup.js";
+import { handleConfigCommand, printConfigHelp } from "./commands/config.js";
 
 // ---------------------------------------------------------------------------
 // Argument parsing
@@ -41,39 +44,159 @@ function parseArgs(argv: string[]): ParsedArgs {
 }
 
 // ---------------------------------------------------------------------------
-// Help
+// Help system — layered
 // ---------------------------------------------------------------------------
 
 function printHelp(): void {
   console.log(`
-Synapse Router CLI
+Synapse Router CLI v0.1.0 — Multi-Provider Schema Negotiation Router
 
 Usage:
-  synapse <command> [options]
+  synapse <command> [subcommand] [options]
 
 Commands:
-  provider list                       List all provider packs
-  provider show <id>                 Show provider details
-  generate <source>                   Generate a Provider Pack from OpenAPI spec
-  vault set <provider> <key>          Store an API key
-  vault list                         List stored keys (values hidden)
-  vault get <provider>               Get key value for a provider
-  vault remove <provider>            Remove a stored key
-  vault verify <provider>            Verify key format
-  vault rotate <provider>            Rotate key password (interactive)
-  negotiate <schema-file>            Run schema negotiation
-  execute <provider> <feature> <input>  Execute a provider feature
+  connect <provider> <intent>   Connect to a provider and execute a feature
+  setup                         Interactive first-time setup wizard
+  config set|get|list           Manage configuration (~/.synapse/config.json)
+  provider list                 List all provider packs
+  provider show <id>            Show provider details
+  generate <source>             Generate a Provider Pack from OpenAPI spec
+  vault set|list|get|remove|verify  Manage API keys
+  negotiate <schema-file>       Run schema negotiation
 
-Generate Options:
-  --provider <id>           Override provider ID
-  --name <name>             Override provider display name
-  --output <dir>            Output directory (default: ./generated-packs/<id>)
-  --no-validate             Skip validation step
-  --no-tarball              Skip tarball build
+Getting started:
+  synapse setup                 Configure your first provider
+  synapse connect deepseek chat --input '{"messages":[...]}'
 
 Options:
-  --help, -h               Show this help
-  --version, -v            Show version
+  --help, -h                    Show help
+  --version, -v                 Show version
+
+Detailed help:
+  synapse connect --help        Connect command options & examples
+  synapse vault --help          Vault subcommands
+  synapse config --help         Config management
+  synapse setup --help          Setup wizard
+  synapse generate --help       Pack generation
+`);
+}
+
+function printProviderHelp(): void {
+  console.log(`
+synapse provider — List and inspect provider packs
+
+Usage:
+  synapse provider list                  List all available provider packs
+  synapse provider show <id>             Show provider card details
+
+Arguments:
+  <id>                   Provider ID (e.g. openai, deepseek, replicate)
+
+Examples:
+  synapse provider list
+  synapse provider show openai
+
+See also:
+  synapse connect   — Connect to a provider
+  synapse generate  — Generate new provider packs
+`);
+}
+
+function printVaultHelp(): void {
+  console.log(`
+synapse vault — Manage encrypted API keys
+
+Usage:
+  synapse vault set <provider> <key> [options]    Store an API key
+  synapse vault list                              List stored keys (values hidden)
+  synapse vault get <provider>                    Get key value for a provider
+  synapse vault remove <provider>                 Remove a stored key
+  synapse vault verify <provider>                 Verify key format
+  synapse vault rotate <provider>                 Rotate key password (interactive)
+
+Arguments:
+  <provider>             Provider ID (e.g. deepseek, openai)
+  <key>                  API key value
+
+Options (vault set):
+  --base-url <url>       Set provider base URL in config
+  --pack <id>            Set provider pack in config
+
+Examples:
+  # Store a DeepSeek API key
+  synapse vault set deepseek sk-xxx
+
+  # Store key with provider configuration
+  synapse vault set deepseek sk-xxx --base-url https://api.deepseek.com/v1 --pack openai
+
+  # List all stored keys
+  synapse vault list
+
+  # Verify a key
+  synapse vault verify deepseek
+
+  # Get key value
+  synapse vault get deepseek
+
+  # Remove a key
+  synapse vault remove deepseek
+
+See also:
+  synapse config    — Manage provider configuration
+  synapse setup     — Interactive setup wizard
+  synapse connect   — Connect to a provider
+`);
+}
+
+function printNegotiateHelp(): void {
+  console.log(`
+synapse negotiate — Run schema negotiation
+
+Usage:
+  synapse negotiate <schema-file>
+
+Arguments:
+  <schema-file>          Path to agent schema JSON file
+
+Examples:
+  synapse negotiate ./my-agent-schema.json
+
+See also:
+  synapse provider list   — List available providers
+  synapse connect         — Connect to a provider
+`);
+}
+
+function printGenerateHelp(): void {
+  console.log(`
+synapse generate — Generate a Provider Pack from OpenAPI spec
+
+Usage:
+  synapse generate <source> [options]
+
+Arguments:
+  <source>               URL or local file path to OpenAPI spec (JSON)
+
+Options:
+  --provider <id>        Override provider ID
+  --name <name>          Override provider display name
+  --output <dir>         Output directory (default: ./generated-packs/<id>)
+  --no-validate          Skip validation step
+  --no-tarball           Skip tarball build
+
+Examples:
+  # Generate from URL
+  synapse generate https://api.example.com/openapi.json
+
+  # Generate from local file with custom provider ID
+  synapse generate ./openapi.json --provider myapi
+
+  # Generate with custom output directory
+  synapse generate ./openapi.json --output ./my-packs/custom
+
+See also:
+  synapse provider list   — List available providers
+  synapse connect         — Connect to a provider
 `);
 }
 
@@ -129,7 +252,7 @@ async function providerList(): Promise<void> {
 async function providerShow(id: string): Promise<void> {
   if (!id) {
     console.error("Error: provider id required");
-    printHelp();
+    printProviderHelp();
     process.exit(1);
   }
   const packsDir = await findPacksDir();
@@ -151,9 +274,37 @@ function makeVault(): ReturnType<typeof createVault> {
   return createVault({ vaultDir: join(homedir(), ".synapse", "keys") });
 }
 
-async function vaultSet(provider: string, key: string): Promise<void> {
+// Config helpers for vault set --base-url / --pack
+const SYNAPSE_DIR = join(homedir(), ".synapse");
+const CONFIG_PATH = join(SYNAPSE_DIR, "config.json");
+
+interface SynapseConfig {
+  providers?: Record<string, {
+    base_url?: string;
+    pack?: string;
+    auth_type?: string;
+  }>;
+  defaults?: Record<string, string>;
+}
+
+async function loadConfig(): Promise<SynapseConfig> {
+  try {
+    const content = await readFile(CONFIG_PATH, "utf8");
+    return JSON.parse(content);
+  } catch {
+    return {};
+  }
+}
+
+async function saveConfig(config: SynapseConfig): Promise<void> {
+  await mkdir(SYNAPSE_DIR, { recursive: true });
+  await writeFile(CONFIG_PATH, JSON.stringify(config, null, 2) + "\n", "utf8");
+}
+
+async function vaultSet(provider: string, key: string, extraArgs: string[]): Promise<void> {
   if (!provider || !key) {
     console.error("Error: both provider and key are required");
+    console.error("Usage: synapse vault set <provider> <key> [--base-url <url>] [--pack <id>]");
     process.exit(1);
   }
   const vault = makeVault();
@@ -171,12 +322,35 @@ async function vaultSet(provider: string, key: string): Promise<void> {
     // provider card not found — use default
   }
 
+  // Parse extra options
+  let baseUrl: string | undefined;
+  let pack: string | undefined;
+  for (let i = 0; i < extraArgs.length; i++) {
+    if (extraArgs[i] === "--base-url" && extraArgs[i + 1]) {
+      baseUrl = extraArgs[++i];
+    } else if (extraArgs[i] === "--pack" && extraArgs[i + 1]) {
+      pack = extraArgs[++i];
+    }
+  }
+
   try {
     await vault.setKey(provider, key, authType);
     console.log(`✓ ${provider} key stored`);
   } catch (err) {
     console.error(`Error storing key: ${err}`);
     process.exit(1);
+  }
+
+  // Update config if --base-url or --pack provided
+  if (baseUrl || pack) {
+    const config = await loadConfig();
+    if (!config.providers) config.providers = {};
+    if (!config.providers[provider]) config.providers[provider] = {};
+    if (baseUrl) config.providers[provider].base_url = baseUrl;
+    if (pack) config.providers[provider].pack = pack;
+    if (!config.providers[provider].auth_type) config.providers[provider].auth_type = authType;
+    await saveConfig(config);
+    console.log(`✓ ${provider} config updated (base_url: ${baseUrl ?? "unchanged"}, pack: ${pack ?? "unchanged"})`);
   }
 }
 
@@ -244,6 +418,7 @@ async function vaultRotate(provider: string): Promise<void> {
 async function negotiate(schemaFile: string): Promise<void> {
   if (!schemaFile) {
     console.error("Error: schema file required");
+    printNegotiateHelp();
     process.exit(1);
   }
   let agentSchema: { features?: Array<{ intent?: string }> };
@@ -295,14 +470,50 @@ async function negotiate(schemaFile: string): Promise<void> {
 async function main(): Promise<void> {
   const { command, args, flags } = parseArgs(process.argv);
 
+  // Raw args after the command name — for sub-commands that do their own flag parsing
+  // e.g. "synapse connect deepseek chat --input '{...}'" → rawArgs = ["deepseek", "chat", "--input", "{...}"]
+  const rawArgs = process.argv.slice(3);  // skip [node, script, command]
+
   // Handle --version / -v / version command first
   if (flags.has("version") || flags.has("v") || command === "version") {
     console.log("synapse-router CLI v0.1.0");
     return;
   }
 
-  // Handle --help / -h / help command
-  if (flags.has("help") || flags.has("h") || command === "help") {
+  // Handle top-level --help / -h / help command
+  // Note: per-command --help is handled within each command handler
+  if ((flags.has("help") || flags.has("h")) && command === "help") {
+    // "synapse --help" or "synapse -h" (command defaults to "help")
+    printHelp();
+    return;
+  }
+  if (command === "help") {
+    // "synapse help <subcommand>" — show subcommand help
+    if (args[0]) {
+      switch (args[0]) {
+        case "connect":
+          printConnectHelp();
+          return;
+        case "setup":
+          printSetupHelp();
+          return;
+        case "config":
+          printConfigHelp();
+          return;
+        case "vault":
+          printVaultHelp();
+          return;
+        case "provider":
+          printProviderHelp();
+          return;
+        case "generate":
+          printGenerateHelp();
+          return;
+        case "negotiate":
+          printNegotiateHelp();
+          return;
+      }
+    }
     printHelp();
     return;
   }
@@ -310,16 +521,24 @@ async function main(): Promise<void> {
   try {
     switch (command) {
       case "provider": {
-        if (args[0] === "list") await providerList();
+        if (flags.has("help") || args.includes("--help") || args.includes("-h")) {
+          printProviderHelp();
+        } else if (args[0] === "list") await providerList();
         else if (args[0] === "show") await providerShow(args[1]);
         else {
           console.error("Unknown provider command");
-          printHelp();
+          printProviderHelp();
         }
         break;
       }
       case "vault": {
-        if (args[0] === "set") await vaultSet(args[1], args[2]);
+        if (flags.has("help") || args.includes("--help") || args.includes("-h")) {
+          printVaultHelp();
+        } else if (args[0] === "set") {
+          // Use rawArgs for vault set to preserve --base-url and --pack flags
+          const vaultArgs = process.argv.slice(4);  // skip [node, script, "vault", "set"]
+          await vaultSet(args[1], args[2], vaultArgs);
+        }
         else if (args[0] === "list") await vaultList();
         else if (args[0] === "get") await vaultGet(args[1]);
         else if (args[0] === "remove") await vaultRemove(args[1]);
@@ -327,18 +546,49 @@ async function main(): Promise<void> {
         else if (args[0] === "rotate") await vaultRotate(args[1]);
         else {
           console.error("Unknown vault command");
-          printHelp();
+          printVaultHelp();
         }
         break;
       }
+      case "connect":
+        if (flags.has("help") || args.includes("--help") || args.includes("-h")) {
+          printConnectHelp();
+        } else {
+          await handleConnectCommand(rawArgs);
+        }
+        break;
+      case "setup":
+        if (flags.has("help") || args.includes("--help") || args.includes("-h")) {
+          printSetupHelp();
+        } else {
+          await handleSetupCommand(rawArgs);
+        }
+        break;
+      case "config":
+        if (flags.has("help") || args.includes("--help") || args.includes("-h")) {
+          printConfigHelp();
+        } else {
+          await handleConfigCommand(rawArgs);
+        }
+        break;
       case "generate":
-        await handleGenerateCommand(args);
+        if (flags.has("help") || args.includes("--help") || args.includes("-h")) {
+          printGenerateHelp();
+        } else {
+          await handleGenerateCommand(args);
+        }
         break;
       case "negotiate":
-        await negotiate(args[0]);
+        if (flags.has("help") || args.includes("--help") || args.includes("-h")) {
+          printNegotiateHelp();
+        } else {
+          await negotiate(args[0]);
+        }
         break;
       case "execute":
-        console.error("Execute not yet implemented");
+        console.error("The 'execute' command has been renamed to 'connect'.");
+        console.error("Use: synapse connect <provider> <intent> [options]");
+        console.error("Run 'synapse connect --help' for more information.");
         process.exit(1);
         break;
       case "version":

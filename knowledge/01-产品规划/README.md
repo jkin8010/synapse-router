@@ -7,6 +7,10 @@
 - [[synapse-router-product-vision|产品愿景与定位]]
 - [[synapse-router-product-principles|产品原则]]
 - [[synapse-router-roadmap|产品路线图]]
+- [[synapse-router-usage-guide|使用指南]]
+- [[synapse-router-phase1-design|Phase 1 实施设计]]
+- [[synapse-router-dual-schema-design|双 Schema 设计]]
+- [[synapse-p1-redefinition|P1 重新定义（用户反馈后）]]
 
 ## 归类边界
 

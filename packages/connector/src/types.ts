@@ -1,0 +1,52 @@
+/**
+ * 共享类型定义
+ */
+
+/**
+ * Connector 使用的 Lock 结构
+ */
+export interface ConnectLock {
+  intent: string;
+  provider: string;
+  feature_id: string;
+  input_schema: {
+    fields: Array<{ name: string; type: string; required: boolean }>;
+  };
+  output_schema: {
+    fields: Array<{ name: string; type: string }>;
+  };
+  field_mappings: Array<{
+    canonical_field: string;
+    provider_field: string;
+    required?: boolean;
+    transform?: "passthrough" | "extract_url" | "base64_decode" | "json_parse" | "cast_number";
+    fallback?: unknown;
+  }>;
+}
+
+export interface ConnectParams {
+  /** Schema Lock 信息（来自 negotiate 的结果或缓存） */
+  lock: ConnectLock;
+  /** 用户输入（canonical 字段） */
+  input: Record<string, unknown>;
+  /** Provider 连接信息 */
+  connection: {
+    base_url: string;
+    api_key: string;
+    auth_type: "Bearer" | "APIKey" | "OAuth2";
+  };
+}
+
+export interface ConnectResult {
+  /** 标准化输出（canonical 字段） */
+  output: Record<string, unknown>;
+  /** Provider 原始响应 */
+  raw: unknown;
+  meta: {
+    provider: string;
+    feature_id: string;
+    model?: string;
+    usage?: { input_tokens: number; output_tokens: number };
+    latency_ms: number;
+  };
+}
