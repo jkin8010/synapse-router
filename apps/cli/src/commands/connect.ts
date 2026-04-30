@@ -6,6 +6,7 @@ import { readFile } from "node:fs/promises";
 import { join, dirname } from "node:path";
 import { homedir } from "node:os";
 import { createVault } from "@synapse-router/vault";
+import { getOrCreateLock, type SchemaLock } from "@synapse-router/lock";
 import type { ConnectParams, ConnectResult, ConnectLock } from "@synapse-router/connector";
 
 // ---------------------------------------------------------------------------
@@ -446,7 +447,7 @@ export async function handleConnectCommand(argv: string[]): Promise<void> {
     }
   }
 
-  // Build lock from provider card
+  // Build lock from provider card (prefer Schema Lock cache)
   let lock: ConnectLock;
   if (options.lock) {
     // Load lock from file
@@ -458,7 +459,8 @@ export async function handleConnectCommand(argv: string[]): Promise<void> {
       process.exit(1);
     }
   } else {
-    // Build lock from provider card
+    // Try Schema Lock cache first
+    const configDir = join(homedir(), ".synapse");
     const card = await loadProviderCard(packsDir, cardDir);
     if (!card) {
       console.error(`Error: Provider pack "${cardDir}" not found${packName ? ` (mapped from provider "${provider}")` : ""}.`);
@@ -473,14 +475,45 @@ export async function handleConnectCommand(argv: string[]): Promise<void> {
       console.error(`Available intents: ${card.features.map((f) => f.intent).join(", ")}`);
       process.exit(1);
     }
-    lock = {
-      intent: feature.intent,
-      provider: provider,  // Use the actual provider name (e.g. "deepseek"), not the pack name
-      feature_id: feature.id,
-      input_schema: feature.input as ConnectLock["input_schema"],
-      output_schema: feature.output as ConnectLock["output_schema"],
-      field_mappings: (feature.field_mappings ?? []) as ConnectLock["field_mappings"],
-    };
+
+    // Check ~/.synapse/schemas/ for cached Schema Lock
+    try {
+      const { lock: schemaLock, cached } = await getOrCreateLock({
+        intent: feature.intent,
+        provider: provider,  // Use actual provider name, not pack name
+        packDir: packsDir,
+        configDir,
+        card,               // Already loaded correctly with config mapping
+      });
+
+      if (cached) {
+        console.log(`Using cached lock: ${schemaLock.lock_id}`);
+      } else {
+        console.log(`Created new lock: ${schemaLock.lock_id}`);
+      }
+
+      // Convert SchemaLock to ConnectLock (compatible structure)
+      lock = {
+        intent: schemaLock.intent,
+        provider: schemaLock.provider,
+        feature_id: schemaLock.feature_id,
+        input_schema: schemaLock.input_schema as ConnectLock["input_schema"],
+        output_schema: schemaLock.output_schema as ConnectLock["output_schema"],
+        field_mappings: schemaLock.field_mappings as ConnectLock["field_mappings"],
+      };
+    } catch (err: any) {
+      console.error(`⚠ Schema Lock failed (fallback to no cache): ${err.message}`);
+      console.error(err.stack);
+      // Fallback: build lock directly from provider card (original behavior)
+      lock = {
+        intent: feature.intent,
+        provider: provider,
+        feature_id: feature.id,
+        input_schema: feature.input as ConnectLock["input_schema"],
+        output_schema: feature.output as ConnectLock["output_schema"],
+        field_mappings: (feature.field_mappings ?? []) as ConnectLock["field_mappings"],
+      };
+    }
   }
 
   // Build connect params

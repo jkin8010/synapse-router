@@ -10,6 +10,9 @@ import { handleGenerateCommand } from "./commands/generate.js";
 import { handleConnectCommand, printConnectHelp } from "./commands/connect.js";
 import { handleSetupCommand, printSetupHelp } from "./commands/setup.js";
 import { handleConfigCommand, printConfigHelp } from "./commands/config.js";
+import { handleLockCommand, printLockHelp } from "./commands/lock.js";
+import { handleSdkCommand, printSdkHelp } from "./commands/sdk.js";
+import { getOrCreateLock, detectOutdatedLocks, type SchemaLock } from "@synapse-router/lock";
 
 // ---------------------------------------------------------------------------
 // Argument parsing
@@ -63,6 +66,8 @@ Commands:
   generate <source>             Generate a Provider Pack from OpenAPI spec
   vault set|list|get|remove|verify  Manage API keys
   negotiate <schema-file>       Run schema negotiation
+  lock list|show|remove|migrate|outdated  Manage Schema Locks
+  sdk generate                  Generate SDK from Provider Pack
 
 Getting started:
   synapse setup                 Configure your first provider
@@ -78,6 +83,7 @@ Detailed help:
   synapse config --help         Config management
   synapse setup --help          Setup wizard
   synapse generate --help       Pack generation
+  synapse sdk --help            SDK generation
 `);
 }
 
@@ -153,17 +159,26 @@ function printNegotiateHelp(): void {
 synapse negotiate — Run schema negotiation
 
 Usage:
-  synapse negotiate <schema-file>
+  synapse negotiate <schema-file>                   Negotiate from agent schema file
+  synapse negotiate --intent <intent> --provider <provider>  Negotiate specific intent+provider
 
 Arguments:
   <schema-file>          Path to agent schema JSON file
 
+Options:
+  --intent <intent>      Feature intent (e.g. chat, text-to-image)
+  --provider <provider>  Provider ID (e.g. openai, deepseek)
+  --no-cache             Force re-negotiation (ignore cached lock)
+
 Examples:
   synapse negotiate ./my-agent-schema.json
+  synapse negotiate --intent chat --provider openai
+  synapse negotiate --intent chat --provider openai --no-cache
 
 See also:
   synapse provider list   — List available providers
   synapse connect         — Connect to a provider
+  synapse lock list       — Manage cached Schema Locks
 `);
 }
 
@@ -415,12 +430,82 @@ async function vaultRotate(provider: string): Promise<void> {
 // Negotiate
 // ---------------------------------------------------------------------------
 
-async function negotiate(schemaFile: string): Promise<void> {
+async function negotiate(rawArgs: string[]): Promise<void> {
+  // Parse flags
+  let schemaFile: string | undefined;
+  let intentFlag: string | undefined;
+  let providerFlag: string | undefined;
+  let noCache = false;
+  const positional: string[] = [];
+
+  for (let i = 0; i < rawArgs.length; i++) {
+    const arg = rawArgs[i];
+    if (arg === "--intent" && rawArgs[i + 1]) {
+      intentFlag = rawArgs[++i];
+    } else if (arg === "--provider" && rawArgs[i + 1]) {
+      providerFlag = rawArgs[++i];
+    } else if (arg === "--no-cache") {
+      noCache = true;
+    } else if (!arg.startsWith("-")) {
+      positional.push(arg);
+    }
+  }
+
+  schemaFile = positional[0];
+
+  const packsDir = await findPacksDir();
+  const configDir = join(homedir(), ".synapse");
+
+  // Mode 1: --intent + --provider → use Schema Lock
+  if (intentFlag && providerFlag) {
+    try {
+      if (noCache) {
+        // Remove existing lock first
+        const { LockStorage } = await import("@synapse-router/lock");
+        const storage = new LockStorage(join(configDir, "schemas"));
+        const locks = await storage.list();
+        for (const l of locks) {
+          if (l.intent === intentFlag && l.provider === providerFlag) {
+            await storage.remove(l.lock_id);
+            console.log(`Removed cached lock: ${l.lock_id}`);
+          }
+        }
+      }
+
+      const { lock, cached } = await getOrCreateLock({
+        intent: intentFlag,
+        provider: providerFlag,
+        packDir: packsDir,
+        configDir,
+      });
+
+      if (cached) {
+        console.log(`Using cached lock: ${lock.lock_id}`);
+      } else {
+        console.log(`Created new lock: ${lock.lock_id}`);
+      }
+
+      console.log(`  Intent:    ${lock.intent}`);
+      console.log(`  Provider:  ${lock.provider}`);
+      console.log(`  Feature:   ${lock.feature_id}`);
+      console.log(`  Pack:      v${lock.pack_version}`);
+      console.log(`  Input:     ${lock.input_schema.fields.length} fields`);
+      console.log(`  Output:    ${lock.output_schema.fields.length} fields`);
+      console.log(`  Mappings:  ${lock.field_mappings.length} fields`);
+    } catch (err: any) {
+      console.error(`Error: ${err.message}`);
+      process.exit(1);
+    }
+    return;
+  }
+
+  // Mode 2: schema file → legacy behavior (match features)
   if (!schemaFile) {
-    console.error("Error: schema file required");
+    console.error("Error: schema file or --intent + --provider required");
     printNegotiateHelp();
     process.exit(1);
   }
+
   let agentSchema: { features?: Array<{ intent?: string }> };
   try {
     const content = await readFile(schemaFile, "utf8");
@@ -430,7 +515,6 @@ async function negotiate(schemaFile: string): Promise<void> {
     process.exit(1);
   }
 
-  const packsDir = await findPacksDir();
   let entries;
   try {
     entries = await readdir(packsDir, { withFileTypes: true });
@@ -512,6 +596,12 @@ async function main(): Promise<void> {
         case "negotiate":
           printNegotiateHelp();
           return;
+        case "lock":
+          printLockHelp();
+          return;
+        case "sdk":
+          printSdkHelp();
+          return;
       }
     }
     printHelp();
@@ -582,7 +672,21 @@ async function main(): Promise<void> {
         if (flags.has("help") || args.includes("--help") || args.includes("-h")) {
           printNegotiateHelp();
         } else {
-          await negotiate(args[0]);
+          await negotiate(rawArgs);
+        }
+        break;
+      case "lock":
+        if (flags.has("help") || args.includes("--help") || args.includes("-h")) {
+          printLockHelp();
+        } else {
+          await handleLockCommand(rawArgs);
+        }
+        break;
+      case "sdk":
+        if (flags.has("help") || args.includes("--help") || args.includes("-h")) {
+          printSdkHelp();
+        } else {
+          await handleSdkCommand(rawArgs);
         }
         break;
       case "execute":

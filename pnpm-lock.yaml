@@ -32,6 +32,12 @@ importers:
       '@synapse-router/connector':
         specifier: workspace:*
         version: link:../../packages/connector
+      '@synapse-router/lock':
+        specifier: workspace:*
+        version: link:../../packages/lock
+      '@synapse-router/sdk-generator':
+        specifier: workspace:*
+        version: link:../../packages/sdk-generator
       '@synapse-router/vault':
         specifier: workspace:*
         version: link:../../packages/vault
@@ -58,6 +64,12 @@ importers:
 
   packages/core: {}
 
+  packages/lock:
+    dependencies:
+      '@synapse-router/core':
+        specifier: workspace:*
+        version: link:../core
+
   packages/negotiator:
     dependencies:
       '@synapse-router/core':
@@ -75,6 +87,12 @@ importers:
         version: link:../providers
 
   packages/sdk: {}
+
+  packages/sdk-generator:
+    dependencies:
+      '@synapse-router/core':
+        specifier: workspace:*
+        version: link:../core
 
   packages/vault:
     dependencies:

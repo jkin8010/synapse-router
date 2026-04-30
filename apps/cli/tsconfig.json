@@ -7,6 +7,9 @@
   },
   "references": [
     { "path": "../../packages/connector" },
+    { "path": "../../packages/core" },
+    { "path": "../../packages/lock" },
+    { "path": "../../packages/sdk-generator" },
     { "path": "../../packages/vault" }
   ],
   "include": [
