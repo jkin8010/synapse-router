@@ -1,6 +1,6 @@
 # @synapse-router/cli
 
-Synapse Router 命令行工具。通过 CLI 管理 Provider、API Key、协商和执行。
+Synapse Router 命令行工具。
 
 ## 安装
 
@@ -14,84 +14,99 @@ npm install -g @synapse-router/cli
 synapse <command> [options]
 
 Commands:
-  provider list                       列出所有 provider packs
-  provider show <id>                  查看 provider 详情
-  vault set <provider> <key>          存储 API key
-  vault list                          列出存储的 keys
-  vault get <provider>               获取 key 值
-  vault remove <provider>            删除 key
-  vault verify <provider>            验证 key 格式
-  vault rotate <provider>            轮换加密密码
-  negotiate <schema-file>            运行 schema 协商
-  execute <provider> <feature> <input>  执行 provider feature
+  connect <provider> <intent>       连接 Provider 并调用 Feature（核心命令）
+  setup                             交互式首次配置向导
+  config set|get|list               管理配置 (~/.synapse/config.json)
+  provider list                     列出所有 Provider Pack
+  provider show <id>                查看 Provider 详情
+  vault set|list|get|remove|verify  管理 API Key
+  negotiate <schema-file>           运行 Schema 协商
+  lock list|show|remove|migrate     管理 Schema Lock 缓存
+  sdk generate                      从 Pack 生成 SDK
+  generate <source>                 从 OpenAPI Spec 生成 Pack
+  serve                             启动 HTTP API
 
 Options:
   --help, -h               显示帮助
   --version, -v            显示版本号
 ```
 
-## Provider 命令
+## 快速开始
 
-### `synapse provider list`
-
-列出所有已安装的 Provider Pack。
+### 首次使用
 
 ```bash
-synapse provider list
-# Providers:
-#   openai       OpenAI                https://api.openai.com/v1
-#   replicate    Replicate             https://api.replicate.com/v1
-#   stability    Stability AI          https://api.stability.ai/v1
-#   comfyui      ComfyUI               http://127.0.0.1:8188
+synapse setup
+# > 选择 Provider: DeepSeek
+# > 输入 API Key: ****
+# > Base URL [https://api.deepseek.com/v1]: ↵
+# ✅ DeepSeek configured!
 ```
 
-### `synapse provider show <id>`
-
-查看指定 Provider 的完整 Provider Card（JSON 格式）。
+### 连接调用
 
 ```bash
-synapse provider show openai
-# {
-#   "provider": {
-#     "id": "openai",
-#     "name": "OpenAI",
-#     "version": "1.0.0",
-#     ...
-#   },
-#   "features": [...]
-# }
+# 命令式 — Agent 使用
+synapse connect deepseek chat \
+  --input '{"messages":[{"role":"user","content":"Hello"}],"model":"deepseek-chat"}'
+
+# 交互式 — 人类使用
+synapse connect openai chat
+# > 输入 JSON（或留空使用默认值）: {"messages":[{"role":"user","content":"Hi"}]}
+# ✅ Connected!
 ```
+
+## Connect 命令
+
+### `synapse connect <provider> <intent>`
+
+连接指定 Provider 并调用其 Feature。**这是最常用的命令**。
+
+```bash
+synapse connect <provider> <intent> [options]
+```
+
+**参数**:
+
+| 参数 | 必需 | 说明 |
+|------|------|------|
+| `<provider>` | ✅ | Provider ID（如 `openai`, `deepseek`） |
+| `<intent>` | ✅ | Intent ID（如 `chat`, `embeddings`, `images_generations`） |
+| `--input <json>` | ❌ | JSON 输入，省略则进入交互式模式 |
+| `--api-key <key>` | ❌ | 直接传 Key（优先使用 vault） |
+
+**Schema Lock**: 首次连接自动生成并缓存 Schema Lock，后续相同 `intent + provider` 调用自动复用缓存。
 
 ## Vault 命令
 
 ### `synapse vault set <provider> <key>`
 
-存储 API Key。自动从 Provider Card 检测 `auth_type`。
+存储 API Key。
 
 ```bash
+# 基本用法
 synapse vault set openai sk-proj-xxxx
-# ✓ openai key stored
 
-synapse vault set stability sk-xxxx
-# ✓ stability key stored
+# 兼容 OpenAI 格式的 Provider
+synapse vault set deepseek sk-xxx --base-url https://api.deepseek.com/v1 --pack openai
 ```
 
-Key 使用 AES-256-GCM 加密存储在 `~/.synapse/keys/` 目录下，支持 OS Keychain 集成。
+Key 使用 AES-256-GCM 加密存储在 `~/.synapse/keys/`。
 
 ### `synapse vault list`
 
-列出所有已存储 Key 的 Provider（Key 值不显示）。
+列出已存储的 Provider。
 
 ```bash
 synapse vault list
 # Stored providers:
 #   openai
-#   stability
+#   deepseek
 ```
 
 ### `synapse vault get <provider>`
 
-获取指定 Provider 的 API Key 明文。
+获取 API Key 明文。
 
 ```bash
 synapse vault get openai
@@ -100,7 +115,7 @@ synapse vault get openai
 
 ### `synapse vault remove <provider>`
 
-删除指定 Provider 的 API Key。
+删除 API Key。
 
 ```bash
 synapse vault remove openai
@@ -109,92 +124,72 @@ synapse vault remove openai
 
 ### `synapse vault verify <provider>`
 
-验证 API Key 格式是否正确。
+验证 Key 格式。
 
 ```bash
 synapse vault verify openai
 # ✓ openai key format is valid
-
-synapse vault verify openai
-# ✗ openai key format is invalid
 ```
-
-内置 Provider 格式验证：
-
-| Provider    | 格式要求                          |
-|------------|-----------------------------------|
-| OpenAI     | `sk-` 开头，20+ 字符               |
-| Replicate  | `r8_` 开头，20+ 字符               |
-| Anthropic  | `sk-ant-` 开头，20+ 字符           |
-| Google     | `AIza` 开头，30+ 字符              |
-| 其他       | 至少 20 个非空白字符               |
-
-### `synapse vault rotate <provider>`
-
-轮换加密密码（交互式，尚未实现 CLI 入口）。
-
-> 当前需通过 `@synapse-router/vault` 包的 `rotateKey()` 方法编程调用。
 
 ## Negotiate 命令
 
 ### `synapse negotiate <schema-file>`
 
-根据 Agent Schema 文件运行协商，匹配支持对应 intent 的 Provider。
+运行 Schema 协商，匹配支持的 Provider。
 
 ```bash
-# 准备 Agent Schema
-cat > agent.json << 'EOF'
-{
-  "agent_id": "my-agent",
-  "agent_name": "My Agent",
-  "version": "1.0.0",
-  "access_protocol": { "kind": "api", "auth_type": "Bearer" },
-  "features": [
-    {
-      "feature_id": "gen-image",
-      "feature_name": "Generate Image",
-      "intent": "text-to-image",
-      "input_schema": { "name": "input", "fields": [{ "name": "prompt", "type": "string", "required": true }] },
-      "output_schema": { "name": "output", "fields": [{ "name": "image_url", "type": "string" }] },
-      "capabilities": [{ "kind": "image-generation", "modalities": ["png"] }]
-    }
-  ]
-}
-EOF
-
 synapse negotiate agent.json
 # Matched providers:
-#   stability: text_to_image_post_v1_generation_text2img
-#   openai: images_generations_post_v1_images_generations
+#   openai: chat_post_v1_chat_completions
 ```
 
-## Execute 命令
+## Lock 命令
 
-### `synapse execute <provider> <feature> <input>`
-
-执行指定 Provider 的功能。
+管理 Schema Lock 缓存。
 
 ```bash
-synapse execute openai chat_post_v1_chat_completions '{"messages": [{"role": "user", "content": "Hello"}]}'
+synapse lock list                    # 列出所有缓存
+synapse lock show <lock-id>          # 查看 Lock 详情
+synapse lock remove <lock-id>        # 删除 Lock
+synapse lock migrate <lock-id>       # 迁移到最新 Pack 版本
+synapse lock outdated                # 检查过期 Lock
 ```
 
-> 注意：`execute` 命令当前尚未完全实现。
+## SDK 命令
 
-## 全局选项
+### `synapse sdk generate`
+
+从 Pack 生成原生 SDK，零运行时依赖。
 
 ```bash
-synapse --version     # 显示版本号：synapse-router CLI v0.1.0
-synapse --help        # 显示帮助信息
-synapse version       # 同 --version
-synapse help          # 同 --help
+synapse sdk generate --pack openai --lang typescript --output ./sdk
+synapse sdk generate --pack openai --lang python --output ./py-sdk
+synapse sdk generate --pack openai --lang typescript \
+  --provider deepseek --base-url https://api.deepseek.com/v1 \
+  --output ./deepseek-sdk
+```
+
+## Config 命令
+
+```bash
+synapse config set <provider> <key> <value>
+synapse config get <provider> <key>
+synapse config list
+```
+
+## Setup 命令
+
+交互式首次配置：
+
+```bash
+synapse setup
 ```
 
 ## 数据目录
 
-CLI 使用以下本地目录：
-
 | 路径                      | 用途              |
 |--------------------------|-------------------|
 | `~/.synapse/keys/`       | Vault 加密存储     |
-| `~/.synapse/providers/`  | 用户自定义 Provider |
+| `~/.synapse/schemas/`    | Schema Lock 缓存   |
+| `~/.synapse/config.json` | 全局配置           |
 | `./packs/`               | 预置 Provider Pack |
