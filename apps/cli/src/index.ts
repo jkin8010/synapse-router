@@ -12,6 +12,7 @@ import { handleSetupCommand, printSetupHelp } from "./commands/setup.js";
 import { handleConfigCommand, printConfigHelp } from "./commands/config.js";
 import { handleLockCommand, printLockHelp } from "./commands/lock.js";
 import { handleSdkCommand, printSdkHelp } from "./commands/sdk.js";
+import { handlePackCommand, printPackHelp } from "./commands/pack.js";
 import { getOrCreateLock, detectOutdatedLocks, type SchemaLock } from "@synapse-router/lock";
 
 // ---------------------------------------------------------------------------
@@ -68,6 +69,7 @@ Commands:
   negotiate <schema-file>       Run schema negotiation
   lock list|show|remove|migrate|outdated  Manage Schema Locks
   sdk generate                  Generate SDK from Provider Pack
+  pack add|search|list|update|remove|show  Manage provider packs from Registry
 
 Getting started:
   synapse setup                 Configure your first provider
@@ -602,6 +604,9 @@ async function main(): Promise<void> {
         case "sdk":
           printSdkHelp();
           return;
+        case "pack":
+          printPackHelp();
+          return;
       }
     }
     printHelp();
@@ -687,6 +692,13 @@ async function main(): Promise<void> {
           printSdkHelp();
         } else {
           await handleSdkCommand(rawArgs);
+        }
+        break;
+      case "pack":
+        if (flags.has("help") || args.includes("--help") || args.includes("-h")) {
+          printPackHelp();
+        } else {
+          await handlePackCommand(args);
         }
         break;
       case "execute":
