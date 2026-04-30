@@ -10,7 +10,7 @@
 
 ```bash
 # 从源码安装
-git clone https://github.com/your-org/synapse-router.git
+git clone https://github.com/useeclaw/synapse-router.git
 cd synapse-router
 pnpm install
 pnpm build
@@ -224,16 +224,16 @@ deepseek-sdk/
 在代码中使用：
 
 ```typescript
-import { DeepseekClient } from './deepseek-sdk';
+import { DeepseekClient } from "./deepseek-sdk";
 
 const client = new DeepseekClient({
-  apiKey: 'sk-your-key',
+  apiKey: "sk-your-key",
   // baseUrl 已在构造时设置，可覆盖
 });
 
 const result = await client.chat({
-  messages: [{ role: 'user', content: 'Hello' }],
-  model: 'deepseek-chat',
+  messages: [{ role: "user", content: "Hello" }],
+  model: "deepseek-chat",
 });
 
 console.log(result.choices[0].message.content);
@@ -245,17 +245,17 @@ console.log(result.choices[0].message.content);
 
 ### CLI 命令总览
 
-| 命令 | 说明 | 典型用户 |
-|------|------|---------|
-| `synapse setup` | 交互式首次配置 | 人类开发者 |
-| `synapse connect` | 连接 Provider 并调用 | 人类/AI Agent |
-| `synapse negotiate` | Schema 协商匹配 Provider | AI Agent |
-| `synapse lock` | 管理 Schema Lock 缓存 | 开发者 |
-| `synapse sdk generate` | 从 Pack 生成 SDK | 开发者 |
-| `synapse provider list/show` | 查看 Provider 信息 | 所有人 |
-| `synapse vault` | 管理 API Key | 所有人 |
-| `synapse config` | 管理配置文件 | 开发者 |
-| `synapse generate` | 从 OpenAPI Spec 生成 Pack | Pack 开发者 |
+| 命令                         | 说明                      | 典型用户      |
+| ---------------------------- | ------------------------- | ------------- |
+| `synapse setup`              | 交互式首次配置            | 人类开发者    |
+| `synapse connect`            | 连接 Provider 并调用      | 人类/AI Agent |
+| `synapse negotiate`          | Schema 协商匹配 Provider  | AI Agent      |
+| `synapse lock`               | 管理 Schema Lock 缓存     | 开发者        |
+| `synapse sdk generate`       | 从 Pack 生成 SDK          | 开发者        |
+| `synapse provider list/show` | 查看 Provider 信息        | 所有人        |
+| `synapse vault`              | 管理 API Key              | 所有人        |
+| `synapse config`             | 管理配置文件              | 开发者        |
+| `synapse generate`           | 从 OpenAPI Spec 生成 Pack | Pack 开发者   |
 
 ---
 
@@ -269,13 +269,13 @@ synapse connect <provider> <intent> [options]
 
 **参数**:
 
-| 参数 | 类型 | 必需 | 说明 |
-|------|------|------|------|
-| `<provider>` | string | ✅ | Provider ID（如 `openai`, `deepseek`） |
-| `<intent>` | string | ✅ | Intent ID（如 `chat`, `embeddings`, `images_generations`） |
-| `--input <json>` | string | ❌ | JSON 输入。省略则进入交互式模式 |
-| `--api-key <key>` | string | ❌ | 直接传 Key（不推荐，优先使用 vault） |
-| `--format <fmt>` | string | ❌ | 输出格式：`json` | `table`（默认 `json`） |
+| 参数              | 类型   | 必需 | 说明                                                       |
+| ----------------- | ------ | ---- | ---------------------------------------------------------- | ---------------------- |
+| `<provider>`      | string | ✅   | Provider ID（如 `openai`, `deepseek`）                     |
+| `<intent>`        | string | ✅   | Intent ID（如 `chat`, `embeddings`, `images_generations`） |
+| `--input <json>`  | string | ❌   | JSON 输入。省略则进入交互式模式                            |
+| `--api-key <key>` | string | ❌   | 直接传 Key（不推荐，优先使用 vault）                       |
+| `--format <fmt>`  | string | ❌   | 输出格式：`json`                                           | `table`（默认 `json`） |
 
 **示例**:
 
@@ -325,12 +325,12 @@ synapse negotiate <schema-file> [options]
 
 **参数**:
 
-| 参数 | 类型 | 必需 | 说明 |
-|------|------|------|------|
-| `<schema-file>` | string | ✅ | Agent Schema JSON 文件路径 |
-| `--intent <id>` | string | ❌ | 限定到指定 Intent |
-| `--provider <id>` | string | ❌ | 限定到指定 Provider |
-| `--format <fmt>` | string | ❌ | 输出格式：`json` | `table` |
+| 参数              | 类型   | 必需 | 说明                       |
+| ----------------- | ------ | ---- | -------------------------- | ------- |
+| `<schema-file>`   | string | ✅   | Agent Schema JSON 文件路径 |
+| `--intent <id>`   | string | ❌   | 限定到指定 Intent          |
+| `--provider <id>` | string | ❌   | 限定到指定 Provider        |
+| `--format <fmt>`  | string | ❌   | 输出格式：`json`           | `table` |
 
 **Schema 文件结构**:
 
@@ -339,24 +339,24 @@ synapse negotiate <schema-file> [options]
   "agent_id": "my-agent",
   "agent_name": "My Agent",
   "version": "1.0.0",
-  "features": [{
-    "feature_id": "gen-image",
-    "intent": "text-to-image",
-    "input_schema": {
-      "name": "input",
-      "fields": [
-        { "name": "prompt", "type": "string", "required": true },
-        { "name": "width", "type": "number" },
-        { "name": "height", "type": "number" }
-      ]
-    },
-    "output_schema": {
-      "name": "output",
-      "fields": [
-        { "name": "image_url", "type": "string" }
-      ]
+  "features": [
+    {
+      "feature_id": "gen-image",
+      "intent": "text-to-image",
+      "input_schema": {
+        "name": "input",
+        "fields": [
+          { "name": "prompt", "type": "string", "required": true },
+          { "name": "width", "type": "number" },
+          { "name": "height", "type": "number" }
+        ]
+      },
+      "output_schema": {
+        "name": "output",
+        "fields": [{ "name": "image_url", "type": "string" }]
+      }
     }
-  }]
+  ]
 }
 ```
 
@@ -380,13 +380,13 @@ synapse negotiate my-agent.json
 synapse lock <subcommand> [options]
 ```
 
-| 子命令 | 说明 |
-|--------|------|
-| `list` | 列出所有缓存的 Schema Lock |
-| `show <lock-id>` | 查看 Lock 详情 |
-| `remove <lock-id>` | 删除 Lock（下次 connect 重新生成） |
-| `migrate <lock-id>` | 迁移到最新 Pack 版本 |
-| `outdated` | 检查过期的 Lock |
+| 子命令              | 说明                               |
+| ------------------- | ---------------------------------- |
+| `list`              | 列出所有缓存的 Schema Lock         |
+| `show <lock-id>`    | 查看 Lock 详情                     |
+| `remove <lock-id>`  | 删除 Lock（下次 connect 重新生成） |
+| `migrate <lock-id>` | 迁移到最新 Pack 版本               |
+| `outdated`          | 检查过期的 Lock                    |
 
 **示例**:
 
@@ -420,13 +420,13 @@ synapse sdk generate --pack <id> --lang <lang> --output <dir> [options]
 
 **参数**:
 
-| 参数 | 类型 | 必需 | 说明 |
-|------|------|------|------|
-| `--pack <id>` | string | ✅ | Pack ID（如 `openai`） |
-| `--lang <lang>` | string | ✅ | 目标语言：`typescript` | `python` |
-| `--output <dir>` | string | ✅ | 输出目录 |
-| `--provider <id>` | string | ❌ | 覆盖 Provider 名（如用 openai pack 生成 deepseek SDK） |
-| `--base-url <url>` | string | ❌ | 覆盖默认 base_url |
+| 参数               | 类型   | 必需 | 说明                                                   |
+| ------------------ | ------ | ---- | ------------------------------------------------------ | -------- |
+| `--pack <id>`      | string | ✅   | Pack ID（如 `openai`）                                 |
+| `--lang <lang>`    | string | ✅   | 目标语言：`typescript`                                 | `python` |
+| `--output <dir>`   | string | ✅   | 输出目录                                               |
+| `--provider <id>`  | string | ❌   | 覆盖 Provider 名（如用 openai pack 生成 deepseek SDK） |
+| `--base-url <url>` | string | ❌   | 覆盖默认 base_url                                      |
 
 **示例**:
 
@@ -460,10 +460,10 @@ synapse vault verify <provider>                  # 验证 Key 格式
 
 **`vault set` 选项**:
 
-| 选项 | 说明 |
-|------|------|
-| `--base-url <url>` | 设置 Provider 的 base_url（写入 config） |
-| `--pack <name>` | 指定使用的 Pack（如 `openai`，供 DeepSeek 等兼容厂商使用） |
+| 选项               | 说明                                                       |
+| ------------------ | ---------------------------------------------------------- |
+| `--base-url <url>` | 设置 Provider 的 base_url（写入 config）                   |
+| `--pack <name>`    | 指定使用的 Pack（如 `openai`，供 DeepSeek 等兼容厂商使用） |
 
 **示例**:
 
@@ -564,12 +564,12 @@ synapse generate ./my-api-spec.yaml \
 
 ## 数据目录
 
-| 路径 | 用途 |
-|------|------|
-| `~/.synapse/keys/` | Vault 加密存储（AES-256-GCM） |
-| `~/.synapse/schemas/` | Schema Lock 缓存（类似 `package-lock.json`） |
-| `~/.synapse/config.json` | 全局配置（base_url、pack 映射等） |
-| `./packs/` | 预置 Provider Pack |
+| 路径                     | 用途                                         |
+| ------------------------ | -------------------------------------------- |
+| `~/.synapse/keys/`       | Vault 加密存储（AES-256-GCM）                |
+| `~/.synapse/schemas/`    | Schema Lock 缓存（类似 `package-lock.json`） |
+| `~/.synapse/config.json` | 全局配置（base_url、pack 映射等）            |
+| `./packs/`               | 预置 Provider Pack                           |
 
 ---
 
@@ -584,16 +584,16 @@ synapse serve
 
 ### 端点
 
-| 方法 | 路径 | 说明 |
-|------|------|------|
-| GET | `/health` | 健康检查 |
-| GET | `/providers` | 列出 Provider |
-| GET | `/providers/:id` | Provider 详情 |
-| POST | `/negotiate` | Schema 协商 |
-| POST | `/connect` | 连接调用 |
-| POST | `/vault/keys` | 存储 Key |
-| GET | `/vault/keys` | 列出 Key |
-| DELETE | `/vault/keys/:provider` | 删除 Key |
+| 方法   | 路径                    | 说明          |
+| ------ | ----------------------- | ------------- |
+| GET    | `/health`               | 健康检查      |
+| GET    | `/providers`            | 列出 Provider |
+| GET    | `/providers/:id`        | Provider 详情 |
+| POST   | `/negotiate`            | Schema 协商   |
+| POST   | `/connect`              | 连接调用      |
+| POST   | `/vault/keys`           | 存储 Key      |
+| GET    | `/vault/keys`           | 列出 Key      |
+| DELETE | `/vault/keys/:provider` | 删除 Key      |
 
 ### 示例
 
@@ -621,13 +621,13 @@ curl -X POST http://localhost:3000/connect \
 
 DeepSeek、月之暗面、智谱、百川等国产模型均兼容 OpenAI API 格式，**唯一差异是 `base_url`**。
 
-| Provider | base_url | 兼容能力 |
-|----------|----------|---------|
-| OpenAI | `https://api.openai.com/v1` | Chat ✅ / Embeddings ✅ / Image ✅ / Audio ✅ |
-| DeepSeek | `https://api.deepseek.com/v1` | Chat ✅ |
-| 月之暗面 | `https://api.moonshot.cn/v1` | Chat ✅ |
-| 智谱 | `https://open.bigmodel.cn/api/paas/v4` | Chat ✅ |
-| 百川 | `https://api.baichuan-ai.com/v1` | Chat ✅ |
+| Provider | base_url                               | 兼容能力                                      |
+| -------- | -------------------------------------- | --------------------------------------------- |
+| OpenAI   | `https://api.openai.com/v1`            | Chat ✅ / Embeddings ✅ / Image ✅ / Audio ✅ |
+| DeepSeek | `https://api.deepseek.com/v1`          | Chat ✅                                       |
+| 月之暗面 | `https://api.moonshot.cn/v1`           | Chat ✅                                       |
+| 智谱     | `https://open.bigmodel.cn/api/paas/v4` | Chat ✅                                       |
+| 百川     | `https://api.baichuan-ai.com/v1`       | Chat ✅                                       |
 
 **使用方式**:
 

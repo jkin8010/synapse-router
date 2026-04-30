@@ -22,7 +22,7 @@ Synapse Router 位于 AI Agent 与多 Provider API 之间，确保每次请求�
 ### 1. 安装
 
 ```bash
-git clone https://github.com/your-org/synapse-router.git
+git clone https://github.com/useeclaw/synapse-router.git
 cd synapse-router && pnpm install && pnpm build
 cd apps/cli && pnpm link --global
 ```
@@ -173,13 +173,13 @@ synapse serve                         # 启动 HTTP API
 
 ### HTTP API
 
-| 方法   | 路径              | 说明                |
-|--------|-------------------|---------------------|
-| POST   | `/connect`        | 连接调用 Provider    |
-| POST   | `/negotiate`      | 协商 Schema          |
-| GET    | `/providers`      | 列出可用 Provider     |
-| GET    | `/providers/:id`  | 查看 Provider 详情    |
-| GET    | `/health`         | 健康检查             |
+| 方法 | 路径             | 说明               |
+| ---- | ---------------- | ------------------ |
+| POST | `/connect`       | 连接调用 Provider  |
+| POST | `/negotiate`     | 协商 Schema        |
+| GET  | `/providers`     | 列出可用 Provider  |
+| GET  | `/providers/:id` | 查看 Provider 详情 |
+| GET  | `/health`        | 健康检查           |
 
 ### MCP Server
 
@@ -198,9 +198,9 @@ synapse serve                         # 启动 HTTP API
 
 ## 📦 预置 Provider Pack
 
-| Pack | Provider | 功能 | base_url |
-|------|----------|------|----------|
-| **openai** | OpenAI, DeepSeek, 月之暗面, 智谱, 百川 等 | Chat, Embeddings, Image, Audio | 可配置 |
+| Pack       | Provider                                  | 功能                           | base_url |
+| ---------- | ----------------------------------------- | ------------------------------ | -------- |
+| **openai** | OpenAI, DeepSeek, 月之暗面, 智谱, 百川 等 | Chat, Embeddings, Image, Audio | 可配置   |
 
 > 兼容 OpenAI API 格式的 Provider 可复用 openai Pack，只需配置 `base_url`。
 
