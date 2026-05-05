@@ -1,0 +1,35 @@
+{
+  "name": "@synapse/observability",
+  "version": "0.1.0",
+  "description": "Cross-project observability and debugging layer for Synapse",
+  "license": "Apache-2.0",
+  "type": "module",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "exports": {
+    ".": {
+      "import": "./dist/index.js",
+      "types": "./dist/index.d.ts"
+    },
+    "./router": {
+      "import": "./dist/router/index.js",
+      "types": "./dist/router/index.d.ts"
+    }
+  },
+  "files": [
+    "dist",
+    "!dist/registry"
+  ],
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "test": "vitest run",
+    "typecheck": "tsc --noEmit -p tsconfig.json",
+    "clean": "rm -rf dist"
+  },
+  "dependencies": {},
+  "devDependencies": {
+    "typescript": "^5.4.0",
+    "vitest": "^2.1.0",
+    "@types/node": "^22.0.0"
+  }
+}
