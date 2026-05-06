@@ -58,7 +58,15 @@ function parsePackRef(
     if (slashIndex > 0) {
       ns = input.substring(1, slashIndex);
       name = input.substring(slashIndex + 1);
+    } else {
+      throw new Error(
+        `Invalid pack reference: "${input}". Expected format: @namespace/name or name`,
+      );
     }
+  } else if (input.includes("/")) {
+    const slashIndex = input.indexOf("/");
+    ns = input.substring(0, slashIndex);
+    name = input.substring(slashIndex + 1);
   }
 
   const atIndex = name.indexOf("@");

@@ -23,4 +23,6 @@ export type {
   Manifest,
   InstallOptions,
   InstallResult,
+  ListPackItem,
+  ListPacksResult,
 } from "./types.js";

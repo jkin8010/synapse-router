@@ -8,6 +8,7 @@ import { homedir } from "node:os";
 import { createVault } from "@synapse-router/vault";
 import { getOrCreateLock, type SchemaLock } from "@synapse-router/lock";
 import type { ConnectParams, ConnectResult, ConnectLock } from "@synapse-router/connector";
+import type { ProviderCard as CoreProviderCard } from "@synapse-router/core";
 
 // ---------------------------------------------------------------------------
 // Types
@@ -95,7 +96,7 @@ interface ProviderCard {
     version: string;
     api_version: string;
     base_url: string;
-    auth_type: string;
+    auth_type: "Bearer" | "APIKey" | "OAuth2";
   };
 }
 
@@ -483,7 +484,7 @@ export async function handleConnectCommand(argv: string[]): Promise<void> {
         provider: provider,  // Use actual provider name, not pack name
         packDir: packsDir,
         configDir,
-        card,               // Already loaded correctly with config mapping
+        card: card as unknown as CoreProviderCard,
       });
 
       if (cached) {

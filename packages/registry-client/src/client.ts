@@ -7,6 +7,7 @@ import type {
   SearchResult,
   PackInfo,
   PackDetail,
+  ListPacksResult,
   PackVersion,
   DownloadInfo,
   RegistryHealth,
@@ -102,6 +103,40 @@ export class RegistryClient {
     return { query, results, total: raw.total ?? results.length };
   }
 
+  // ── List all packs ─────────────────────────────────────────────────────────
+
+  async listPacks(page = 1, limit = 50): Promise<ListPacksResult> {
+    const params = new URLSearchParams({ page: String(page), limit: String(limit) });
+    const raw = await apiGet<{
+      data: Array<{
+        namespace: string; name: string; displayName: string;
+        description?: string; version: string; category?: string;
+        provider: string; downloads: number; rating: number;
+        tags: string[]; createdAt: string; updatedAt: string;
+      }>;
+      pagination: { page: number; limit: number; total: number; totalPages: number };
+    }>(`/api/v1/packs?${params.toString()}`, this.config);
+
+    return {
+      packs: (raw.data ?? []).map((p) => ({
+        id: `${p.namespace}/${p.name}`,
+        ns: p.namespace,
+        name: p.name,
+        displayName: p.displayName,
+        description: p.description ?? "",
+        version: p.version,
+        category: p.category ?? "",
+        provider: p.provider,
+        downloads: p.downloads,
+        rating: p.rating,
+        tags: p.tags ?? [],
+        createdAt: p.createdAt,
+        updatedAt: p.updatedAt,
+      })),
+      pagination: raw.pagination,
+    };
+  }
+
   // ── Pack detail ───────────────────────────────────────────────────────────
 
   async getPack(ns: string, name: string): Promise<PackDetail> {
@@ -192,10 +227,18 @@ export class RegistryClient {
       headers["Authorization"] = `Bearer ${this.config.authToken}`;
     }
 
-    const response = await fetch(info.url, {
-      headers,
-      signal: AbortSignal.timeout(this.config.timeout),
-    });
+    let response: Response;
+    try {
+      response = await fetch(info.url, {
+        headers,
+        signal: AbortSignal.timeout(300_000), // 5 min for tarball download
+      });
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : "Unknown error";
+      throw new Error(
+        `Failed to download ${ns}/${name}@${info.version} from ${info.url}: ${message}`,
+      );
+    }
 
     if (!response.ok) {
       throw new Error(

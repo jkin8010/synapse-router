@@ -14,6 +14,44 @@ import { handleLockCommand, printLockHelp } from "./commands/lock.js";
 import { handleSdkCommand, printSdkHelp } from "./commands/sdk.js";
 import { handlePackCommand, printPackHelp } from "./commands/pack.js";
 import { getOrCreateLock, detectOutdatedLocks, type SchemaLock } from "@synapse-router/lock";
+import { createRegistryClient } from "@synapse-router/registry-client";
+import { readFileSync, existsSync } from "node:fs";
+
+// ---------------------------------------------------------------------------
+// Load .env files
+// ---------------------------------------------------------------------------
+
+function loadDotEnv(): void {
+  const cwd = process.cwd();
+  const files = [".env.local", ".env"]; // .env.local overrides .env
+  for (const name of files) {
+    const path = join(cwd, name);
+    if (!existsSync(path)) continue;
+    try {
+      const content = readFileSync(path, "utf8");
+      for (const line of content.split("\n")) {
+        const trimmed = line.trim();
+        if (!trimmed || trimmed.startsWith("#")) continue;
+        const eqIdx = trimmed.indexOf("=");
+        if (eqIdx === -1) continue;
+        const key = trimmed.slice(0, eqIdx).trim();
+        let value = trimmed.slice(eqIdx + 1).trim();
+        // Strip surrounding quotes
+        if ((value.startsWith('"') && value.endsWith('"')) ||
+            (value.startsWith("'") && value.endsWith("'"))) {
+          value = value.slice(1, -1);
+        }
+        if (key && !(key in process.env)) {
+          process.env[key] = value;
+        }
+      }
+    } catch {
+      // ignore unreadable .env files
+    }
+  }
+}
+
+loadDotEnv();
 
 // ---------------------------------------------------------------------------
 // Argument parsing
@@ -62,7 +100,7 @@ Commands:
   connect <provider> <intent>   Connect to a provider and execute a feature
   setup                         Interactive first-time setup wizard
   config set|get|list           Manage configuration (~/.synapse/config.json)
-  provider list                 List all provider packs
+  provider list [--remote]      List all provider packs
   provider show <id>            Show provider details
   generate <source>             Generate a Provider Pack from OpenAPI spec
   vault set|list|get|remove|verify  Manage API keys
@@ -94,19 +132,24 @@ function printProviderHelp(): void {
 synapse provider — List and inspect provider packs
 
 Usage:
-  synapse provider list                  List all available provider packs
-  synapse provider show <id>             Show provider card details
+  synapse provider list [--remote]        List available provider packs
+  synapse provider show <id> [--remote]   Show provider card details
+
+Options:
+  --remote               Query remote Registry instead of local
 
 Arguments:
   <id>                   Provider ID (e.g. openai, deepseek, replicate)
 
 Examples:
   synapse provider list
+  synapse provider list --remote
   synapse provider show openai
 
 See also:
   synapse connect   — Connect to a provider
   synapse generate  — Generate new provider packs
+  synapse pack      — Manage packs from Registry
 `);
 }
 
@@ -232,55 +275,167 @@ async function findPacksDir(): Promise<string> {
 }
 
 // ---------------------------------------------------------------------------
-// Provider commands
+// Multi-source provider loading
 // ---------------------------------------------------------------------------
 
-async function providerList(): Promise<void> {
-  const packsDir = await findPacksDir();
+type ProviderSource = "builtin" | "registry" | "local";
+
+interface ProviderEntry {
+  card: Record<string, any>;
+  source: ProviderSource;
+}
+
+async function loadProvidersFromDir(dir: string): Promise<ProviderEntry[]> {
+  const results: ProviderEntry[] = [];
   let entries;
   try {
-    entries = await readdir(packsDir, { withFileTypes: true });
+    entries = await readdir(dir, { withFileTypes: true });
   } catch {
-    console.error(`Error: packs directory not found at ${packsDir}`);
-    process.exit(1);
+    return results;
   }
-
-  console.log("Providers:");
-  let found = false;
   for (const entry of entries) {
     if (!entry.isDirectory() || entry.name.startsWith(".")) continue;
-    const cardPath = join(packsDir, entry.name, "provider-card.json");
+    const cardPath = join(dir, entry.name, "provider-card.json");
     try {
       const content = await readFile(cardPath, "utf8");
       const card = JSON.parse(content);
-      console.log(
-        `  ${card.provider.id.padEnd(12)} ${card.provider.name.padEnd(20)} ${card.service.base_url}`
-      );
-      found = true;
+      if (card.provider?.id) {
+        results.push({ card, source: "builtin" as ProviderSource });
+      }
     } catch {
       // skip malformed packs
     }
   }
-  if (!found) {
-    console.log("  (no providers found)");
-  }
+  return results;
 }
 
-async function providerShow(id: string): Promise<void> {
+async function loadAllProviders(): Promise<Map<string, ProviderEntry>> {
+  const providers = new Map<string, ProviderEntry>();
+
+  const builtinDir = await findPacksDir().catch(() => join(process.cwd(), "packs"));
+  const registryDir = join(homedir(), ".synapse", "packs");
+  const localDir = join(process.cwd(), "synapse-packs");
+
+  // Priority low to high: builtin < registry < local
+  for (const entry of await loadProvidersFromDir(builtinDir)) {
+    providers.set(entry.card.provider.id as string, { ...entry, source: "builtin" });
+  }
+  for (const entry of await loadProvidersFromDir(registryDir)) {
+    providers.set(entry.card.provider.id as string, { ...entry, source: "registry" });
+  }
+  for (const entry of await loadProvidersFromDir(localDir)) {
+    providers.set(entry.card.provider.id as string, { ...entry, source: "local" });
+  }
+
+  return providers;
+}
+
+// ---------------------------------------------------------------------------
+// Provider commands
+// ---------------------------------------------------------------------------
+
+async function providerList(remote = false): Promise<void> {
+  if (remote) {
+    const client = createRegistryClient();
+    try {
+      const result = await client.listPacks();
+      if (result.packs.length === 0) {
+        console.log("(no providers found on Registry)");
+        return;
+      }
+      // Group packs by provider, deduplicate provider ids
+      const providers = new Map<string, { name: string; packs: Array<{ id: string; version: string; desc: string }> }>();
+      for (const pack of result.packs) {
+        const pid = pack.provider;
+        if (!providers.has(pid)) {
+          providers.set(pid, { name: pid, packs: [] });
+        }
+        const oneline = pack.description.replace(/\s+/g, " ").trim();
+        const desc = oneline.length > 60 ? oneline.slice(0, 57) + "..." : oneline;
+        providers.get(pid)!.packs.push({ id: pack.id, version: pack.version, desc });
+      }
+
+      console.log(`Registry: ${client.registryUrl}\nProviders:`);
+      for (const [, entry] of providers) {
+        console.log(`  ${entry.name.padEnd(20)} ${entry.packs.length} pack${entry.packs.length > 1 ? "s" : ""}`);
+        for (const p of entry.packs) {
+          console.log(`    ${p.id.padEnd(28)} v${p.version.padEnd(8)} ${p.desc}`);
+        }
+      }
+      console.log(`\n${providers.size} provider${providers.size !== 1 ? "s" : ""}, ${result.pagination.total} packs total`);
+    } catch (err: any) {
+      console.error(`Error: Unable to reach Registry (${err.message})`);
+      process.exit(1);
+    }
+    return;
+  }
+
+  const providers = await loadAllProviders();
+
+  if (providers.size === 0) {
+    console.log("(no providers found)");
+    return;
+  }
+
+  console.log("Providers:");
+  for (const [, entry] of providers) {
+    const card = entry.card as Record<string, any>;
+    const provider = card.provider;
+    const service = card.service;
+    const tag = entry.source === "builtin" ? "" : ` (${entry.source})`;
+    console.log(
+      `  ${(provider.id ?? "").padEnd(16)} ${(provider.name ?? "").padEnd(24)} ${service?.base_url ?? ""}${tag}`
+    );
+  }
+
+  console.log(`\nSources: ${[...new Set([...providers.values()].map(e => e.source))].join(", ")}`);
+}
+
+async function providerShow(id: string, remote = false): Promise<void> {
   if (!id) {
     console.error("Error: provider id required");
     printProviderHelp();
     process.exit(1);
   }
-  const packsDir = await findPacksDir();
-  const cardPath = join(packsDir, id, "provider-card.json");
-  try {
-    const content = await readFile(cardPath, "utf8");
-    console.log(JSON.stringify(JSON.parse(content), null, 2));
-  } catch {
+
+  if (remote) {
+    const client = createRegistryClient();
+    try {
+      // Fetch all packs and filter by provider name
+      const result = await client.listPacks();
+      const packs = result.packs.filter((p) => p.provider === id);
+      if (packs.length === 0) {
+        console.error(`Error: provider "${id}" not found on Registry`);
+        process.exit(1);
+      }
+      console.log(`\n  Provider:    ${id}`);
+      console.log(`  Registry:    ${client.registryUrl}`);
+      console.log(`  Packs:       ${packs.length}`);
+      console.log("");
+      for (const p of packs) {
+        const oneline = p.description.replace(/\s+/g, " ").trim();
+        const desc = oneline.length > 80 ? oneline.slice(0, 77) + "..." : oneline;
+        console.log(`  ${p.id.padEnd(32)} v${p.version.padEnd(8)} ${desc}`);
+        console.log(`  ${"".padEnd(32)}  ${p.downloads} downloads  ${"★".repeat(Math.round(p.rating))}${"☆".repeat(5 - Math.round(p.rating))}`);
+        if (p.tags.length > 0) {
+          console.log(`  ${"".padEnd(32)}  tags: ${p.tags.join(", ")}`);
+        }
+        console.log();
+      }
+    } catch (err: any) {
+      console.error(`Error: Unable to reach Registry (${err.message})`);
+      process.exit(1);
+    }
+    return;
+  }
+
+  const providers = await loadAllProviders();
+  const entry = providers.get(id);
+  if (!entry) {
     console.error(`Error: provider "${id}" not found`);
     process.exit(1);
   }
+  console.log(JSON.stringify({ ...entry.card, source: entry.source }, null, 2));
 }
 
 // ---------------------------------------------------------------------------
@@ -618,8 +773,8 @@ async function main(): Promise<void> {
       case "provider": {
         if (flags.has("help") || args.includes("--help") || args.includes("-h")) {
           printProviderHelp();
-        } else if (args[0] === "list") await providerList();
-        else if (args[0] === "show") await providerShow(args[1]);
+        } else if (args[0] === "list") await providerList(flags.has("remote") || args.includes("--remote"));
+        else if (args[0] === "show") await providerShow(args[1], flags.has("remote") || args.includes("--remote"));
         else {
           console.error("Unknown provider command");
           printProviderHelp();

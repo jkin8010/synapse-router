@@ -50,6 +50,11 @@ function parsePackRef(
         `Invalid pack reference: "${input}". Expected format: @namespace/name or name`,
       );
     }
+  } else if (input.includes("/")) {
+    // ns/name format (e.g. "aliyun/qwen-image")
+    const slashIndex = input.indexOf("/");
+    ns = input.substring(0, slashIndex);
+    name = input.substring(slashIndex + 1);
   }
 
   const atIndex = name.indexOf("@");

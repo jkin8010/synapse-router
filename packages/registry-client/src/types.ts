@@ -109,3 +109,24 @@ export interface InstallResult {
   features?: Array<{ id: string; intent: string; name: string }>;
   error?: string;
 }
+
+export interface ListPackItem {
+  id: string;
+  ns: string;
+  name: string;
+  displayName: string;
+  description: string;
+  version: string;
+  category: string;
+  provider: string;
+  downloads: number;
+  rating: number;
+  tags: string[];
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface ListPacksResult {
+  packs: ListPackItem[];
+  pagination: { page: number; limit: number; total: number; totalPages: number };
+}

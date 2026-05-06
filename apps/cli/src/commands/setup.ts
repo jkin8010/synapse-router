@@ -64,15 +64,17 @@ async function prompt(question: string, hidden = false): Promise<string> {
   const readline = await import("node:readline");
 
   if (hidden) {
-    // For API key input, we use a simple approach:
-    // mute stdout via a custom writable that suppresses characters
+    // Display prompt text first, then suppress only the typed input echo
     return new Promise((resolve) => {
+      // Print the question before overriding stdout so the user can read it
+      process.stdout.write(question);
+
       const rl = readline.createInterface({
         input: process.stdin,
         output: process.stdout,
       });
 
-      // Suppress key echo
+      // Suppress key echo — only blocks character output, not newlines
       const origWrite = process.stdout.write.bind(process.stdout);
       const suppressed = (buffer: string | Buffer) => {
         if (typeof buffer === "string" && buffer !== "\n" && buffer !== "\r" && buffer !== "\r\n") {
@@ -82,7 +84,7 @@ async function prompt(question: string, hidden = false): Promise<string> {
       };
       process.stdout.write = suppressed as typeof process.stdout.write;
 
-      rl.question(question, (answer) => {
+      rl.question("", (answer) => {
         process.stdout.write = origWrite;
         rl.close();
         console.log(""); // newline after hidden input
