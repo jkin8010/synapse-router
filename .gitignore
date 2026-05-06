@@ -8,6 +8,8 @@ dist/
 .DS_Store
 *.log
 .omc/
+.claude/
+.env.local
 debug-*
 test-derive.*
 test-lock*
