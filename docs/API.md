@@ -83,7 +83,7 @@ curl http://localhost:3000/health
 
 ## 连接调用
 
-### POST /connect
+### POST /execute
 
 连接指定 Provider 并调用其 Feature。支持两种模式。
 
@@ -92,7 +92,7 @@ curl http://localhost:3000/health
 **请求**:
 
 ```bash
-curl -X POST http://localhost:3000/connect \
+curl -X POST http://localhost:3000/execute \
   -H "Content-Type: application/json" \
   -d '{
     "provider": "deepseek",
@@ -134,7 +134,7 @@ curl -X POST http://localhost:3000/connect \
 #### 模式二：通过 negotiation_id 执行
 
 ```bash
-curl -X POST http://localhost:3000/connect \
+curl -X POST http://localhost:3000/execute \
   -H "Content-Type: application/json" \
   -d '{
     "negotiation_id": "uuid-xxx",
@@ -171,6 +171,15 @@ curl -X POST http://localhost:3000/vault/keys \
 ### DELETE /vault/keys/:provider
 
 删除指定 Provider 的 API Key。
+
+### POST /vault/verify/:provider
+
+验证指定 Provider 的 API Key 是否有效。
+
+```bash
+curl -X POST http://localhost:3000/vault/verify/openai
+# {"provider":"openai","valid":true}
+```
 
 ---
 

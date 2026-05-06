@@ -138,14 +138,21 @@ synapse-router/
 │   ├── lock/              # Schema Lock（缓存/存储/迁移/过期检测）
 │   ├── vault/             # API Key 加密存储（AES-256-GCM + OS Keychain）
 │   ├── pack-generator/    # 从 OpenAPI Spec 自动生成 Provider Pack
-│   └── sdk-generator/     # 从 Pack DSL 生成 TypeScript / Python SDK
+│   ├── sdk-generator/     # 从 Pack DSL 生成 TypeScript / Python SDK
+│   ├── sdk/               # SDK 运行时支持
+│   ├── billing/           # 用量计费
+│   └── observability/     # 可观测性与调试层（Trace/Span/Event）
 ├── apps/
-│   ├── cli/               # CLI 工具（connect/setup/config/vault/lock/sdk）
+│   ├── cli/               # CLI 工具（connect/setup/config/vault/lock/sdk/pack）
 │   ├── api/               # HTTP API Server
 │   ├── mcp-server/        # MCP Server（Model Context Protocol）
-│   └── playground/        # 本地可视化调试界面
+│   ├── playground/        # 本地可视化调试界面
+│   └── comfy-node/        # ComfyUI 工作流节点
 └── packs/                 # 预置 Provider Pack
-    └── openai/            # OpenAI Pack（供 DeepSeek 等兼容厂商复用）
+    ├── openai/            # OpenAI（Chat, Embeddings, Audio, Image）
+    ├── replicate/         # Replicate（Predictions, Trainings）
+    ├── stability/         # Stability AI（Text-to-Image, Image-to-Image）
+    └── comfyui/           # ComfyUI（Workflow）
         ├── provider-card.json
         └── dsl/
 ```
@@ -160,6 +167,7 @@ synapse connect <provider> <intent>   # 连接并调用（核心命令）
 synapse negotiate <schema-file>       # Schema 协商
 synapse lock list|show|remove|migrate  # 管理 Schema Lock
 synapse sdk generate                  # 生成 SDK
+synapse pack add|search|list|update|remove|show  # 管理 Pack
 synapse provider list                 # 列出 Provider Pack
 synapse provider show <id>            # 查看 Provider 详情
 synapse vault set <provider> <key>    # 存储 API Key
@@ -173,13 +181,17 @@ synapse serve                         # 启动 HTTP API
 
 ### HTTP API
 
-| 方法 | 路径             | 说明               |
-| ---- | ---------------- | ------------------ |
-| POST | `/connect`       | 连接调用 Provider  |
-| POST | `/negotiate`     | 协商 Schema        |
-| GET  | `/providers`     | 列出可用 Provider  |
-| GET  | `/providers/:id` | 查看 Provider 详情 |
-| GET  | `/health`        | 健康检查           |
+| 方法 | 路径                      | 说明               |
+| ---- | ------------------------- | ------------------ |
+| POST | `/execute`                | 连接调用 Provider  |
+| POST | `/negotiate`              | 协商 Schema        |
+| GET  | `/providers`              | 列出可用 Provider  |
+| GET  | `/providers/:id`          | 查看 Provider 详情 |
+| GET  | `/vault/keys`             | 列出已存储 Key     |
+| POST | `/vault/keys`             | 存储 API Key       |
+| DELETE | `/vault/keys/:provider` | 删除 API Key       |
+| POST | `/vault/verify/:provider` | 验证 API Key       |
+| GET  | `/health`                 | 健康检查           |
 
 ### MCP Server
 
@@ -198,9 +210,12 @@ synapse serve                         # 启动 HTTP API
 
 ## 📦 预置 Provider Pack
 
-| Pack       | Provider                                  | 功能                           | base_url |
-| ---------- | ----------------------------------------- | ------------------------------ | -------- |
-| **openai** | OpenAI, DeepSeek, 月之暗面, 智谱, 百川 等 | Chat, Embeddings, Image, Audio | 可配置   |
+| Pack           | Provider                                  | 功能                              | base_url |
+| -------------- | ----------------------------------------- | --------------------------------- | -------- |
+| **openai**     | OpenAI, DeepSeek, 月之暗面, 智谱, 百川 等 | Chat, Embeddings, Image, Audio    | 可配置   |
+| **replicate**  | Replicate                                 | Predictions, Trainings            | 可配置   |
+| **stability**  | Stability AI                              | Text-to-Image, Image-to-Image     | 可配置   |
+| **comfyui**    | ComfyUI                                   | Workflow                          | 可配置   |
 
 > 兼容 OpenAI API 格式的 Provider 可复用 openai Pack，只需配置 `base_url`。
 

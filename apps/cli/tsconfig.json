@@ -9,6 +9,7 @@
     { "path": "../../packages/connector" },
     { "path": "../../packages/core" },
     { "path": "../../packages/lock" },
+    { "path": "../../packages/registry-client" },
     { "path": "../../packages/sdk-generator" },
     { "path": "../../packages/vault" }
   ],

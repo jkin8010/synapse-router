@@ -8,6 +8,7 @@
   "references": [
     { "path": "../../packages/vault" },
     { "path": "../../packages/negotiator" },
+    { "path": "../../packages/registry-client" },
     { "path": "../../packages/providers" }
   ],
   "include": [

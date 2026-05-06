@@ -16,6 +16,7 @@
   "dependencies": {
     "@synapse-router/connector": "workspace:*",
     "@synapse-router/lock": "workspace:*",
+    "@synapse-router/registry-client": "workspace:*",
     "@synapse-router/sdk-generator": "workspace:*",
     "@synapse-router/vault": "workspace:*"
   }

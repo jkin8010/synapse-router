@@ -2,12 +2,20 @@ import http from "node:http";
 import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
+import { homedir } from "node:os";
 import { randomUUID } from "node:crypto";
 import { createVault } from "@synapse-router/vault";
 import {
   negotiateSchema,
   type NegotiateSchemaInput,
 } from "@synapse-router/negotiator";
+import {
+  createRegistryClient,
+} from "@synapse-router/registry-client";
+import type {
+  RegistryClient,
+  RegistryHealth,
+} from "@synapse-router/registry-client";
 import type {
   ProviderCard,
   AgentSchema,
@@ -15,11 +23,8 @@ import type {
   FieldMapping,
 } from "@synapse-router/core";
 
-// Derive __dirname equivalent for ESM
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
-
-// Repo root is 3 levels up from apps/api/src/
 const REPO_ROOT = path.resolve(__dirname, "..", "..", "..");
 
 // ─── Types ───────────────────────────────────────────────────────────────────
@@ -42,10 +47,18 @@ interface VaultSetKeyBody {
   auth_type: "APIKey" | "Bearer" | "OAuth2";
 }
 
+type ProviderSource = "builtin" | "registry" | "local";
+
+interface ProviderEntry {
+  card: ProviderCard;
+  source: ProviderSource;
+}
+
 interface RouteContext {
-  providers: Map<string, ProviderCard>;
+  providers: Map<string, ProviderEntry>;
   vault: ReturnType<typeof createVault>;
   negotiations: Map<string, NegotiationRecord>;
+  registryClient: RegistryClient | null;
 }
 
 interface NegotiationRecord {
@@ -102,7 +115,6 @@ function parseBody(req: http.IncomingMessage): Promise<unknown> {
     let body = "";
     req.on("data", (chunk) => {
       body += chunk;
-      // Guard against very large bodies
       if (body.length > 1_000_000) {
         reject(new Error("Request body too large"));
         req.destroy();
@@ -141,36 +153,82 @@ function sendError(
   statusCode: number,
   code: string,
   message: string,
-  details: Record<string, unknown> = {}
+  details: Record<string, unknown> = {},
 ): void {
   sendJson(res, statusCode, { error: { code, message, details } });
 }
 
 // ─── Provider Loading ────────────────────────────────────────────────────────
 
-async function loadProviders(packsDir: string): Promise<Map<string, ProviderCard>> {
-  const providers = new Map<string, ProviderCard>();
+async function loadProvidersFromDir(dir: string): Promise<ProviderCard[]> {
+  const cards: ProviderCard[] = [];
 
   let entries: fs.Dirent[];
   try {
-    entries = await fs.promises.readdir(packsDir, { withFileTypes: true });
+    entries = await fs.promises.readdir(dir, { withFileTypes: true });
   } catch {
-    return providers;
+    return cards;
   }
 
   for (const entry of entries) {
     if (!entry.isDirectory()) continue;
     try {
-      const cardPath = path.join(packsDir, entry.name, "provider-card.json");
+      let cardPath = path.join(dir, entry.name, "provider-card.json");
+      try {
+        await fs.promises.stat(cardPath);
+      } catch {
+        cardPath = path.join(dir, entry.name, "pack.json");
+      }
       const content = await fs.promises.readFile(cardPath, "utf8");
       const card = JSON.parse(content) as ProviderCard;
-      providers.set(card.provider.id, card);
+      if (card.provider?.id) {
+        cards.push(card);
+      }
     } catch {
       // Skip invalid packs
     }
   }
 
-  return providers;
+  return cards;
+}
+
+async function loadAllProviders(opts: {
+  builtinDir: string;
+  registryDir: string;
+  localDir: string;
+}): Promise<{
+  providers: Map<string, ProviderEntry>;
+  sourceCounts: Record<ProviderSource, number>;
+}> {
+  const providers = new Map<string, ProviderEntry>();
+  const sourceCounts: Record<ProviderSource, number> = {
+    builtin: 0,
+    registry: 0,
+    local: 0,
+  };
+
+  // Priority: low to high — local > registry > builtin
+
+  const builtinCards = await loadProvidersFromDir(opts.builtinDir);
+  for (const card of builtinCards) {
+    providers.set(card.provider.id, { card, source: "builtin" });
+  }
+
+  const registryCards = await loadProvidersFromDir(opts.registryDir);
+  for (const card of registryCards) {
+    providers.set(card.provider.id, { card, source: "registry" });
+  }
+
+  const localCards = await loadProvidersFromDir(opts.localDir);
+  for (const card of localCards) {
+    providers.set(card.provider.id, { card, source: "local" });
+  }
+
+  for (const entry of providers.values()) {
+    sourceCounts[entry.source]++;
+  }
+
+  return { providers, sourceCounts };
 }
 
 // ─── Negotiation Logic ───────────────────────────────────────────────────────
@@ -185,18 +243,23 @@ function intentMatches(agentIntent: string, featureIntent: string): boolean {
 
 function negotiate(
   agentSchema: AgentSchema,
-  providers: Map<string, ProviderCard>,
-  targetProviderId?: string
+  providers: Map<string, ProviderEntry>,
+  targetProviderId?: string,
 ): NegotiationRecord {
   const negotiation_id = randomUUID();
   const accepted: AcceptedMatch[] = [];
   const rejected: RejectedMatch[] = [];
 
-  const candidates = targetProviderId
-    ? (providers.has(targetProviderId) ? [[targetProviderId, providers.get(targetProviderId)!]] as [string, ProviderCard][] : [])
-    : [...providers.entries()];
+  let candidates: [string, ProviderEntry][];
+  if (targetProviderId) {
+    const entry = providers.get(targetProviderId);
+    candidates = entry ? [[targetProviderId, entry]] : [];
+  } else {
+    candidates = [...providers.entries()];
+  }
 
-  for (const [providerId, card] of candidates) {
+  for (const [providerId, entry] of candidates) {
+    const card = entry.card;
     let bestMatch: { feature: ProviderFeature; mapping: FieldMapping[] } | null = null;
 
     for (const feature of card.features) {
@@ -247,11 +310,10 @@ function negotiate(
 async function handleRequest(
   req: http.IncomingMessage,
   res: http.ServerResponse,
-  ctx: RouteContext
+  ctx: RouteContext,
 ): Promise<void> {
   setCorsHeaders(res);
 
-  // Handle CORS preflight
   if (req.method === "OPTIONS") {
     res.writeHead(204);
     res.end();
@@ -264,15 +326,39 @@ async function handleRequest(
   try {
     // ── GET /health ──────────────────────────────────────────────────────────
     if (req.method === "GET" && matchRoute("/health", pathname)) {
-      sendJson(res, 200, { status: "ok" });
+      const sourceCounts: Record<ProviderSource, number> = { builtin: 0, registry: 0, local: 0 };
+      for (const entry of ctx.providers.values()) {
+        sourceCounts[entry.source]++;
+      }
+
+      let registry: { url: string; status: string; latency_ms: number } | null = null;
+      if (ctx.registryClient) {
+        const health = await ctx.registryClient.healthCheck();
+        registry = {
+          url: ctx.registryClient.registryUrl,
+          status: health.status,
+          latency_ms: health.latencyMs,
+        };
+      }
+
+      sendJson(res, 200, {
+        status: "ok",
+        version: "0.1.0",
+        registry,
+        providers: {
+          total: ctx.providers.size,
+          sources: sourceCounts,
+        },
+      });
       return;
     }
 
     // ── GET /providers ──────────────────────────────────────────────────────
     if (req.method === "GET" && matchRoute("/providers", pathname)) {
-      const cards = [...ctx.providers.values()].map((card) => ({
-        provider: card.provider,
-        features: card.features.map((f) => ({
+      const cards = [...ctx.providers.values()].map((entry) => ({
+        provider: entry.card.provider,
+        source: entry.source,
+        features: entry.card.features.map((f) => ({
           id: f.id,
           intent: f.intent,
           name: f.name,
@@ -286,12 +372,12 @@ async function handleRequest(
     // ── GET /providers/:id ─────────────────────────────────────────────────
     const providerParams = matchRoute("/providers/:id", pathname);
     if (req.method === "GET" && providerParams) {
-      const card = ctx.providers.get(providerParams["id"]);
-      if (!card) {
+      const entry = ctx.providers.get(providerParams["id"]);
+      if (!entry) {
         sendError(res, 404, "PROVIDER_NOT_FOUND", `Provider '${providerParams["id"]}' not found`);
         return;
       }
-      sendJson(res, 200, card);
+      sendJson(res, 200, { ...entry.card, source: entry.source });
       return;
     }
 
@@ -349,11 +435,7 @@ async function handleRequest(
         return;
       }
 
-      const record = negotiate(
-        body.agent_schema,
-        ctx.providers,
-        body.provider_id
-      );
+      const record = negotiate(body.agent_schema, ctx.providers, body.provider_id);
       ctx.negotiations.set(record.negotiation_id, record);
       sendJson(res, 200, record);
       return;
@@ -387,30 +469,24 @@ async function handleRequest(
         return;
       }
 
-      const card = ctx.providers.get(providerId);
-      if (!card) {
+      const entry = ctx.providers.get(providerId);
+      if (!entry) {
         sendError(res, 404, "PROVIDER_NOT_FOUND", `Provider '${providerId}' not found`);
         return;
       }
 
       const startMs = Date.now();
-
-      // Fetch the API key from vault
       const apiKey = await ctx.vault.getKey(providerId);
-
-      // Execute against provider — mocked response using provider info
-      const matchedFeature = card.features.find((f) => f.id === featureId) ?? card.features[0];
+      const matchedFeature = entry.card.features.find((f) => f.id === featureId) ?? entry.card.features[0];
 
       const output = {
         provider_id: providerId,
         feature_id: matchedFeature.id,
         request: body.input ?? {},
         api_key_present: apiKey !== null,
-        // In production this would be the actual provider API response
-        // For now, return a structured mock that reflects the request was processed
         _meta: {
-          provider_base_url: card.service.base_url,
-          auth_type: card.service.auth_type,
+          provider_base_url: entry.card.service.base_url,
+          auth_type: entry.card.service.auth_type,
           feature_intent: matchedFeature.intent,
         },
       };
@@ -427,7 +503,6 @@ async function handleRequest(
     sendError(res, 404, "NOT_FOUND", `Route '${pathname}' not found`);
   } catch (err) {
     const message = err instanceof Error ? err.message : "Internal error";
-    // Distinguish JSON parse errors from internal errors
     if (message === "Invalid JSON") {
       sendError(res, 400, "INVALID_REQUEST", "Invalid JSON in request body");
     } else {
@@ -443,39 +518,33 @@ export interface ServerOptions {
   packsDir?: string;
   port?: number;
   hostname?: string;
+  noRegistry?: boolean;
 }
-
-/**
- * Returns a promise that resolves when the server has finished loading
- * providers. Attach to server as `._readyPromise` for test access.
- */
 
 export function createServer(options: ServerOptions = {}): http.Server {
   const vaultDir = options.vaultDir ?? path.join(REPO_ROOT, ".vault");
   const packsDir = options.packsDir ?? path.join(REPO_ROOT, "packs");
+  const registryDir = path.join(homedir(), ".synapse", "packs");
+  const localDir = path.join(process.cwd(), "synapse-packs");
 
   const vault = createVault({ vaultDir, audit: false, preferKeychain: false });
-  const providers = new Map<string, ProviderCard>();
+  const providers = new Map<string, ProviderEntry>();
   const negotiations = new Map<string, NegotiationRecord>();
+  const registryClient = options.noRegistry ? null : createRegistryClient();
 
-  const ctx: RouteContext = { providers, vault, negotiations };
+  const ctx: RouteContext = { providers, vault, negotiations, registryClient };
 
-  // Load providers before server is considered ready
-  let providersReady: Promise<void>;
-  providersReady = loadProviders(packsDir)
-    .then((loaded) => {
-      for (const [id, card] of loaded) {
-        providers.set(id, card);
+  const providersReady = loadAllProviders({ builtinDir: packsDir, registryDir, localDir })
+    .then((result) => {
+      for (const [id, entry] of result.providers) {
+        providers.set(id, entry);
       }
     })
     .catch(() => {
       // Non-fatal: server starts without providers
     });
 
-  ctx.providers = providers;
-
   const server = http.createServer(async (req, res) => {
-    // Wait for providers to be loaded before handling
     await providersReady;
     handleRequest(req, res, ctx).catch((err) => {
       const message = err instanceof Error ? err.message : "Unhandled error";
@@ -483,7 +552,6 @@ export function createServer(options: ServerOptions = {}): http.Server {
     });
   });
 
-  // Attach for test access
   (server as any)._providers = providers;
   (server as any)._vault = vault;
   (server as any)._negotiations = negotiations;

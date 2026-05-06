@@ -43,6 +43,9 @@ synapse setup
 synapse provider list
 # Providers:
 #   openai       OpenAI                https://api.openai.com/v1
+#   replicate    Replicate             https://api.replicate.com/v1
+#   stability    Stability AI          https://api.stability.ai/v1
+#   comfyui      ComfyUI               https://api.comfyui.com
 ```
 
 ---
@@ -253,6 +256,7 @@ console.log(result.choices[0].message.content);
 | `synapse lock`               | 管理 Schema Lock 缓存     | 开发者        |
 | `synapse sdk generate`       | 从 Pack 生成 SDK          | 开发者        |
 | `synapse provider list/show` | 查看 Provider 信息        | 所有人        |
+| `synapse pack`               | 管理 Provider Pack        | Pack 开发者   |
 | `synapse vault`              | 管理 API Key              | 所有人        |
 | `synapse config`             | 管理配置文件              | 开发者        |
 | `synapse generate`           | 从 OpenAPI Spec 生成 Pack | Pack 开发者   |
@@ -545,6 +549,56 @@ synapse provider show openai
 
 ---
 
+---
+
+### `synapse pack` — 管理 Provider Pack
+
+从 Registry 安装、搜索、更新和管理 Provider Pack。
+
+```bash
+synapse pack add <pack-spec> [options]          # 安装 Pack
+synapse pack search <query> [options]           # 搜索 Pack
+synapse pack list [options]                     # 列出已安装 Pack
+synapse pack update <pack-id> [options]         # 更新 Pack
+synapse pack remove <pack-id> [options]         # 删除 Pack
+synapse pack show <pack-id> [options]           # 查看 Pack 详情
+```
+
+**Pack 格式**: `@<namespace>/<name>@<version>`（如 `@openai/chat@1.0.0`）
+
+**示例**:
+
+```bash
+# 搜索 Pack
+synapse pack search openai
+# Found 3 packs:
+#   @openai/chat@1.0.0 — OpenAI Chat Completions
+#   @openai/embeddings@1.0.0 — OpenAI Embeddings
+#   ...
+
+# 安装 Pack
+synapse pack add @openai/chat@1.0.0
+# ✓ Installed @openai/chat@1.0.0
+
+# 列出已安装 Pack
+synapse pack list
+# Installed packs:
+#   @openai/chat@1.0.0 (installed 2026-05-06)
+
+# 查看详情
+synapse pack show @openai/chat
+
+# 更新 Pack
+synapse pack update @openai/chat
+
+# 删除 Pack
+synapse pack remove @openai/chat
+```
+
+> Pack 安装到 `~/.synapse/packs/`，清单文件 `~/.synapse/packs/registry-manifest.json`。
+
+---
+
 ### `synapse generate` — 从 OpenAPI Spec 生成 Pack
 
 ```bash
@@ -590,10 +644,11 @@ synapse serve
 | GET    | `/providers`            | 列出 Provider |
 | GET    | `/providers/:id`        | Provider 详情 |
 | POST   | `/negotiate`            | Schema 协商   |
-| POST   | `/connect`              | 连接调用      |
+| POST   | `/execute`              | 连接调用      |
 | POST   | `/vault/keys`           | 存储 Key      |
 | GET    | `/vault/keys`           | 列出 Key      |
 | DELETE | `/vault/keys/:provider` | 删除 Key      |
+| POST   | `/vault/verify/:provider`| 验证 Key      |
 
 ### 示例
 
@@ -603,7 +658,7 @@ curl http://localhost:3000/health
 # {"status":"ok","version":"0.1.0"}
 
 # 连接调用
-curl -X POST http://localhost:3000/connect \
+curl -X POST http://localhost:3000/execute \
   -H "Content-Type: application/json" \
   -d '{
     "provider": "deepseek",

@@ -8,12 +8,13 @@ import { createServer, type ServerOptions } from "./index.js";
 // ─── Test Fixtures ────────────────────────────────────────────────────────────
 
 const TEST_VAULT_DIR = path.join(process.cwd(), ".test-vault");
-const TEST_PACKS_DIR = path.join(process.cwd(), "packs");
+const TEST_PACKS_DIR = path.join(process.cwd(), "..", "..", "packs");
 
 function getTestOptions(): ServerOptions {
   return {
     vaultDir: TEST_VAULT_DIR,
     packsDir: TEST_PACKS_DIR,
+    noRegistry: true,
     port: 0, // random available port
   };
 }
@@ -113,7 +114,9 @@ describe("HTTP API Server", () => {
     await withServer(getTestOptions(), async (baseUrl) => {
       const res = await httpRequest(`${baseUrl}/health`);
       assert.equal(res.status, 200);
-      assert.deepEqual(res.body, { status: "ok" });
+      assert.equal((res.body as Record<string, unknown>).status, "ok");
+      assert.ok("version" in (res.body as Record<string, unknown>), "should include version");
+      assert.ok("providers" in (res.body as Record<string, unknown>), "should include providers");
     });
   });
 

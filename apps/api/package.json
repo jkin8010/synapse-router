@@ -12,6 +12,7 @@
   },
   "dependencies": {
     "@synapse-router/negotiator": "workspace:*",
-    "fastify": "^5.2.0"
+    "@synapse-router/registry-client": "workspace:*",
+    "@synapse-router/vault": "workspace:*"
   }
 }
