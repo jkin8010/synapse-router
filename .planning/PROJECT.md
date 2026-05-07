@@ -10,6 +10,15 @@ v1.0 实现了完整的契约验证闭环：Schema 协商 → Manifest 匹配 �
 
 **"先有契约，再调用"** — 每次路由都从 Schema 契约开始，只有契约明确后才允许调用 Provider。v1.0 通过 `negotiateAndVerify` 全链路验证将协商成功率从单次 LLM 调用提升到重试验证闭环。
 
+## Current Milestone: v1.1 Testing & Playground
+
+**Goal:** 建立完整的端到端测试覆盖和可视化调试界面，确保全链路可验证、可观测。
+
+**Target features:**
+- E2E 测试框架和关键路径测试 (negotiate → verify → SDK generation → Mock test)
+- Playground Web UI 可视化调试界面 (Schema 编辑、Provider 选择、实时响应查看)
+- 真实 Provider 冒烟测试 (openai, replicate 等)
+
 ## Requirements
 
 ### Validated
@@ -25,10 +34,10 @@ v1.0 实现了完整的契约验证闭环：Schema 协商 → Manifest 匹配 �
 
 ### Active
 
-- [ ] 真实 Provider 冒烟测试
+- [ ] 真实 Provider 冒烟测试 — v1.1
+- [ ] Web UI/Playground 可视化界面 — v1.1
+- [ ] E2E 端到端测试框架和关键路径 — v1.1
 - [ ] API 认证中间件
-- [ ] Web UI/Playground 可视化界面
-- [ ] E2E 端到端测试
 - [ ] SDK 缓存优化
 - [ ] Registry `contract_verifications` 表和 API
 
@@ -63,5 +72,22 @@ Tech stack: TypeScript 5.9+ strict, Node.js 22+, pnpm 10+ monorepo.
 - Vault 永不明文落盘
 - Registry 是可选增强，不可用时不影响核心功能
 
+## Evolution
+
+This document evolves at phase transitions and milestone boundaries.
+
+**After each phase transition** (via `/gsd-transition`):
+1. Requirements invalidated? → Move to Out of Scope with reason
+2. Requirements validated? → Move to Validated with phase reference
+3. New requirements emerged? → Add to Active
+4. Decisions to log? → Add to Key Decisions
+5. "What This Is" still accurate? → Update if drifted
+
+**After each milestone** (via `/gsd-complete-milestone`):
+1. Full review of all sections
+2. Core Value check — still the right priority?
+3. Audit Out of Scope — reasons still valid?
+4. Update Context with current state
+
 ---
-*Last updated: 2026-05-07 after v1.0 milestone*
+*Last updated: 2026-05-07 — v1.1 milestone started*
