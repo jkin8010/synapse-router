@@ -1,26 +1,33 @@
 # Synapse Router — 路线图
 
-## Phase 1: Negotiator 可靠性增强
+## Milestones
 
-**Status:** `计划中`
-**Goal:** "一次协商，一次运行" — 在现有 negotiator → sdk-generator 流水线中增加契约验证闭环。
+- ✅ **v1.0 Negotiator Reliability** — Phase 1 (shipped 2026-05-07)
 
-### 关键决策 (D-01 ~ D-16)
-- Contract Mocker: `node:http` 进程内 HTTP Mock Server，零外部依赖
-- Provider Manifest: DSL 文件轻量扩展 `features[].constraints` 字段
-- Pipeline: 统一 `negotiateAndVerify()` 入口，全链路验证（静态 manifest 匹配 → 代码生成 → 动态 mock 测试）
-- 重试: 最多 2 次，结构化错误注入 LLM prompt
-- Registry: 异步提交验证结果，本地优先
+## Phases
 
-### 计划
-| Plan | Objective | Wave | 决策 | 状态 |
-|------|-----------|------|------|------|
-| 01-01-PLAN.md | Contract Mocker 包 | 1 | D-01~D-04 | ✅ |
-| 01-02-PLAN.md | Manifest 类型与匹配 | 1 | D-05, D-07, D-13 (types) | ⬜ |
-| 01-03-PLAN.md | Pipeline + 重试逻辑 | 2 | D-08~D-13 (impl) | ⬜ |
-| 01-04-PLAN.md | Registry 集成 | 2 | D-14~D-16 | ⬜ |
+<details>
+<summary>✅ v1.0 Negotiator Reliability (Phase 1) — SHIPPED 2026-05-07</summary>
 
-### 延迟项
+- [x] Phase 1: Negotiator 可靠性增强 (4/4 plans) — completed 2026-05-07
+  - 01-01: Contract Mocker 包 — 零依赖 HTTP Mock Server
+  - 01-02: Manifest 类型与匹配 — 约束定义 + 三种差异检测
+  - 01-03: Pipeline + 重试逻辑 — negotiateAndVerify 全链路编排
+  - 01-04: Registry 集成 — Fire-and-forget 异步验证提交
+
+</details>
+
+## 延迟项
+
 - Registry 侧 `contract_verifications` 表和 API → synapse-registry Phase 2
 - 真实 Provider 冒烟测试 → 后续 Phase
 - SDK 缓存优化 → 后续 Phase
+- API 认证中间件 → 后续 Phase
+- Web UI/Playground → 后续 Phase
+- E2E 测试 → 后续 Phase
+
+## Progress
+
+| Phase | Milestone | Plans Complete | Status | Completed |
+| ----- | --------- | -------------- | ------ | --------- |
+| 1. Negotiator 可靠性增强 | v1.0 | 4/4 | Complete | 2026-05-07 |
