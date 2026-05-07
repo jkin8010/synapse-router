@@ -1,7 +1,9 @@
 import type { Tool } from "./types.js";
 import type { Vault } from "@synapse-router/vault";
 import { loadAllSpecs, loadProviders } from "@synapse-router/providers";
-import { negotiateSchema } from "@synapse-router/negotiator";
+import { negotiateAndVerify } from "@synapse-router/negotiator";
+import { homedir } from "node:os";
+import { join } from "node:path";
 
 // Tool Definitions
 
@@ -61,8 +63,10 @@ export const MCP_TOOLS: Tool[] = [
       type: "object",
       properties: {
         agent_schema: { type: "object" },
-        provider_id: { type: "string" }
-      }
+        provider_id: { type: "string" },
+        pack_dir: { type: "string" }
+      },
+      required: ["provider_id"]
     }
   },
   {
@@ -145,16 +149,21 @@ export async function handleToolCall(
 
     case "negotiate": {
       const agentSchema = args.agent_schema as { task?: string; goal?: string; constraints?: unknown } | undefined;
-      const providerId = args.provider_id as string | undefined;
+      const providerId = args.provider_id as string;
+      const packDir = (args.pack_dir as string) ?? join(homedir(), ".synapse", "packs", providerId);
 
       if (!agentSchema?.task) {
         throw new Error("agent_schema.task is required for negotiate");
       }
 
-      const result = await negotiateSchema(
-        { task: agentSchema.task, goal: agentSchema.goal ?? "", constraints: agentSchema.constraints },
-        providerId ? { providerId } as any : {}
-      );
+      const result = await negotiateAndVerify({
+        task: agentSchema.task,
+        goal: agentSchema.goal ?? "",
+        constraints: (agentSchema.constraints as Record<string, unknown>) ?? {},
+        providerId,
+        packDir,
+        lang: "typescript",
+      });
 
       return { content: [{ type: "text", text: JSON.stringify(result) }] };
     }

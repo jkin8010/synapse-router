@@ -9,6 +9,7 @@ import { createVault } from "@synapse-router/vault";
 import { getOrCreateLock, type SchemaLock } from "@synapse-router/lock";
 import type { ConnectParams, ConnectResult, ConnectLock } from "@synapse-router/connector";
 import type { ProviderCard as CoreProviderCard } from "@synapse-router/core";
+import { negotiateAndVerify } from "@synapse-router/negotiator";
 
 // ---------------------------------------------------------------------------
 // Types

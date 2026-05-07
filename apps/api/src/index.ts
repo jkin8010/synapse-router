@@ -6,8 +6,9 @@ import { homedir } from "node:os";
 import { randomUUID } from "node:crypto";
 import { createVault } from "@synapse-router/vault";
 import {
-  negotiateSchema,
-  type NegotiateSchemaInput,
+  negotiateAndVerify,
+  type NegotiateAndVerifyInput,
+  type NegotiationResult,
 } from "@synapse-router/negotiator";
 import {
   createRegistryClient,
@@ -32,6 +33,11 @@ const REPO_ROOT = path.resolve(__dirname, "..", "..", "..");
 interface NegotiateBody {
   agent_schema?: AgentSchema;
   provider_id?: string;
+  // Schema negotiation fields for negotiateAndVerify
+  task?: string;
+  goal?: string;
+  constraints?: Record<string, unknown>;
+  pack_dir?: string;
 }
 
 interface ExecuteBody {
@@ -437,7 +443,33 @@ async function handleRequest(
 
       const record = negotiate(body.agent_schema, ctx.providers, body.provider_id);
       ctx.negotiations.set(record.negotiation_id, record);
-      sendJson(res, 200, record);
+
+      // Run schema-level negotiation + verification when task/goal provided
+      let verification_result: NegotiationResult["verification_result"] | undefined;
+      if (body.task && body.goal && body.provider_id) {
+        try {
+          const packDir = body.pack_dir ?? path.join(REPO_ROOT, "packs", body.provider_id);
+          const result = await negotiateAndVerify({
+            task: body.task,
+            goal: body.goal,
+            constraints: body.constraints ?? {},
+            providerId: body.provider_id,
+            packDir,
+          });
+          verification_result = result.verification_result;
+        } catch (err) {
+          verification_result = {
+            status: err instanceof Error && err.message.includes("mock_failure")
+              ? "mock_failure"
+              : err instanceof Error && err.message.includes("manifest_mismatch")
+              ? "manifest_mismatch"
+              : "mock_failure",
+            verified_at: new Date().toISOString(),
+          };
+        }
+      }
+
+      sendJson(res, 200, { ...record, verification_result });
       return;
     }
 
