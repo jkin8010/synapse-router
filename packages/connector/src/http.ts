@@ -22,6 +22,20 @@ export async function callProvider(request: HttpRequest): Promise<unknown> {
     headers,
   };
 
+  // Debug: log request details (redact api key)
+  if (process.env.SYNAPSE_DEBUG) {
+    const debugHeaders = { ...headers };
+    for (const k of Object.keys(debugHeaders)) {
+      if (k.toLowerCase().includes("auth") || k.toLowerCase().includes("key")) {
+        const v = debugHeaders[k] ?? "";
+        debugHeaders[k] = v.length > 12 ? v.slice(0, 8) + "..." + v.slice(-4) : v;
+      }
+    }
+    console.error(`[synapse-debug] ${method} ${url}`);
+    console.error(`[synapse-debug] headers:`, JSON.stringify(debugHeaders));
+    console.error(`[synapse-debug] body keys:`, body && typeof body === "object" ? Object.keys(body as Record<string, unknown>).join(", ") : "none");
+  }
+
   if (method === "POST" && body !== undefined) {
     fetchOptions.body = JSON.stringify(body);
   }

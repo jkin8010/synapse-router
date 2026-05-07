@@ -9,6 +9,36 @@ import type { ConnectLock } from "./types.js";
 
 type FieldMapping = ConnectLock["field_mappings"][number];
 
+// ─── Nested Path Support ─────────────────────────────────────────────────────
+
+/**
+ * Set a value at a nested path like "input.messages[0].role".
+ * Creates intermediate objects/arrays as needed.
+ */
+function deepSet(obj: Record<string, unknown>, path: string, value: unknown): void {
+  const regex = /(\w+)|\[(\d+)\]/g;
+  const parts: Array<string | number> = [];
+  let m: RegExpExecArray | null;
+  while ((m = regex.exec(path)) !== null) {
+    if (m[1] !== undefined) parts.push(m[1]);
+    else if (m[2] !== undefined) parts.push(parseInt(m[2], 10));
+  }
+  if (parts.length === 0) return;
+
+  let current: any = obj;
+  for (let i = 0; i < parts.length - 1; i++) {
+    const key = parts[i];
+    const nextKey = parts[i + 1];
+    if (typeof nextKey === "number") {
+      if (!current[key] || !Array.isArray(current[key])) current[key] = [];
+    } else {
+      if (!current[key] || typeof current[key] !== "object" || Array.isArray(current[key])) current[key] = {};
+    }
+    current = current[key];
+  }
+  current[parts[parts.length - 1]] = value;
+}
+
 // ─── Transform Functions ────────────────────────────────────────────────────
 
 function applyTransform(value: unknown, transform: string | undefined): unknown {
@@ -102,7 +132,7 @@ export function mapInput(
 
     // 应用 transform
     const transformed = applyTransform(value, transform);
-    result[provider_field] = transformed;
+    deepSet(result, provider_field, transformed);
   }
 
   // Step 2: 透传用户直接提供的字段（包括 provider 字段名和不在 mapping 中的字段）

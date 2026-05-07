@@ -22,7 +22,14 @@ export interface DerivedPath {
  * 规则：
  * 1. 找到 "_post_" 或 "_get_" 来确定 method 和路径起点
  * 2. 路径段用 _ 分隔，转换为 / 分隔
- * 3. 路径前加 /
+ * 3. __ (双下划线) 转换为 - (连字符)，用于表示带连字符的单一路径段
+ *    如: multimodal__generation → multimodal-generation
+ * 4. 路径前加 /
+ *
+ * 示例:
+ *   chat_post_v1_chat_completions → POST /v1/chat/completions
+ *   multimodal__generation_post_api_v1_services_aigc_multimodal__generation_generation
+ *     → POST /api/v1/services/aigc/multimodal-generation/generation
  */
 export function deriveApiPath(featureId: string): DerivedPath {
   // 查找 method 标记
@@ -40,14 +47,13 @@ export function deriveApiPath(featureId: string): DerivedPath {
     pathStart = getIdx + "_get_".length;
   } else {
     // 回退：如果没有 method 标记，假设 POST 且整个 feature_id 是路径
-    return {
-      method: "POST",
-      path: "/" + featureId.replace(/_/g, "/"),
-    };
+    const path = "/" + featureId.replace(/__/g, "-").replace(/_/g, "/");
+    return { method: "POST", path };
   }
 
   const pathSegments = featureId.slice(pathStart);
-  const path = "/" + pathSegments.replace(/_/g, "/");
+  // __ → - (hyphen), then _ → / (path separator)
+  const path = "/" + pathSegments.replace(/__/g, "-").replace(/_/g, "/");
 
   return { method, path };
 }

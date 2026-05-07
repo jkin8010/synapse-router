@@ -54,9 +54,12 @@ export async function connect(params: ConnectParams): Promise<ConnectResult> {
   let normalizedBase = connection.base_url.replace(/\/+$/, "");  // 去掉结尾的斜杠
   let normalizedPath = path.replace(/^\/*/, "/");  // 确保以 / 开头
 
-  // 处理 base_url 已经包含 path 前缀的情况（如 /v1 重复）
-  while (normalizedPath.startsWith(`/${normalizedBase.split("/").pop()}`)) {
-    normalizedPath = normalizedPath.slice(`/${normalizedBase.split("/").pop()}`.length);
+  // 如果 base_url 包含路径前缀（如 /api/v1），从 derived path 中去除重复前缀
+  const baseUrlPath = (() => {
+    try { return new URL(normalizedBase).pathname.replace(/\/+$/, ""); } catch { return ""; }
+  })();
+  if (baseUrlPath && normalizedPath.startsWith(baseUrlPath)) {
+    normalizedPath = normalizedPath.slice(baseUrlPath.length) || "/";
   }
 
   const url = `${normalizedBase}${normalizedPath}`;

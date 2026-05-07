@@ -58,6 +58,8 @@ async function loadConfig(): Promise<SynapseConfig> {
 // Packs directory
 // ---------------------------------------------------------------------------
 
+const USER_PACKS_DIR = join(homedir(), ".synapse", "packs");
+
 async function findPacksDir(): Promise<string> {
   // Same logic as the main index.ts findPacksDir — resolve relative to script location
   const { fileURLToPath } = await import("node:url");
@@ -74,7 +76,7 @@ async function findPacksDir(): Promise<string> {
 // ---------------------------------------------------------------------------
 
 interface ProviderCard {
-  provider: { id: string; name: string; docs_url: string };
+  provider: { id: string; name: string; docs_url: string; base_url?: string; auth_type?: "Bearer" | "APIKey" | "OAuth2" };
   features: Array<{
     id: string;
     intent: string;
@@ -101,29 +103,80 @@ interface ProviderCard {
 }
 
 async function loadProviderCard(packsDir: string, providerId: string): Promise<ProviderCard | null> {
-  const cardPath = join(packsDir, providerId, "provider-card.json");
-  try {
-    const content = await readFile(cardPath, "utf8");
-    return JSON.parse(content);
-  } catch {
-    return null;
+  // Search project packs/ first, then ~/.synapse/packs/ (registry-installed)
+  for (const dir of [packsDir, USER_PACKS_DIR]) {
+    const cardPath = join(dir, providerId, "provider-card.json");
+    try {
+      const content = await readFile(cardPath, "utf8");
+      return JSON.parse(content);
+    } catch {
+      continue;
+    }
   }
+  return null;
+}
+
+// ---------------------------------------------------------------------------
+// Registry manifest resolution
+// ---------------------------------------------------------------------------
+
+interface ManifestEntry {
+  id: string;
+  ns: string;
+  name: string;
+  version: string;
+  installed_at: string;
+  source: string;
+  checksum: string;
+}
+
+interface Manifest {
+  packs: Record<string, ManifestEntry>;
+}
+
+async function resolvePackFromManifest(providerId: string): Promise<string | null> {
+  // Try to resolve a provider ID to a pack name from the registry manifest.
+  // E.g. "aliyun" → finds pack "qwen-image" with ns "aliyun" in manifest.
+  const manifestPath = join(USER_PACKS_DIR, "registry-manifest.json");
+  try {
+    const content = await readFile(manifestPath, "utf8");
+    const manifest: Manifest = JSON.parse(content);
+    // First: check if providerId matches a pack name directly
+    if (manifest.packs[providerId]) {
+      return providerId;
+    }
+    // Second: check if providerId matches a namespace, return first pack in that ns
+    for (const [packName, entry] of Object.entries(manifest.packs)) {
+      if (entry.ns === providerId) {
+        return packName;
+      }
+    }
+  } catch {
+    // manifest not found
+  }
+  return null;
 }
 
 async function listAvailableProviders(packsDir: string): Promise<Array<{ id: string; name: string }>> {
   const { readdir } = await import("node:fs/promises");
   const providers: Array<{ id: string; name: string }> = [];
-  try {
-    const entries = await readdir(packsDir, { withFileTypes: true });
-    for (const entry of entries) {
-      if (!entry.isDirectory() || entry.name.startsWith(".")) continue;
-      const card = await loadProviderCard(packsDir, entry.name);
-      if (card) {
-        providers.push({ id: card.provider.id, name: card.provider.name });
+  const seen = new Set<string>();
+  // Scan both project packs/ and ~/.synapse/packs/ (registry-installed)
+  for (const dir of [packsDir, USER_PACKS_DIR]) {
+    try {
+      const entries = await readdir(dir, { withFileTypes: true });
+      for (const entry of entries) {
+        if (!entry.isDirectory() || entry.name.startsWith(".")) continue;
+        if (seen.has(entry.name)) continue;
+        const card = await loadProviderCard(packsDir, entry.name);
+        if (card) {
+          seen.add(entry.name);
+          providers.push({ id: card.provider.id, name: card.provider.name });
+        }
       }
+    } catch {
+      // packs dir not found
     }
-  } catch {
-    // packs dir not found
   }
   return providers;
 }
@@ -406,7 +459,18 @@ export async function handleConnectCommand(argv: string[]): Promise<void> {
   const packName = providerConfig?.pack;  // e.g. "openai" for deepseek using openai pack
 
   // Determine which pack dir to load provider-card from
-  const cardDir = packName ?? provider;  // "openai" if configured, else the provider itself
+  // Priority: config.pack > provider ID > manifest namespace resolution
+  let cardDir = packName ?? provider;
+  if (!packName) {
+    const card = await loadProviderCard(packsDir, provider);
+    if (!card) {
+      // Try resolving from registry manifest (e.g. "aliyun" → "qwen-image")
+      const resolved = await resolvePackFromManifest(provider);
+      if (resolved) {
+        cardDir = resolved;
+      }
+    }
+  }
 
   let baseUrl = options.baseUrl;
   if (!baseUrl) {
@@ -414,8 +478,9 @@ export async function handleConnectCommand(argv: string[]): Promise<void> {
       baseUrl = providerConfig.base_url;
     } else {
       const card = await loadProviderCard(packsDir, cardDir);
-      if (card?.service?.base_url) {
-        baseUrl = card.service.base_url;
+      const cardBaseUrl = card?.service?.base_url ?? card?.provider?.base_url;
+      if (cardBaseUrl) {
+        baseUrl = cardBaseUrl;
       } else {
         baseUrl = `https://api.${provider}.com/v1`;
       }
@@ -434,18 +499,17 @@ export async function handleConnectCommand(argv: string[]): Promise<void> {
     process.exit(1);
   }
 
-  // Resolve auth type
+  // Resolve auth type — provider-card is authoritative, config is fallback
   let authType: "Bearer" | "APIKey" | "OAuth2" = "Bearer";
-  if (providerConfig?.auth_type) {
-    authType = providerConfig.auth_type;
-  } else {
-    const card = await loadProviderCard(packsDir, cardDir);
-    if (card?.service?.auth_type) {
-      const raw = card.service.auth_type;
-      if (raw === "Bearer" || raw === "APIKey" || raw === "OAuth2") {
-        authType = raw;
-      }
+  const card = await loadProviderCard(packsDir, cardDir);
+  if (card) {
+    // Check service.auth_type first (standard packs), then provider.auth_type (registry packs)
+    const raw = card.service?.auth_type ?? card.provider?.auth_type;
+    if (raw === "Bearer" || raw === "APIKey" || raw === "OAuth2") {
+      authType = raw;
     }
+  } else if (providerConfig?.auth_type) {
+    authType = providerConfig.auth_type;
   }
 
   // Build lock from provider card (prefer Schema Lock cache)

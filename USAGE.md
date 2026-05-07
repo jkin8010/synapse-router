@@ -244,6 +244,346 @@ console.log(result.choices[0].message.content);
 
 ---
 
+## 场景用例
+
+### Text-to-Image — 文本生成图片
+
+Agent 声明 `text-to-image` 意图，Router 匹配到支持该意图的 Provider（OpenAI DALL-E、Stability AI、Replicate 等）。
+
+#### 使用 OpenAI DALL-E 3
+
+```bash
+# 1. 配置 API Key（首次）
+synapse vault set openai sk-your-openai-key
+
+# 2. 直接连接调用
+synapse connect openai images_generations \
+  --input '{"prompt":"A cyberpunk cat riding a hoverboard in neon-lit Tokyo","model":"dall-e-3","size":"1792x1024","quality":"hd"}'
+```
+
+返回结果：
+
+```json
+{
+  "output": {
+    "created": 1714396800,
+    "data": [{
+      "url": "https://oaidalleapiprodscus.blob.core.windows.net/...",
+      "revised_prompt": "A futuristic cat riding a glowing hoverboard..."
+    }]
+  },
+  "meta": {
+    "provider": "openai",
+    "feature_id": "images_generations_post_v1_images_generations",
+    "usage": { "input_tokens": 0, "output_tokens": 1 }
+  }
+}
+```
+
+#### 使用 Stability AI Stable Diffusion
+
+```bash
+# 1. 配置 API Key
+synapse vault set stability sk-your-stability-key
+
+# 2. 生成图片
+synapse connect stability text_to_image \
+  --input '{"text_prompts":[{"text":"A serene mountain lake at dawn","weight":1}],"width":1024,"height":1024,"steps":30,"cfg_scale":7}'
+```
+
+#### 通过协商自动选择 Provider
+
+```bash
+# Agent 声明需求，Router 自动匹配最合适的 Provider
+synapse negotiate - <<'EOF'
+{
+  "agent_id": "image-bot",
+  "agent_name": "Image Bot",
+  "version": "1.0.0",
+  "features": [{
+    "feature_id": "gen-image",
+    "intent": "text-to-image",
+    "input_schema": {
+      "name": "input",
+      "fields": [
+        { "name": "prompt", "type": "string", "required": true }
+      ]
+    },
+    "output_schema": {
+      "name": "output",
+      "fields": [
+        { "name": "image_url", "type": "string" }
+      ]
+    }
+  }]
+}
+EOF
+# Matched providers:
+#   openai: images_generations_post_v1_images_generations
+#   stability: text_to_image_post_v1_generation_text2img
+```
+
+#### 通过 Replicate 运行开源模型（如 SDXL、Flux）
+
+```bash
+# 1. 配置 API Key
+synapse vault set replicate r8-your-replicate-key
+
+# 2. 运行模型推理
+synapse connect replicate predictions \
+  --input '{"version":"stability-ai/sdxl:39ed52f2a78e934b3ba6e2a89f5b1c712de7dfea535525255b1aa35c5565e08b","input":{"prompt":"A watercolor painting of a cozy bookshop"}}'
+```
+
+---
+
+### Image-to-Image — 图片转图片
+
+对已有图片进行风格转换、重绘、超分等操作。
+
+#### 使用 Stability AI img2img
+
+```bash
+# 配置 API Key（如已配置可跳过）
+synapse vault set stability sk-your-stability-key
+
+# 将图片转为 Base64 并调用
+BASE64_IMG=$(base64 -i input.png | tr -d '\n')
+
+synapse connect stability image_to_image \
+  --input "{
+    \"text_prompts\":[{\"text\":\"Turn into oil painting style\",\"weight\":1}],
+    \"init_image\":\"$BASE64_IMG\",
+    \"image_strength\":0.6,
+    \"steps\":30,
+    \"cfg_scale\":7
+  }"
+```
+
+**关键参数说明**：
+
+| 参数             | 说明                                           |
+| ---------------- | ---------------------------------------------- |
+| `init_image`     | 原始图片的 Base64 编码                         |
+| `image_strength` | 控制转换程度，0=完全保留原图，1=完全重绘       |
+| `init_image_mode` | `image_strength`（按强度）或 `step_count`（按步数） |
+| `text_prompts`   | 提示词数组，每个包含 `text` 和 `weight`        |
+
+---
+
+### Embeddings — 文本向量化
+
+生成文本的向量表示，用于语义搜索、聚类、分类等。
+
+#### 使用 OpenAI Embeddings
+
+```bash
+# 配置 API Key（如已配置可跳过）
+synapse vault set openai sk-your-openai-key
+
+# 单条文本向量化
+synapse connect openai embeddings \
+  --input '{"input":["The quick brown fox jumps over the lazy dog"],"model":"text-embedding-3-large","dimensions":1024}'
+```
+
+返回结果：
+
+```json
+{
+  "output": {
+    "object": "list",
+    "data": [{
+      "object": "embedding",
+      "index": 0,
+      "embedding": [0.0023, -0.0094, 0.0112, ...]
+    }],
+    "model": "text-embedding-3-large",
+    "usage": { "prompt_tokens": 9, "total_tokens": 9 }
+  },
+  "meta": {
+    "provider": "openai",
+    "feature_id": "embeddings_post_v1_embeddings"
+  }
+}
+```
+
+#### 批量向量化
+
+```bash
+synapse connect openai embeddings \
+  --input '{"input":["Hello world","Goodbye world","你好世界"],"model":"text-embedding-3-small"}'
+```
+
+#### 使用兼容 OpenAI 的 Embedding 服务
+
+```bash
+# 配置智谱 AI（兼容 OpenAI 接口格式）
+synapse vault set zhipu your-zhipu-key \
+  --base-url https://open.bigmodel.cn/api/paas/v4 \
+  --pack openai
+
+# 调用
+synapse connect zhipu embeddings \
+  --input '{"input":["需要向量化的文本"],"model":"embedding-3"}'
+```
+
+---
+
+### Speech-to-Text — 语音转文字
+
+音频文件转写为文本，支持多语言、时间戳、分段输出。
+
+#### 使用 OpenAI Whisper
+
+```bash
+# 配置 API Key（如已配置可跳过）
+synapse vault set openai sk-your-openai-key
+
+# 转写音频
+synapse connect openai audio_transcriptions \
+  --input '{"model":"whisper-1","language":"zh","response_format":"verbose_json"}'
+```
+
+**输出格式选项**：
+
+| 格式             | 说明                                 |
+| ---------------- | ------------------------------------ |
+| `json`           | 仅文本（默认）                       |
+| `text`           | 纯文本                               |
+| `srt`            | SRT 字幕格式                         |
+| `vtt`            | WebVTT 字幕格式                      |
+| `verbose_json`   | 包含分段、时间戳、语言的详细 JSON    |
+
+---
+
+### Model Inference — 开源模型推理
+
+通过 Replicate 运行任意开源模型，覆盖图像生成、视频生成、语音合成等。
+
+#### 运行图像模型
+
+```bash
+synapse vault set replicate r8-your-replicate-key
+
+# 运行 Flux 模型
+synapse connect replicate predictions \
+  --input '{"version":"black-forest-labs/flux-schnell","input":{"prompt":"A photorealistic sunset over mountains"}}'
+```
+
+#### 运行语音模型
+
+```bash
+# 运行 TTS 模型
+synapse connect replicate predictions \
+  --input '{"version":"lucataco/xtts-v2","input":{"text":"Hello, how are you?","speaker":"female_en"}}'
+```
+
+#### 运行视频模型
+
+```bash
+# 运行视频生成模型
+synapse connect replicate predictions \
+  --input '{"version":"stability-ai/stable-video-diffusion","input":{"input_image":"<base64-image>"}}'
+```
+
+---
+
+### Fine-Tuning — 模型微调
+
+通过 Replicate 对开源模型进行微调训练。
+
+```bash
+synapse connect replicate trainings \
+  --input '{
+    "version":"stability-ai/sdxl-base-1.0",
+    "input":{
+      "input_images":"https://your-bucket.s3.amazonaws.com/training-images.zip",
+      "token_string":"xyz",
+      "max_train_steps":1000
+    }
+  }'
+```
+
+---
+
+### ComfyUI Workflow — 工作流编排
+
+执行 ComfyUI 自定义工作流，支持节点式图像处理管道。
+
+#### 配置本地 ComfyUI
+
+```bash
+# ComfyUI 通常运行在本地
+synapse vault set comfyui your-api-key \
+  --base-url http://localhost:8188
+```
+
+#### 执行工作流
+
+```bash
+synapse connect comfyui workflow \
+  --input '{
+    "prompt":{
+      "3":{
+        "class_type":"KSampler",
+        "inputs":{
+          "seed":1564383135,
+          "steps":20,
+          "cfg":8,
+          "sampler_name":"euler",
+          "scheduler":"normal",
+          "denoise":1,
+          "model":["4",0],
+          "positive":["6",0],
+          "negative":["7",0],
+          "latent_image":["5",0]
+        }
+      },
+      "5":{
+        "class_type":"EmptyLatentImage",
+        "inputs":{"width":512,"height":512,"batch_size":1}
+      },
+      "6":{
+        "class_type":"CLIPTextEncode",
+        "inputs":{"text":"a beautiful landscape","clip":["4",1]}
+      }
+    }
+  }'
+```
+
+---
+
+### 多 Provider 路由 — 根据 Intent 自动选择
+
+当多个 Provider 支持同一 Intent 时，Router 根据策略选择最优 Provider。
+
+```bash
+# 协商发现多个 Provider 支持 text-to-image
+synapse negotiate my-agent.json --intent text-to-image
+# Matched providers:
+#   openai    — images_generations (quality: hd, cost: $0.04/image)
+#   stability — text_to_image      (quality: standard, cost: $0.04/image)
+
+# 使用 HTTP API，让 Router 自动选择
+curl -X POST http://localhost:3000/execute \
+  -H "Content-Type: application/json" \
+  -d '{
+    "intent": "text-to-image",
+    "strategy": "cheap",
+    "input": { "prompt": "A cat in a garden" }
+  }'
+```
+
+**路由策略**：
+
+| 策略       | 说明                                       |
+| ---------- | ------------------------------------------ |
+| `cheap`    | 优先选择成本最低的 Provider                |
+| `fast`     | 优先选择延迟最低的 Provider                |
+| `quality`  | 优先选择输出质量最高的 Provider            |
+| `manual`   | 手动指定 Provider（默认）                  |
+
+---
+
 ## 命令参考
 
 ### CLI 命令总览

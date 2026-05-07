@@ -310,6 +310,8 @@ export interface ProviderCard {
     id: string;
     name: string;
     docs_url?: string;
+		base_url?: string;
+		auth_type?: "APIKey" | "Bearer" | "OAuth2";
   };
   service: {
     id: string;
