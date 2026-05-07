@@ -8,6 +8,8 @@ export {
   listInstalledPacks,
   updatePack,
 } from "./installer.js";
+export { submitVerification, fetchPackManifest } from "./verify.js";
+export type { VerificationSubmission } from "./verify.js";
 export type {
   RegistryClientConfig,
   SearchOptions,
