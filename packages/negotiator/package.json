@@ -16,6 +16,8 @@
     "typecheck": "tsc -b tsconfig.json"
   },
   "dependencies": {
-    "@synapse-router/core": "workspace:*"
+    "@synapse-router/contract-mocker": "workspace:*",
+    "@synapse-router/core": "workspace:*",
+    "@synapse-router/sdk-generator": "workspace:*"
   }
 }

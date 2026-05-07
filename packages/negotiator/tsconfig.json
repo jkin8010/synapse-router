@@ -13,7 +13,13 @@
   ],
   "references": [
     {
+      "path": "../contract-mocker"
+    },
+    {
       "path": "../core"
+    },
+    {
+      "path": "../sdk-generator"
     }
   ]
 }
