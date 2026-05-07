@@ -22,6 +22,13 @@ export {
   createContractVerificationError,
 } from "./errors.js";
 
+// ─── Re-export Manifest functions (Plan 01-02) ──────────────────────────
+export {
+  loadManifestFromPack,
+  matchManifest,
+  buildSuggestions,
+} from "./manifest.js";
+
 export interface NegotiateSchemaInput {
   task: string;
   goal: string;
