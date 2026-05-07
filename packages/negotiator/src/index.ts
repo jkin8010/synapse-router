@@ -5,6 +5,23 @@ import {
   type Schema
 } from "@synapse-router/core";
 
+// ─── Re-export Manifest and Verification types (Plan 01-02) ─────────────
+export type {
+  ManifestConstraint,
+  ManifestFieldMismatch,
+  ManifestMatchResult,
+  ManifestDiff,
+  MockResult,
+  VerificationStatus,
+  VerificationResult,
+} from "./types.js";
+
+// ─── Re-export ContractVerificationError (Plan 01-02) ───────────────────
+export {
+  type ContractVerificationError,
+  createContractVerificationError,
+} from "./errors.js";
+
 export interface NegotiateSchemaInput {
   task: string;
   goal: string;
