@@ -34,18 +34,18 @@
 
 | REQ-ID | Phase | Status |
 |--------|-------|--------|
-| E2E-01 | — | pending |
-| E2E-02 | — | pending |
-| E2E-03 | — | pending |
-| E2E-04 | — | pending |
-| E2E-05 | — | pending |
-| E2E-06 | — | pending |
-| PLAYGROUND-01 | — | pending |
-| PLAYGROUND-02 | — | pending |
-| PLAYGROUND-03 | — | pending |
-| PLAYGROUND-04 | — | pending |
-| PLAYGROUND-05 | — | pending |
-| SMOKE-01 | — | pending |
-| SMOKE-02 | — | pending |
-| SMOKE-03 | — | pending |
-| SMOKE-04 | — | pending |
+| E2E-01 | Phase 2 | pending |
+| E2E-02 | Phase 2 | pending |
+| E2E-03 | Phase 2 | pending |
+| E2E-04 | Phase 2 | pending |
+| E2E-05 | Phase 2 | pending |
+| E2E-06 | Phase 2 | pending |
+| PLAYGROUND-01 | Phase 3 | pending |
+| PLAYGROUND-02 | Phase 3 | pending |
+| PLAYGROUND-03 | Phase 3 | pending |
+| PLAYGROUND-04 | Phase 3 | pending |
+| PLAYGROUND-05 | Phase 3 | pending |
+| SMOKE-01 | Phase 4 | pending |
+| SMOKE-02 | Phase 4 | pending |
+| SMOKE-03 | Phase 4 | pending |
+| SMOKE-04 | Phase 4 | pending |
