@@ -19,6 +19,9 @@
       "path": "../core"
     },
     {
+      "path": "../registry-client"
+    },
+    {
       "path": "../sdk-generator"
     }
   ]

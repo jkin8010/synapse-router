@@ -1,8 +1,11 @@
-import { describe, it } from "node:test";
+import { describe, it, after } from "node:test";
 import assert from "node:assert/strict";
+import { readFile, rm } from "node:fs/promises";
+import { homedir } from "node:os";
+import { join } from "node:path";
 import type { Schema } from "@synapse-router/core";
-import type { ManifestConstraint } from "./types.js";
-import { runMockTest } from "./verifier.js";
+import type { ManifestConstraint, VerificationResult } from "./types.js";
+import { runMockTest, cacheVerificationResultLocally } from "./verifier.js";
 
 // ─── mergeConstraints (internal, tested via direct copy of logic) ────────
 
@@ -177,5 +180,131 @@ describe("runMockTest", () => {
     assert.ok("response_received" in result.mockResult);
     assert.ok("error_message" in result.mockResult);
     assert.strictEqual(typeof result.mockResult.error_message, "string");
+  });
+});
+
+// ─── cacheVerificationResultLocally tests ───────────────────────────────
+
+const VERIFICATIONS_DIR = join(homedir(), ".synapse", "verifications");
+
+function makeVerificationResult(
+  overrides: Partial<VerificationResult> = {},
+): VerificationResult {
+  return {
+    status: "passed",
+    verified_at: new Date().toISOString(),
+    ...overrides,
+  };
+}
+
+describe("cacheVerificationResultLocally", () => {
+  const schemaId = `test-cache-${Date.now()}`;
+  const providerId = "test-provider";
+  const cachePath = join(VERIFICATIONS_DIR, `${schemaId}.verification.json`);
+
+  after(async () => {
+    // Clean up test cache file
+    try {
+      await rm(cachePath, { force: true });
+    } catch {
+      // ignore cleanup errors
+    }
+  });
+
+  it("should write verification result to ~/.synapse/verifications/ directory", async () => {
+    const result = makeVerificationResult();
+
+    await cacheVerificationResultLocally(schemaId, providerId, result);
+
+    const content = await readFile(cachePath, "utf8");
+    const parsed = JSON.parse(content);
+
+    assert.strictEqual(parsed.schema_id, schemaId);
+    assert.strictEqual(parsed.provider_id, providerId);
+    assert.strictEqual(parsed.status, "passed");
+    assert.strictEqual(typeof parsed.verified_at, "string");
+  });
+
+  it("should cache manifest_mismatch verification results", async () => {
+    const mismatchId = `test-cache-mismatch-${Date.now()}`;
+    const mismatchPath = join(
+      VERIFICATIONS_DIR,
+      `${mismatchId}.verification.json`,
+    );
+
+    after(async () => {
+      try {
+        await rm(mismatchPath, { force: true });
+      } catch {
+        // ignore
+      }
+    });
+
+    const result = makeVerificationResult({
+      status: "manifest_mismatch",
+      manifest_diff: {
+        missing: ["required_field"],
+        extra: ["extra_field"],
+        type_mismatch: [{ field: "count", expected: "number", actual: "string" }],
+      },
+    });
+
+    await cacheVerificationResultLocally(mismatchId, providerId, result);
+
+    const content = await readFile(mismatchPath, "utf8");
+    const parsed = JSON.parse(content);
+
+    assert.strictEqual(parsed.status, "manifest_mismatch");
+    assert.deepStrictEqual(parsed.manifest_diff.missing, ["required_field"]);
+    assert.deepStrictEqual(parsed.manifest_diff.extra, ["extra_field"]);
+    assert.strictEqual(parsed.manifest_diff.type_mismatch.length, 1);
+  });
+
+  it("should cache mock_failure verification results", async () => {
+    const mockFailId = `test-cache-mockfail-${Date.now()}`;
+    const mockFailPath = join(
+      VERIFICATIONS_DIR,
+      `${mockFailId}.verification.json`,
+    );
+
+    after(async () => {
+      try {
+        await rm(mockFailPath, { force: true });
+      } catch {
+        // ignore
+      }
+    });
+
+    const result = makeVerificationResult({
+      status: "mock_failure",
+      mock_result: {
+        request_sent: { prompt: "hello" },
+        response_received: null,
+        error_message: "Connection refused",
+      },
+    });
+
+    await cacheVerificationResultLocally(mockFailId, providerId, result);
+
+    const content = await readFile(mockFailPath, "utf8");
+    const parsed = JSON.parse(content);
+
+    assert.strictEqual(parsed.status, "mock_failure");
+    assert.deepStrictEqual(parsed.mock_result.request_sent, { prompt: "hello" });
+    assert.strictEqual(parsed.mock_result.response_received, null);
+    assert.strictEqual(parsed.mock_result.error_message, "Connection refused");
+  });
+
+  it("should not throw when filesystem write fails (best-effort)", async () => {
+    // The function catches all errors silently
+    const result = makeVerificationResult();
+
+    await assert.doesNotReject(async () => {
+      await cacheVerificationResultLocally(
+        "valid-id",
+        "test-provider",
+        result,
+      );
+    });
   });
 });

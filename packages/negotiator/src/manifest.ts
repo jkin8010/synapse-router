@@ -155,3 +155,182 @@ export function buildSuggestions(result: ManifestMatchResult): string[] {
 
   return suggestions;
 }
+
+// ─── loadManifestEnhanced (D-15: Registry-enhanced manifest loading) ─────
+
+/**
+ * Extract pack identity (namespace + name) from a local pack directory.
+ *
+ * Reads provider-card.json and extracts provider.id as the lookup key
+ * for Registry queries. Returns null if the card cannot be read or parsed.
+ */
+async function extractPackIdentity(
+  packDir: string,
+): Promise<{ ns: string; name: string } | null> {
+  try {
+    const content = await readFile(join(packDir, "provider-card.json"), "utf8");
+    const card = JSON.parse(content) as {
+      provider?: { id?: string };
+    };
+    const id = card?.provider?.id;
+    if (!id) return null;
+    return { ns: id, name: id };
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * Extract ManifestConstraint[] from a remote manifest (Registry spec object).
+ *
+ * The spec object is expected to have a top-level "features" array where
+ * each feature may carry a "constraints" field. If the format is unrecognised,
+ * returns an empty array.
+ */
+function extractConstraintsFromManifest(
+  manifest: Record<string, unknown>,
+): ManifestConstraint[] {
+  const constraints: ManifestConstraint[] = [];
+
+  try {
+    const features = manifest["features"];
+    if (!Array.isArray(features)) return constraints;
+
+    for (const feature of features) {
+      if (
+        feature &&
+        typeof feature === "object" &&
+        "constraints" in feature
+      ) {
+        const c = (feature as Record<string, unknown>)["constraints"];
+        if (c && typeof c === "object" && !Array.isArray(c)) {
+          constraints.push(c as ManifestConstraint);
+        }
+      }
+    }
+  } catch {
+    // Malformed manifest — return empty
+  }
+
+  return constraints;
+}
+
+/**
+ * Merge local and remote constraints with local priority.
+ *
+ * Strategy:
+ * 1. Start with all remote constraints
+ * 2. For each local constraint, find the matching remote one (by feature_id
+ *    if available, otherwise by required-fields overlap) and override.
+ * 3. Local constraints without a remote match are appended as-is.
+ *
+ * This ensures local pack DSL takes precedence while remote fills gaps.
+ */
+function mergeConstraintsEnhanced(
+  local: ManifestConstraint[],
+  remote: ManifestConstraint[],
+): ManifestConstraint[] {
+  if (local.length === 0) return remote;
+  if (remote.length === 0) return local;
+
+  // Build a set of required field sets from local for fast overlap detection
+  const localReqSets = local.map((c) => new Set(c.required ?? []));
+  const remoteUsed = new Set<number>();
+  const result: ManifestConstraint[] = [];
+
+  for (let i = 0; i < local.length; i++) {
+    const localReq = localReqSets[i]!;
+
+    // Try to find a matching remote constraint by field overlap
+    let bestMatch = -1;
+    let bestOverlap = 0;
+
+    for (let j = 0; j < remote.length; j++) {
+      if (remoteUsed.has(j)) continue;
+      const remoteReq = new Set(remote[j]!.required ?? []);
+      const overlap = [...localReq].filter((f) => remoteReq.has(f)).length;
+      if (overlap > bestOverlap) {
+        bestOverlap = overlap;
+        bestMatch = j;
+      }
+    }
+
+    if (bestMatch >= 0) {
+      // Merge: remote as base, local overrides
+      remoteUsed.add(bestMatch);
+      const merged: ManifestConstraint = { ...remote[bestMatch] };
+      const localC = local[i]!;
+
+      // Local required takes full precedence (not merged)
+      merged.required = [...new Set([...(merged.required ?? []), ...(localC.required ?? [])])];
+      if (localC.type) merged.type = { ...(merged.type ?? {}), ...localC.type };
+      if (localC.enum) merged.enum = { ...(merged.enum ?? {}), ...localC.enum };
+      if (localC.minLength) merged.minLength = { ...(merged.minLength ?? {}), ...localC.minLength };
+      if (localC.maxLength) merged.maxLength = { ...(merged.maxLength ?? {}), ...localC.maxLength };
+
+      result.push(merged);
+    } else {
+      // No remote match — use local as-is
+      result.push(local[i]!);
+    }
+  }
+
+  // Append remaining remote constraints that had no local match
+  for (let j = 0; j < remote.length; j++) {
+    if (!remoteUsed.has(j)) {
+      result.push(remote[j]!);
+    }
+  }
+
+  return result;
+}
+
+/**
+ * Load manifest constraints from a pack directory with optional Registry
+ * enhancement.
+ *
+ * 1. Always load local constraints from pack DSL files (offline-capable).
+ * 2. If a RegistryClient is provided, attempt to fetch the remote manifest
+ *    and merge with local (local takes priority).
+ * 3. If the Registry is unavailable or the fetch fails, return local-only
+ *    constraints (D-14: Registry is optional).
+ *
+ * @param packDir - Path to the local pack directory
+ * @param registryClient - Optional Registry client for remote enhancement
+ * @returns ManifestConstraint[] (never throws)
+ */
+export async function loadManifestEnhanced(
+  packDir: string,
+  registryClient?: import("@synapse-router/registry-client").RegistryClient | null,
+): Promise<ManifestConstraint[]> {
+  // Step 1: Always load local constraints
+  const localConstraints = await loadManifestFromPack(packDir);
+
+  // Step 2: Attempt remote enhancement if Registry is available
+  if (!registryClient) return localConstraints;
+
+  const identity = await extractPackIdentity(packDir);
+  if (!identity) return localConstraints;
+
+  try {
+    const { fetchPackManifest } = await import(
+      "@synapse-router/registry-client"
+    );
+    const remoteManifest = await fetchPackManifest(
+      registryClient,
+      identity.ns,
+      identity.name,
+    );
+
+    if (!remoteManifest) return localConstraints;
+
+    const remoteConstraints = extractConstraintsFromManifest(remoteManifest);
+    if (remoteConstraints.length === 0) return localConstraints;
+
+    // Step 3: Merge with local priority
+    return mergeConstraintsEnhanced(localConstraints, remoteConstraints);
+  } catch {
+    // Registry unavailable — return local-only (D-14)
+    return localConstraints;
+  }
+}

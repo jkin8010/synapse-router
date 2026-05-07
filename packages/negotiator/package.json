@@ -18,6 +18,7 @@
   "dependencies": {
     "@synapse-router/contract-mocker": "workspace:*",
     "@synapse-router/core": "workspace:*",
+    "@synapse-router/registry-client": "workspace:*",
     "@synapse-router/sdk-generator": "workspace:*"
   }
 }

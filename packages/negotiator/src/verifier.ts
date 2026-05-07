@@ -1,8 +1,12 @@
 // ─── D-08~D-11: negotiateAndVerify Pipeline Orchestration ───────────────
 
+import { mkdir, writeFile } from "node:fs/promises";
+import { homedir } from "node:os";
+import { join } from "node:path";
 import { negotiateSchema, createOpenAICompatibleClient } from "./index.js";
 import {
   loadManifestFromPack,
+  loadManifestEnhanced,
   matchManifest,
   buildSuggestions,
 } from "./manifest.js";
@@ -17,6 +21,15 @@ import type {
 import type { Schema } from "@synapse-router/core";
 import { MockServer } from "@synapse-router/contract-mocker";
 import { generateSdk } from "@synapse-router/sdk-generator";
+import {
+  RegistryClient,
+  submitVerification,
+} from "@synapse-router/registry-client";
+import type { VerificationSubmission } from "@synapse-router/registry-client";
+
+// ─── Cache directory ─────────────────────────────────────────────────────
+
+const VERIFICATIONS_DIR = join(homedir(), ".synapse", "verifications");
 
 // ─── Public Types ─────────────────────────────────────────────────────────
 
@@ -151,6 +164,39 @@ export async function runMockTest(
   }
 }
 
+// ─── cacheVerificationResultLocally ──────────────────────────────────────
+
+/**
+ * Cache a verification result to the local filesystem.
+ *
+ * Writes to ~/.synapse/verifications/{schema_id}.verification.json
+ * using the same file-cache pattern as LockStorage (packages/lock).
+ *
+ * File I/O errors are silently caught — caching is best-effort and
+ * must never block the main pipeline (D-14).
+ */
+export async function cacheVerificationResultLocally(
+  schemaId: string,
+  providerId: string,
+  result: VerificationResult,
+): Promise<void> {
+  try {
+    await mkdir(VERIFICATIONS_DIR, { recursive: true });
+    const record = {
+      schema_id: schemaId,
+      provider_id: providerId,
+      ...result,
+    };
+    const filePath = join(
+      VERIFICATIONS_DIR,
+      `${schemaId}.verification.json`,
+    );
+    await writeFile(filePath, JSON.stringify(record, null, 2) + "\n", "utf8");
+  } catch {
+    // Best-effort cache — silently ignore filesystem errors
+  }
+}
+
 // ─── negotiateAndVerify ───────────────────────────────────────────────────
 
 export async function negotiateAndVerify(
@@ -166,8 +212,12 @@ export async function negotiateAndVerify(
     llm
   );
 
-  // Step 2: Phase 1a — 加载 Manifest 并匹配
-  const constraints = await loadManifestFromPack(input.packDir);
+  // Step 2: Phase 1a — 加载 Manifest (with Registry enhancement, D-15) 并匹配
+  const registryUrl = process.env["SYNAPSE_REGISTRY_URL"];
+  const registryClient = registryUrl
+    ? new RegistryClient({ registryUrl })
+    : null;
+  const constraints = await loadManifestEnhanced(input.packDir, registryClient);
   if (constraints.length > 0) {
     const mergedConstraint = mergeConstraints(constraints);
     const manifestMatch = matchManifest(negotiated.schema, mergedConstraint);
@@ -215,13 +265,30 @@ export async function negotiateAndVerify(
     );
   }
 
+  const verificationResult: VerificationResult = {
+    status: "passed",
+    verified_at: new Date().toISOString(),
+  };
+
+  // Cache locally + fire-and-forget submit to Registry (D-16)
+  await cacheVerificationResultLocally(
+    negotiated.schema_id,
+    input.providerId,
+    verificationResult,
+  );
+
+  const submission: VerificationSubmission = {
+    schema_id: negotiated.schema_id,
+    provider_id: input.providerId,
+    status: verificationResult.status,
+    verified_at: verificationResult.verified_at,
+  };
+  submitVerification(registryClient, submission).catch(() => {});
+
   return {
     schema: negotiated.schema,
     schema_id: negotiated.schema_id,
     sdk_code: sdkResult.files.map((f) => f.content).join("\n"),
-    verification_result: {
-      status: "passed",
-      verified_at: new Date().toISOString(),
-    },
+    verification_result: verificationResult,
   };
 }
