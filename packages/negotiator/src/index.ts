@@ -206,3 +206,11 @@ interface OpenAIChatCompletionResponse {
     };
   }>;
 }
+
+// ─── Re-export Pipeline Orchestration (Plan 01-03) ──────────────────────
+export { negotiateAndVerify, runMockTest } from "./verifier.js";
+export type { NegotiateAndVerifyInput, NegotiationResult } from "./verifier.js";
+
+// ─── Re-export Retry Logic (Plan 01-03) ─────────────────────────────────
+export { retryWithFeedback, buildFeedbackPrompt, MAX_RETRIES } from "./retry.js";
+export type { RetryableError } from "./retry.js";
