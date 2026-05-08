@@ -20,7 +20,7 @@ export function createApiClient(config: ApiConfig = { baseUrl: "http://localhost
     return res.json();
   }
 
-  async function negotiate(schema: unknown, providerId?: string) {
+  async function negotiate(schema: unknown, providerId?: string, signal?: AbortSignal) {
     const res = await fetch(`${config.baseUrl}/negotiate`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -28,20 +28,25 @@ export function createApiClient(config: ApiConfig = { baseUrl: "http://localhost
         agent_schema: schema,
         provider_id: providerId,
       }),
+      signal,
     });
     if (!res.ok) throw new ApiError("Negotiation failed", res.status, await res.json());
     return res.json();
   }
 
-  async function execute(params: {
-    negotiation_id?: string;
-    provider_id?: string;
-    input?: unknown;
-  }) {
+  async function execute(
+    params: {
+      negotiation_id?: string;
+      provider_id?: string;
+      input?: unknown;
+    },
+    signal?: AbortSignal,
+  ) {
     const res = await fetch(`${config.baseUrl}/execute`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(params),
+      signal,
     });
     if (!res.ok) throw new ApiError("Execution failed", res.status, await res.json());
     return res.json();
