@@ -1,8 +1,9 @@
 import { useRef, useCallback } from "react";
-import { useDispatch } from "../context";
+import { useAppState, useDispatch } from "../context";
 import { createApiClient } from "../lib/api";
 
 export default function useExecute() {
+  const { selectedBaseUrl } = useAppState();
   const dispatch = useDispatch();
   const apiRef = useRef(createApiClient());
 
@@ -16,7 +17,7 @@ export default function useExecute() {
 
       try {
         const result = await apiRef.current.execute(
-          { provider_id: providerId },
+          { provider_id: providerId, baseUrl: selectedBaseUrl ?? undefined },
           controller.signal,
         );
         const duration = Math.round(performance.now() - startTime);
@@ -40,7 +41,7 @@ export default function useExecute() {
         clearTimeout(timeoutId);
       }
     },
-    [dispatch],
+    [dispatch, selectedBaseUrl],
   );
 
   return { execute };

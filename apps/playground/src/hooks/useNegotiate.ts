@@ -1,8 +1,9 @@
 import { useRef, useCallback } from "react";
-import { useDispatch } from "../context";
+import { useAppState, useDispatch } from "../context";
 import { createApiClient } from "../lib/api";
 
 export default function useNegotiate() {
+  const { selectedBaseUrl } = useAppState();
   const dispatch = useDispatch();
   const apiRef = useRef(createApiClient());
 
@@ -16,7 +17,7 @@ export default function useNegotiate() {
 
       try {
         const parsedSchema = JSON.parse(agentSchema);
-        const result = await apiRef.current.negotiate(parsedSchema, providerId, undefined, controller.signal);
+        const result = await apiRef.current.negotiate(parsedSchema, providerId, selectedBaseUrl ?? undefined, controller.signal);
         const duration = Math.round(performance.now() - startTime);
         dispatch({ type: "SET_NEGOTIATION_RESULT", result, duration });
         dispatch({ type: "SET_STATUS", status: "idle" });
@@ -38,7 +39,7 @@ export default function useNegotiate() {
         clearTimeout(timeoutId);
       }
     },
-    [dispatch],
+    [dispatch, selectedBaseUrl],
   );
 
   return { negotiate };
