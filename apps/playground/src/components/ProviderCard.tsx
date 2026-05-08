@@ -54,6 +54,14 @@ export default function ProviderCard({ card, isSelected, isConfigured, onSelect 
       {/* Feature count */}
       <p className="text-xs text-gray-500">{card.features.length} features</p>
 
+      {/* base_url display */}
+      {card.service?.base_url && (
+        <p className="text-xs text-gray-500 mt-0.5 truncate">
+          <span className="text-gray-600">URL: </span>
+          {card.service.base_url}
+        </p>
+      )}
+
       {/* Not configured warning */}
       {!isConfigured && (
         <p className="text-xs text-yellow-400 mt-1">(no key configured)</p>

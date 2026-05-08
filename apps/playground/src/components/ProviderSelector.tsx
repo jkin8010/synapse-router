@@ -4,7 +4,7 @@ import ProviderCard from "./ProviderCard";
 import { createApiClient } from "../lib/api";
 
 export default function ProviderSelector() {
-  const { providers, selectedProviderId } = useAppState();
+  const { providers, selectedProviderId, selectedBaseUrl } = useAppState();
   const dispatch = useDispatch();
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -34,6 +34,7 @@ export default function ProviderSelector() {
 
   const handleSelect = (providerId: string) => {
     dispatch({ type: "SELECT_PROVIDER", providerId });
+    dispatch({ type: "SET_BASE_URL", baseUrl: null });
   };
 
   return (
@@ -65,6 +66,47 @@ export default function ProviderSelector() {
           </button>
         </div>
       </div>
+
+      {/* Base URL override -- shown when a provider is selected */}
+      {selectedProviderId && (
+        <div className="px-0 pb-2">
+          <div className="flex items-center gap-1.5">
+            <label className="text-xs text-gray-500 shrink-0">URL:</label>
+            <input
+              type="text"
+              value={selectedBaseUrl ?? ""}
+              onChange={(e) => {
+                const val = e.target.value.trim();
+                dispatch({ type: "SET_BASE_URL", baseUrl: val || null });
+              }}
+              placeholder={
+                providers.find((p) => p.provider.id === selectedProviderId)?.service?.base_url ??
+                "https://api.example.com/v1"
+              }
+              className="flex-1 bg-gray-800 border border-gray-700 rounded px-2 py-1 text-xs text-gray-300
+                         focus:border-blue-500 focus:outline-none placeholder-gray-600"
+            />
+            {selectedBaseUrl && (
+              <button
+                onClick={() => dispatch({ type: "SET_BASE_URL", baseUrl: null })}
+                className="text-gray-500 hover:text-gray-300 shrink-0"
+                title="Reset to default"
+              >
+                <svg className="w-3.5 h-3.5" viewBox="0 0 20 20" fill="currentColor">
+                  <path
+                    fillRule="evenodd"
+                    d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z"
+                    clipRule="evenodd"
+                  />
+                </svg>
+              </button>
+            )}
+          </div>
+          <p className="text-xs text-gray-600 mt-1">
+            Override the default base URL for this provider
+          </p>
+        </div>
+      )}
 
       {/* Content */}
       <div className="overflow-y-auto flex-1 space-y-2">
