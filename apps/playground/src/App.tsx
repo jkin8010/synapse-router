@@ -1,5 +1,5 @@
+import { useState, useCallback, useRef } from "react";
 import { AppProvider } from "./context";
-import ResizablePanel from "./components/ResizablePanel";
 import ProviderSelector from "./components/ProviderSelector";
 import SchemaEditor from "./components/SchemaEditor";
 import ActionBar from "./components/ActionBar";
@@ -8,26 +8,76 @@ import ResponseViewer from "./components/ResponseViewer";
 import StatusBar from "./components/StatusBar";
 
 export default function App() {
+  const [leftWidth, setLeftWidth] = useState(240);
+  const [rightWidth, setRightWidth] = useState(320);
+  const isDragging = useRef<"left" | "right" | null>(null);
+
+  const handleMouseMove = useCallback((e: MouseEvent) => {
+    if (isDragging.current === "left") {
+      setLeftWidth(Math.max(200, Math.min(400, e.clientX)));
+    } else if (isDragging.current === "right") {
+      setRightWidth(Math.max(280, Math.min(500, window.innerWidth - e.clientX)));
+    }
+  }, []);
+
+  const handleMouseUp = useCallback(() => {
+    isDragging.current = null;
+    document.removeEventListener("mousemove", handleMouseMove);
+    document.removeEventListener("mouseup", handleMouseUp);
+    document.body.style.userSelect = "";
+  }, [handleMouseMove]);
+
+  const handleDividerMouseDown = (side: "left" | "right") => (e: React.MouseEvent) => {
+    e.preventDefault();
+    isDragging.current = side;
+    document.body.style.userSelect = "none";
+    document.addEventListener("mousemove", handleMouseMove);
+    document.addEventListener("mouseup", handleMouseUp);
+  };
+
   return (
     <AppProvider>
-      <div className="h-screen grid" style={{ gridTemplateColumns: "240px 4px 1fr 4px 320px" }}>
-        <div className="bg-gray-950 text-gray-100 overflow-hidden">
-          <ProviderSelector />
-        </div>
-        <ResizablePanel side="left" />
-        <div className="bg-gray-950 text-gray-100 flex flex-col overflow-hidden">
-          <div className="flex-1 p-4 pb-0 overflow-hidden">
-            <SchemaEditor />
+      <div className="h-screen flex flex-col">
+        <div
+          className="flex-1 grid"
+          style={{
+            gridTemplateColumns: `${leftWidth}px 4px 1fr 4px ${rightWidth}px`,
+          }}
+        >
+          {/* LEFT PANEL: Provider Selector */}
+          <div className="bg-gray-950 overflow-hidden">
+            <ProviderSelector />
           </div>
-          <ActionBar />
-          <MockTestSection />
+
+          {/* LEFT DIVIDER */}
+          <div
+            className="cursor-col-resize bg-gray-800 hover:bg-blue-500/30 transition-colors duration-150"
+            onMouseDown={handleDividerMouseDown("left")}
+          />
+
+          {/* CENTER PANEL: Schema Editor + Action Bar + Mock Test */}
+          <div className="bg-gray-950 overflow-hidden flex flex-col">
+            <div className="flex-1 overflow-auto">
+              <SchemaEditor />
+            </div>
+            <ActionBar />
+            <MockTestSection />
+          </div>
+
+          {/* RIGHT DIVIDER */}
+          <div
+            className="cursor-col-resize bg-gray-800 hover:bg-blue-500/30 transition-colors duration-150"
+            onMouseDown={handleDividerMouseDown("right")}
+          />
+
+          {/* RIGHT PANEL: Response Viewer */}
+          <div className="bg-gray-950 overflow-hidden">
+            <ResponseViewer />
+          </div>
         </div>
-        <ResizablePanel side="right" />
-        <div className="bg-gray-950 text-gray-100 overflow-hidden">
-          <ResponseViewer />
-        </div>
+
+        <StatusBar />
       </div>
-      <StatusBar />
     </AppProvider>
   );
 }
