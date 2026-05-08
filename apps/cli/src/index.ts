@@ -8,6 +8,7 @@ import { fileURLToPath } from "node:url";
 import { createVault } from "@synapse-router/vault";
 import { handleGenerateCommand } from "./commands/generate.js";
 import { handleConnectCommand, printConnectHelp } from "./commands/connect.js";
+import { handleSmokeCommand, printSmokeHelp } from "./commands/smoke.js";
 import { handleSetupCommand, printSetupHelp } from "./commands/setup.js";
 import { handleConfigCommand, printConfigHelp } from "./commands/config.js";
 import { handleLockCommand, printLockHelp } from "./commands/lock.js";
@@ -98,6 +99,7 @@ Usage:
 
 Commands:
   connect <provider> <intent>   Connect to a provider and execute a feature
+  smoke --provider <name>       Run provider smoke tests against live APIs
   setup                         Interactive first-time setup wizard
   config set|get|list           Manage configuration (~/.synapse/config.json)
   provider list [--remote]      List all provider packs
@@ -762,6 +764,9 @@ async function main(): Promise<void> {
         case "pack":
           printPackHelp();
           return;
+        case "smoke":
+          printSmokeHelp();
+          return;
       }
     }
     printHelp();
@@ -854,6 +859,13 @@ async function main(): Promise<void> {
           printPackHelp();
         } else {
           await handlePackCommand(args);
+        }
+        break;
+      case "smoke":
+        if (flags.has("help") || args.includes("--help") || args.includes("-h")) {
+          printSmokeHelp();
+        } else {
+          await handleSmokeCommand(rawArgs);
         }
         break;
       case "execute":
