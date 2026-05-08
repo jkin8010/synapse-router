@@ -25,10 +25,10 @@
 
 ## SMOKE — Provider 冒烟测试
 
-- [ ] **SMOKE-01**: 冒烟测试框架（真实 API key 输入、超时控制、skip 标记）
-- [ ] **SMOKE-02**: OpenAI chat completions 冒烟测试
-- [ ] **SMOKE-03**: Replicate 冒烟测试
-- [ ] **SMOKE-04**: 冒烟测试 CLI 命令（synapse smoke --provider openai）
+- [x] **SMOKE-01**: 冒烟测试框架（真实 API key 输入、超时控制、skip 标记）
+- [x] **SMOKE-02**: OpenAI chat completions 冒烟测试
+- [x] **SMOKE-03**: Replicate 冒烟测试
+- [x] **SMOKE-04**: 冒烟测试 CLI 命令（synapse smoke --provider openai）
 
 ## Traceability
 
@@ -45,7 +45,7 @@
 | PLAYGROUND-03 | Phase 3 | pending |
 | PLAYGROUND-04 | Phase 3 | pending |
 | PLAYGROUND-05 | Phase 3 | pending |
-| SMOKE-01 | Phase 4 | pending |
-| SMOKE-02 | Phase 4 | pending |
-| SMOKE-03 | Phase 4 | pending |
-| SMOKE-04 | Phase 4 | pending |
+| SMOKE-01 | Phase 4 | Complete |
+| SMOKE-02 | Phase 4 | Complete |
+| SMOKE-03 | Phase 4 | Complete |
+| SMOKE-04 | Phase 4 | Complete |

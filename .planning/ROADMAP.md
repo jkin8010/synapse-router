@@ -74,7 +74,7 @@ Plans:
 **Plans**: 1 plan
 
 Plans:
-- [ ] 04-01-PLAN.md -- Create smoke.ts framework + wire into index.ts CLI dispatch
+- [x] 04-01-PLAN.md -- Create smoke.ts framework + wire into index.ts CLI dispatch
 
 ## Progress
 

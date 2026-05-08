@@ -2,15 +2,15 @@
 gsd_state_version: 1.0
 milestone: v1.1
 milestone_name: Testing & Playground
-status: completed
-stopped_at: Phase 4 context gathered
-last_updated: "2026-05-08T08:42:21.718Z"
+status: verifying
+stopped_at: Completed 04-provider-smoke-tests-01-PLAN.md
+last_updated: "2026-05-08T10:19:54.750Z"
 last_activity: 2026-05-08
 progress:
   total_phases: 3
-  completed_phases: 2
-  total_plans: 11
-  completed_plans: 11
+  completed_phases: 3
+  total_plans: 12
+  completed_plans: 12
   percent: 100
 ---
 
@@ -21,16 +21,19 @@ progress:
 See: .planning/PROJECT.md (updated 2026-05-07)
 
 **Core value:** "先有契约，再调用" — 每次路由都从 Schema 契约开始，只有契约明确后才允许调用 Provider
-**Current focus:** Phase 4: Provider Smoke Tests
+**Current focus:** Phase 04 — provider-smoke-tests
 
 ## Current Position
 
+Phase: 04 (provider-smoke-tests) — EXECUTING
+Plan: 1 of 1
+
 - **Phase:** 2 of 3 (E2E End-to-End Testing) ✓ COMPLETE
 - **Phase:** 3 of 3 (Playground Web UI) ✓ COMPLETE
-- **Status:** v1.1 milestone 2/3 phases complete
+- **Status:** Phase complete — ready for verification
 - **Last activity:** 2026-05-08
 
-**Progress:** [████████░░] 66%
+**Progress:** [██████████] 100%
 
 ## Performance Metrics
 
@@ -46,6 +49,7 @@ See: .planning/PROJECT.md (updated 2026-05-07)
 | 1. Negotiator 可靠性增强 | 4 | (v1.0 shipped) |
 | 2. E2E End-to-End Testing | 4 | ✓ |
 | 3. Playground Web UI | 7 | ✓ |
+| Phase 04-provider-smoke-tests P01 | 579 | 2 tasks | 2 files |
 
 ## Phase 3 Artifacts
 
@@ -73,6 +77,14 @@ Proceed to Phase 4: Provider Smoke Tests
 - Phase 3: CodeMirror 6 for schema editor, @uiw/react-codemirror for read-only tabs
 - Phase 3: React Context + useReducer for state management
 - Phase 3: API-only mock test (no local LLM), POST /execute endpoint
+- [Phase 04-provider-smoke-tests]: D-01: Use connector.connect() layer for smoke tests
+- [Phase 04-provider-smoke-tests]: D-02: Framework lives in apps/cli/src/commands/smoke.ts
+- [Phase 04-provider-smoke-tests]: D-03: One runSmokeTest function per provider
+- [Phase 04-provider-smoke-tests]: D-04: --provider is required
+- [Phase 04-provider-smoke-tests]: D-05: Supported flags: --provider, --timeout, --format, --verbose, --api-key
+- [Phase 04-provider-smoke-tests]: D-06: OpenAI: gpt-4o-mini, verify choices[0].message.content
+- [Phase 04-provider-smoke-tests]: D-07: Replicate: hardcoded SDXL model version
+- [Phase 04-provider-smoke-tests]: D-08: Verify response shape beyond HTTP 200
 
 ### Pending Todos
 
@@ -97,6 +109,6 @@ Items carried forward from v1.0 milestone close:
 
 ## Session Continuity
 
-Last session: 2026-05-08T08:42:21.715Z
-Stopped at: Phase 4 context gathered
-Resume file: .planning/phases/04-provider-smoke-tests/04-CONTEXT.md
+Last session: 2026-05-08T10:19:54.747Z
+Stopped at: Completed 04-provider-smoke-tests-01-PLAN.md
+Resume file: None
