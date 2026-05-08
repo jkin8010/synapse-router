@@ -3,6 +3,7 @@ import ResizablePanel from "./components/ResizablePanel";
 import ProviderSelector from "./components/ProviderSelector";
 import SchemaEditor from "./components/SchemaEditor";
 import ActionBar from "./components/ActionBar";
+import ResponseViewer from "./components/ResponseViewer";
 import StatusBar from "./components/StatusBar";
 
 export default function App() {
@@ -20,8 +21,8 @@ export default function App() {
           <ActionBar />
         </div>
         <ResizablePanel side="right" />
-        <div className="bg-gray-950 p-4 text-gray-100">
-          <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider">RESPONSE</p>
+        <div className="bg-gray-950 text-gray-100 overflow-hidden">
+          <ResponseViewer />
         </div>
       </div>
       <StatusBar />
