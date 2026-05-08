@@ -15,6 +15,12 @@
 **Plans**: 4 plans
 
 Plans:
+- [ ] 02-01-PLAN.md -- E2E test framework infrastructure (helpers, fixtures, test:e2e script)
+- [ ] 02-02-PLAN.md -- CLI connect and API /negotiate entry point E2E tests
+- [ ] 02-03-PLAN.md -- MCP Server negotiate tool and negotiateAndVerify pipeline E2E tests
+- [ ] 02-04-PLAN.md -- SDK generated code compilation and execution validation
+
+Plans:
 - [x] 01-01: Contract Mocker 包 — 零依赖 HTTP Mock Server
 - [x] 01-02: Manifest 类型与匹配 — 约束定义 + 三种差异检测
 - [x] 01-03: Pipeline + 重试逻辑 — negotiateAndVerify 全链路编排
@@ -35,7 +41,13 @@ Plans:
   2. Three application entry point tests pass: CLI `synapse connect --task "..."` full flow, API `/negotiate` HTTP request/response, MCP Server negotiate tool
   3. Full-chain `negotiateAndVerify` pipeline test passes end-to-end (negotiate -> manifest match -> SDK code generation -> mock test with contract-mocker)
   4. SDK generated code during E2E tests compiles and executes successfully when imported, verifying no broken output
-**Plans**: TBD
+**Plans**: 4 plans
+
+Plans:
+- [ ] 02-01-PLAN.md -- E2E test framework infrastructure (helpers, fixtures, test:e2e script)
+- [ ] 02-02-PLAN.md -- CLI connect and API /negotiate entry point E2E tests
+- [ ] 02-03-PLAN.md -- MCP Server negotiate tool and negotiateAndVerify pipeline E2E tests
+- [ ] 02-04-PLAN.md -- SDK generated code compilation and execution validation
 
 #### Phase 3: Playground Web UI
 **Goal**: Developers can visually compose, send, and debug negotiate requests through a web interface without needing CLI or API knowledge
