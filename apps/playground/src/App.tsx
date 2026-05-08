@@ -1,6 +1,6 @@
 import { AppProvider } from "./context";
-import { ResizablePanel } from "./components/ResizablePanel";
-import { StatusBar } from "./components/StatusBar";
+import ResizablePanel from "./components/ResizablePanel";
+import StatusBar from "./components/StatusBar";
 
 export default function App() {
   return (
