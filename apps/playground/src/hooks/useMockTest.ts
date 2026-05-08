@@ -24,10 +24,15 @@ export default function useMockTest() {
           controller.signal,
         );
 
+        // Read pass/fail from API response if available, otherwise derive from output presence
+        const passed = typeof result.passed === "boolean"
+          ? result.passed
+          : (result.output != null);
+
         dispatch({
           type: "SET_MOCK_TEST_RESULT",
           result: {
-            passed: true,
+            passed,
             expected: result.expected ?? [],
             got: result.got ?? [],
             fieldCoverage: result.fieldCoverage ?? "-",
