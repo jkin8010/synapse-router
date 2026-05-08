@@ -3,6 +3,7 @@ import ResizablePanel from "./components/ResizablePanel";
 import ProviderSelector from "./components/ProviderSelector";
 import SchemaEditor from "./components/SchemaEditor";
 import ActionBar from "./components/ActionBar";
+import MockTestSection from "./components/MockTestSection";
 import ResponseViewer from "./components/ResponseViewer";
 import StatusBar from "./components/StatusBar";
 
@@ -19,6 +20,7 @@ export default function App() {
             <SchemaEditor />
           </div>
           <ActionBar />
+          <MockTestSection />
         </div>
         <ResizablePanel side="right" />
         <div className="bg-gray-950 text-gray-100 overflow-hidden">
