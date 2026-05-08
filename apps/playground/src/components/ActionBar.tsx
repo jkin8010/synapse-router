@@ -1,9 +1,11 @@
 import { useAppState } from "../context";
 import useNegotiate from "../hooks/useNegotiate";
+import useExecute from "../hooks/useExecute";
 
 export default function ActionBar() {
   const { schema, schemaValid, selectedProviderId, status, negotiationResult, timing } = useAppState();
   const { negotiate } = useNegotiate();
+  const { execute } = useExecute();
 
   const isNegotiating = status === "negotiating";
   const isExecuting = status === "executing";
@@ -15,6 +17,11 @@ export default function ActionBar() {
   const handleNegotiate = () => {
     if (negotiateDisabled) return;
     negotiate(schema, selectedProviderId!);
+  };
+
+  const handleExecute = () => {
+    if (executeDisabled) return;
+    execute(selectedProviderId!);
   };
 
   return (
@@ -57,6 +64,7 @@ export default function ActionBar() {
       {/* Execute button */}
       <button
         disabled={executeDisabled}
+        onClick={handleExecute}
         className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md text-sm font-medium transition-colors duration-150 ${
           !executeDisabled
             ? "bg-gray-800 text-gray-300 hover:bg-gray-700 hover:text-gray-100"
