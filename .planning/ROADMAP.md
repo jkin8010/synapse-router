@@ -85,4 +85,4 @@ Plans:
 | 1. Negotiator Reliability | v1.0 | 4/4 | Complete | 2026-05-07 |
 | 2. E2E End-to-End Testing | v1.1 | 0/0 | Not started | - |
 | 3. Playground Web UI | v1.1 | 7/7 | Complete   | 2026-05-08 |
-| 4. Provider Smoke Tests | v1.1 | 0/0 | Not started | - |
+| 4. Provider Smoke Tests | v1.1 | 1/1 | Complete | 2026-05-08 |
