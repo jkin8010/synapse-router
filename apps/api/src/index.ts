@@ -38,6 +38,7 @@ interface NegotiateBody {
   goal?: string;
   constraints?: Record<string, unknown>;
   pack_dir?: string;
+  base_url?: string;
 }
 
 interface ExecuteBody {
@@ -45,6 +46,7 @@ interface ExecuteBody {
   provider_id?: string;
   feature_id?: string;
   input?: Record<string, unknown>;
+  base_url?: string;
 }
 
 interface VaultSetKeyBody {
@@ -364,6 +366,12 @@ async function handleRequest(
       const cards = [...ctx.providers.values()].map((entry) => ({
         provider: entry.card.provider,
         source: entry.source,
+        service: {
+          id: entry.card.service.id,
+          name: entry.card.service.name,
+          base_url: entry.card.service.base_url,
+          auth_type: entry.card.service.auth_type,
+        },
         features: entry.card.features.map((f) => ({
           id: f.id,
           intent: f.intent,
@@ -469,7 +477,11 @@ async function handleRequest(
         }
       }
 
-      sendJson(res, 200, { ...record, verification_result });
+      sendJson(res, 200, {
+        ...record,
+        verification_result,
+        ...(body.base_url ? { provider_base_url_override: body.base_url } : {}),
+      });
       return;
     }
 
@@ -517,7 +529,7 @@ async function handleRequest(
         request: body.input ?? {},
         api_key_present: apiKey !== null,
         _meta: {
-          provider_base_url: entry.card.service.base_url,
+          provider_base_url: body.base_url ?? entry.card.service.base_url,
           auth_type: entry.card.service.auth_type,
           feature_intent: matchedFeature.intent,
         },
