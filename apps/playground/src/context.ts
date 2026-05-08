@@ -4,6 +4,13 @@ import { createContext, useContext, useReducer, createElement } from "react";
 
 export interface ProviderCard {
   provider: { id: string; name: string; description?: string };
+  source?: string;
+  service?: {
+    id: string;
+    name: string;
+    base_url: string;
+    auth_type: string;
+  };
   features: Array<{ feature_id: string; feature_name?: string; intent: string }>;
 }
 
@@ -57,6 +64,7 @@ export interface AppState {
   activeTab: TabId;
   status: AppStatus;
   timing: { negotiate?: number; execute?: number };
+  selectedBaseUrl: string | null;
 }
 
 // ── Actions ────────────────────────────────────────────────────────────────
@@ -72,7 +80,8 @@ export type AppAction =
   | { type: "SET_ACTIVE_TAB"; tab: TabId }
   | { type: "ADD_LOG"; entry: LogEntry }
   | { type: "ADD_ERROR"; error: AppError }
-  | { type: "CLEAR_ERRORS" };
+  | { type: "CLEAR_ERRORS" }
+  | { type: "SET_BASE_URL"; baseUrl: string | null };
 
 // ── Default Schema ─────────────────────────────────────────────────────────
 
@@ -128,6 +137,7 @@ export const initialState: AppState = {
   activeTab: "formatted",
   status: "idle",
   timing: {},
+  selectedBaseUrl: null,
 };
 
 // ── Reducer ────────────────────────────────────────────────────────────────
@@ -164,6 +174,8 @@ export function appReducer(state: AppState, action: AppAction): AppState {
       return { ...state, errors: [...state.errors, action.error] };
     case "CLEAR_ERRORS":
       return { ...state, errors: [] };
+    case "SET_BASE_URL":
+      return { ...state, selectedBaseUrl: action.baseUrl };
     default:
       return state;
   }

@@ -16,7 +16,7 @@ export default function useNegotiate() {
 
       try {
         const parsedSchema = JSON.parse(agentSchema);
-        const result = await apiRef.current.negotiate(parsedSchema, providerId, controller.signal);
+        const result = await apiRef.current.negotiate(parsedSchema, providerId, undefined, controller.signal);
         const duration = Math.round(performance.now() - startTime);
         dispatch({ type: "SET_NEGOTIATION_RESULT", result, duration });
         dispatch({ type: "SET_STATUS", status: "idle" });
