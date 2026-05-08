@@ -59,9 +59,9 @@ Plans:
 - [x] 03-02-PLAN.md -- LEFT panel (ProviderSelector cards) + CENTER panel (SchemaEditor CodeMirror + ActionBar + useNegotiate/useExecute hooks)
 - [x] 03-03-PLAN.md -- RIGHT panel (6-tab ResponseViewer) + MockTestSection + useMockTest hook
 - [x] 03-04-PLAN.md -- App.tsx three-panel layout wiring + integration tests (api.test.ts, App.test.tsx)
-- [ ] 03-05-PLAN.md -- Gap closure: Wire Execute button onClick + fix Mock test hardcoded passed:true
-- [ ] 03-06-PLAN.md -- Gap closure: Add service.base_url to API GET /providers + extend Playground data layer for base_url support
-- [ ] 03-07-PLAN.md -- Gap closure: Display base_url on ProviderCard + inline override input in ProviderSelector + wire through negotiate/execute hooks
+- [x] 03-05-PLAN.md -- Gap closure: Wire Execute button onClick + fix Mock test hardcoded passed:true
+- [x] 03-06-PLAN.md -- Gap closure: Add service.base_url to API GET /providers + extend Playground data layer for base_url support
+- [x] 03-07-PLAN.md -- Gap closure: Display base_url on ProviderCard + inline override input in ProviderSelector + wire through negotiate/execute hooks
 
 #### Phase 4: Provider Smoke Tests
 **Goal**: Real provider API integrations (OpenAI, Replicate) are verified working with real API keys through an automated smoke test framework
@@ -71,7 +71,10 @@ Plans:
   1. Smoke test framework supports API key injection (env/CLI/config), timeout control, and skip markers for unavailable providers
   2. OpenAI chat completions and Replicate smoke tests pass against live production APIs
   3. `synapse smoke --provider <name>` CLI command runs specific provider smoke tests and displays structured pass/fail results per test case
-**Plans**: TBD
+**Plans**: 1 plan
+
+Plans:
+- [ ] 04-01-PLAN.md -- Create smoke.ts framework + wire into index.ts CLI dispatch
 
 ## Progress
 
@@ -81,5 +84,5 @@ Plans:
 |-------|-----------|----------------|--------|-----------|
 | 1. Negotiator Reliability | v1.0 | 4/4 | Complete | 2026-05-07 |
 | 2. E2E End-to-End Testing | v1.1 | 0/0 | Not started | - |
-| 3. Playground Web UI | v1.1 | 4/7 | Gap Closure | 2026-05-08 |
+| 3. Playground Web UI | v1.1 | 7/7 | Complete   | 2026-05-08 |
 | 4. Provider Smoke Tests | v1.1 | 0/0 | Not started | - |
