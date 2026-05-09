@@ -9,6 +9,12 @@ import { join, resolve, isAbsolute } from "node:path";
 import { homedir } from "node:os";
 import { createInterface } from "node:readline";
 import { loadAllProfiles, ProviderProfile } from "./profile.js";
+import {
+  tuneStrategies,
+  formatTuneReportAsJson,
+  formatTuneReportAsText,
+  type StrategyTuneReport,
+} from "./tune.js";
 
 // ---------------------------------------------------------------------------
 // Types
@@ -20,6 +26,7 @@ interface EvolveOptions {
   dryRun: boolean;
   force: boolean;
   withProfile: boolean;
+  tune: boolean;
   fromRegistry: boolean;
   yes: boolean;
   registryUrl?: string;
@@ -55,6 +62,7 @@ Options:
   --dry-run             Preview changes without writing files
   --force               Regenerate even if no provider changes detected
   --with-profile        Read .synapse/profiles/ to inform SDK generation
+  --tune                Tune strategy weights from production profile data
   --from-registry       Check registry for newer pack versions before generation
   --registry-url <url>  Registry URL (implies --from-registry, overrides config/env)
   --yes, -y             Non-interactive mode (auto-confirm downloads)
@@ -124,6 +132,7 @@ export function parseEvolveArgs(argv: string[]): EvolveOptions {
     dryRun: false,
     force: false,
     withProfile: false,
+    tune: false,
     fromRegistry: false,
     yes: false,
   };
@@ -144,6 +153,8 @@ export function parseEvolveArgs(argv: string[]): EvolveOptions {
       options.fromRegistry = true;
     } else if (arg === "--yes" || arg === "-y") {
       options.yes = true;
+    } else if (arg === "--tune") {
+      options.tune = true;
     } else if (arg === "--registry-url" && argv[i + 1]) {
       options.registryUrl = argv[++i];
       options.fromRegistry = true; // --registry-url implies --from-registry
@@ -597,6 +608,9 @@ export async function handleEvolveCommand(argv: string[]): Promise<void> {
     }
   }
 
+  // Strategy weight tuning (--tune) — declare early for both write block and tune block
+  let tuneReports: StrategyTuneReport[] = [];
+
   // Write top-level files
   if (!options.dryRun) {
     const successResults = results.filter((r) => !r.error);
@@ -606,6 +620,32 @@ export async function handleEvolveCommand(argv: string[]): Promise<void> {
       await writeTopLevelIndex(outDir, results);
       if (options.withProfile && profiles.length > 0) {
         await writeGenesisJson(outDir, profiles);
+      }
+      // Write tuning reports (after tune block completes)
+      if (tuneReports.length > 0) {
+        const jsonContent = formatTuneReportAsJson(tuneReports);
+        await writeFile(join(outDir, "strategies.json"), jsonContent, "utf8");
+        const mdContent = formatTuneReportAsText(tuneReports);
+        await writeFile(join(outDir, "STRATEGIES.md"), mdContent, "utf8");
+      }
+    }
+  }
+
+  // Strategy weight tuning (--tune)
+  if (options.tune) {
+    if (profiles.length === 0) {
+      console.log("\n  ⚠ No profile data found. Run 'synapse profile refresh' first or use --with-profile.");
+    } else {
+      console.log("\n  Tuning strategy weights from production data...");
+      tuneReports = tuneStrategies(profiles);
+      console.log(`  Evaluated ${profiles.length} provider(s) across ${tuneReports.length} strategy/strategies`);
+      for (const report of tuneReports) {
+        const biasCounts = {
+          match: report.findings.filter((f) => f.bias === "match").length,
+          under: report.findings.filter((f) => f.bias === "under").length,
+          over: report.findings.filter((f) => f.bias === "over").length,
+        };
+        console.log(`    ${report.strategy.padEnd(16)} ${biasCounts.match} match  ${biasCounts.under} under  ${biasCounts.over} over`);
       }
     }
   }
