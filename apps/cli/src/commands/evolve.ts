@@ -346,7 +346,7 @@ async function writeTopLevelIndex(
   for (const result of results) {
     if (result.error) continue;
     lines.push(`// ${result.provider}`);
-    lines.push(`export * from './${result.provider}/index.js';`);
+    lines.push(`export * as ${result.provider} from './${result.provider}/index.js';`);
   }
 
   lines.push("");

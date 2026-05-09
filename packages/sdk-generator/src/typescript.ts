@@ -26,9 +26,9 @@ function packageName(providerId: string): string {
 }
 
 /** Build the endpoint path from feature_id.
- *  chat_post_v1_chat_completions → /chat/completions
- *  embeddings_post_v1_embeddings → /embeddings
- *  images_generations_post_v1_images_generations → /images/generations
+ *  chat_post_v1_chat_completions -> /chat/completions
+ *  embeddings_post_v1_embeddings -> /embeddings
+ *  images_generations_post_v1_images_generations -> /images/generations
  */
 function featureIdToEndpoint(featureId: string): string {
   // Extract the path segment after _post_v1_ (or _get_v1_, etc.)
@@ -36,7 +36,7 @@ function featureIdToEndpoint(featureId: string): string {
   if (match) {
     return "/" + match[1].replace(/_/g, "/");
   }
-  // Fallback: use the whole id with underscores → slashes
+  // Fallback: use the whole id with underscores -> slashes
   return "/" + featureId.replace(/_/g, "/");
 }
 
@@ -195,7 +195,7 @@ export function generateTypeScript(packData: PackData): GeneratedFile[] {
   // ---- README.md ----
   files.push({
     path: "README.md",
-    content: generateReadme(providerId, providerName, clientClass, baseUrl),
+    content: generateReadme(providerId, providerName, clientClass, baseUrl, providerCard.features),
   });
 
   return files;
@@ -355,36 +355,172 @@ function generateTsConfig(): string {
   return JSON.stringify(config, null, 2) + "\n";
 }
 
-function generateReadme(providerId: string, providerName: string, clientClass: string, baseUrl: string): string {
-  return `# @synapse-sdk/${providerId}
+function generateReadme(
+  providerId: string,
+  providerName: string,
+  clientClass: string,
+  baseUrl: string,
+  features: readonly ProviderFeature[],
+): string {
+  const now = new Date().toISOString().split("T")[0];
 
-Auto-generated SDK for ${providerName} API.
+  // Build method reference table rows
+  const methodLines: string[] = [];
+  for (const feature of features) {
+    const methodName = featureIdToMethodName(feature.id);
+    const desc = feature.description ?? feature.name;
+    const requiredCount = feature.input.fields.filter((f: any) => f.required).length;
+    const totalCount = feature.input.fields.length;
+    methodLines.push(`| \`${methodName}()\` | \`${baseUrl}${featureIdToEndpoint(feature.id)}\` | ${desc} | ${totalCount} (${requiredCount} required) |`);
+  }
+  const methodTable = methodLines.join("\n");
 
-## Installation
+  // Build per-method parameter detail tables
+  const methodRefLines: string[] = [];
+  for (const feature of features) {
+    const methodName = featureIdToMethodName(feature.id);
+    methodRefLines.push(`### \`${clientClass}.${methodName}(input)\``);
+    methodRefLines.push("");
+    if (feature.description) methodRefLines.push(feature.description);
+    methodRefLines.push("");
+    methodRefLines.push("| Parameter | Type | Required | Description |");
+    methodRefLines.push("|-----------|------|----------|-------------|");
+    for (const field of feature.input.fields as any[]) {
+      const tsType = field.enum
+        ? field.enum.map((v: string) => `\`'${v}'\``).join(" \\| ")
+        : `\`${dslTypeToTsType(field.type)}\``;
+      const req = field.required ? "Yes" : "Optional";
+      const desc = field.description ?? "—";
+      methodRefLines.push(`| \`${field.name}\` | ${tsType} | ${req} | ${desc} |`);
+    }
+    methodRefLines.push("");
+  }
 
-\`\`\`bash
-npm install @synapse-sdk/${providerId}
-\`\`\`
+  // Generate example input from first feature
+  const exampleFields = features[0].input.fields
+    .filter((f: any) => f.name !== "stream")
+    .slice(0, 3)
+    .map((f: any) => {
+      if (f.type === "array") return `      ${f.name}: [{ role: 'user', content: 'Hello!' }],`;
+      if (f.type === "string" && f.enum) return `      ${f.name}: '${f.enum[0]}',`;
+      if (f.type === "string") return `      ${f.name}: '${f.name === "model" ? "gpt-4o-mini" : "example"}',`;
+      if (f.type === "number") return `      ${f.name}: 0.7,`;
+      if (f.type === "boolean") return `      ${f.name}: true,`;
+      return `      ${f.name}: undefined,`;
+    });
 
-## Usage
+  const firstRequired: any = features[0].input.fields.find((f: any) => f.required);
+  const errorExampleArg = firstRequired && firstRequired.type === "array"
+    ? `      ${firstRequired.name}: [{ role: 'user', content: 'Hello' }],`
+    : firstRequired
+      ? `      ${firstRequired.name}: 'example',`
+      : `      ...: undefined,`;
 
-\`\`\`typescript
-import { ${clientClass} } from '@synapse-sdk/${providerId}';
+  const lines: string[] = [];
+  lines.push(`# @synapse-sdk/${providerId}`);
+  lines.push("");
+  lines.push(`> Auto-generated SDK for **${providerName} API**`);
+  lines.push(`> Generated on: ${now}`);
+  lines.push(`> Generator: @synapse-router/sdk-generator`);
+  lines.push("");
+  lines.push("Zero-dependency TypeScript SDK. Uses only native `fetch`. No external dependencies.");
+  lines.push("");
+  lines.push("---");
+  lines.push("");
+  lines.push("## Installation");
+  lines.push("");
+  lines.push("```bash");
+  lines.push(`# No install needed — copy the ${providerId}/ directory into your project`);
+  lines.push("# Requires Node.js 18+ (built-in fetch support)");
+  lines.push("```");
+  lines.push("");
+  lines.push("If you prefer npm:");
+  lines.push("");
+  lines.push("```bash");
+  lines.push(`npm install @synapse-sdk/${providerId}`);
+  lines.push("```");
+  lines.push("");
+  lines.push("---");
+  lines.push("");
+  lines.push("## Quick Start");
+  lines.push("");
+  lines.push("```typescript");
+  lines.push(`import { ${clientClass} } from './${providerId}/index.js';`);
+  lines.push("");
+  lines.push(`const client = new ${clientClass}({`);
+  lines.push(`  apiKey: process.env.${providerId.toUpperCase()}_API_KEY!,`);
+  lines.push("});");
+  lines.push("");
+  lines.push("async function main() {");
+  lines.push("  try {");
+  lines.push(`    const result = await client.${featureIdToMethodName(features[0].id)}({`);
+  exampleFields.forEach((f) => lines.push(f));
+  lines.push("    });");
+  lines.push("    console.log(result);");
+  lines.push("  } catch (error) {");
+  lines.push("    console.error('Request failed:', error);");
+  lines.push("  }");
+  lines.push("}");
+  lines.push("");
+  lines.push("main();");
+  lines.push("```");
+  lines.push("");
+  lines.push("---");
+  lines.push("");
+  lines.push("## API Reference");
+  lines.push("");
+  lines.push(`### \`new ${clientClass}(config)\``);
+  lines.push("");
+  lines.push("| Parameter | Type | Required | Description |");
+  lines.push("|-----------|------|----------|-------------|");
+  lines.push(`| \`apiKey\` | \`string\` | Yes | API key for ${providerName} |`);
+  lines.push(`| \`baseUrl\` | \`string\` | Optional | API base URL (default: \`${baseUrl}\`) |`);
+  lines.push("");
+  lines.push("---");
+  lines.push("");
+  lines.push("### Method Reference");
+  lines.push("");
+  lines.push("| Method | Endpoint | Description | Parameters |");
+  lines.push("|--------|----------|-------------|------------|");
+  lines.push(methodTable);
+  lines.push("");
+  lines.push(methodRefLines.join("\n"));
+  lines.push("---");
+  lines.push("");
+  lines.push("## Error Handling");
+  lines.push("");
+  lines.push("All methods throw `ApiError` on non-2xx responses:");
+  lines.push("");
+  lines.push("```typescript");
+  lines.push(`import { ${clientClass}, ApiError } from './${providerId}/index.js';`);
+  lines.push("");
+  lines.push(`const client = new ${clientClass}({`);
+  lines.push(`  apiKey: process.env.${providerId.toUpperCase()}_API_KEY!,`);
+  lines.push("});");
+  lines.push("");
+  lines.push("async function safeCall() {");
+  lines.push("  try {");
+  lines.push(`    return await client.${featureIdToMethodName(features[0].id)}({`);
+  lines.push(errorExampleArg);
+  lines.push("    });");
+  lines.push("  } catch (error) {");
+  lines.push("    if (error instanceof ApiError) {");
+  lines.push("      console.error(`HTTP ${error.status}: ${error.message}`);");
+  lines.push("      console.error('Raw response:', error.raw);");
+  lines.push("    } else {");
+  lines.push("      console.error('Unexpected error:', error);");
+  lines.push("    }");
+  lines.push("  }");
+  lines.push("}");
+  lines.push("```");
+  lines.push("");
+  lines.push("---");
+  lines.push("");
+  lines.push("## Generated by");
+  lines.push("");
+  lines.push("**@synapse-router/sdk-generator** — [synapse-router](https://github.com/qise-tech/synapse-router)");
+  lines.push("");
+  lines.push(`*This SDK was auto-generated on ${now}. Regenerate with \`synapse evolve\` to pick up provider updates.*`);
 
-const client = new ${clientClass}({
-  apiKey: process.env.${providerId.toUpperCase()}_API_KEY!,
-  // baseUrl: '${baseUrl}',  // default, can override for other providers
-});
-
-// Chat completions
-const result = await client.chat({
-  messages: [{ role: 'user', content: 'Hello!' }],
-  model: 'gpt-4',
-});
-\`\`\`
-
-## Generated by
-
-@synapse-router/sdk-generator — [synapse-router](https://github.com/qise-tech/synapse-router)
-`;
+  return lines.join("\n");
 }
