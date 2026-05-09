@@ -230,9 +230,9 @@ describe("negotiate", () => {
 // ---------------------------------------------------------------------------
 
 describe("execute", () => {
-  it("reports not yet implemented", () => {
+  it("reports renamed to connect", () => {
     const result = runCli(["execute", "openai", "chat", "{}"]);
     assert.notStrictEqual(result.code, 0);
-    assert.ok(result.stderr.includes("not yet implemented"), `got: ${result.stderr}`);
+    assert.ok(result.stderr.includes("renamed to"), `got: ${result.stderr}`);
   });
 });
