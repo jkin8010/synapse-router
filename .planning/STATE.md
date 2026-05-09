@@ -1,114 +1,80 @@
 ---
 gsd_state_version: 1.0
 milestone: v1.1
-milestone_name: Testing & Playground
-status: completed
-stopped_at: Completed 04-provider-smoke-tests-01-PLAN.md
-last_updated: "2026-05-08T10:41:52.632Z"
-last_activity: 2026-05-08
+milestone_name: Testing & Playground (v1.2, v2.0 planned)
+status: executing
+stopped_at: Phase 4 planning
+last_updated: "2026-05-09T12:30:00.000Z"
+last_activity: 2026-05-09
 progress:
-  total_phases: 3
-  completed_phases: 3
-  total_plans: 12
-  completed_plans: 12
-  percent: 100
+  total_phases: 7
+  completed_phases: 2
+  total_plans: 28
+  completed_plans: 7
+  percent: 25
 ---
 
 # Synapse Router — Execution State
 
 ## Project Reference
 
-See: .planning/PROJECT.md (updated 2026-05-07)
+See: .planning/PROJECT.md (updated 2026-05-09)
 
-**Core value:** "先有契约，再调用" — 每次路由都从 Schema 契约开始，只有契约明确后才允许调用 Provider
-**Current focus:** Phase 04 — provider-smoke-tests
+**Core value:** "开发时协商，运行时无感" — 运行时只有纯代码逻辑的 SDK，确定性、零 Token 成本、零 LLM 意外
+**Current focus:** Phase 03 — playground-web-ui
 
 ## Current Position
 
-Phase: 04 (provider-smoke-tests) — EXECUTING
-Plan: Not started
+Phase: 04 (provider-smoke-tests) — PLANNING
 
-- **Phase:** 04 of 3 (E2E End-to-End Testing)
-- **Phase:** 3 of 3 (Playground Web UI) ✓ COMPLETE
-- **Status:** Milestone complete
-- **Last activity:** 2026-05-08
+- **Phase:** 1 of 7 (Negotiator Reliability) ✓ COMPLETE
+- **Phase:** 2 of 7 (E2E Testing) ✓ COMPLETE
+- **Phase:** 3 of 7 (Playground Web UI) ✓ COMPLETE
+- **Phase:** 4 of 7 (Provider Smoke Tests) ○ Planning
+- **Phase:** 5 of 7 (Router as SDK Generator) ○ Planned
+- **Phase:** 6 of 7 (Local Evolution Engine) ○ Planned (4 plans written)
+- **Phase:** 7 of 7 (Registry-Router Collaboration) ○ Planned
 
-**Progress:** [██████████] 100%
+**Progress:** [██░░░░░░░░░░] 14%
 
-## Performance Metrics
+## Architecture Decision (2026-05-09)
 
-**Velocity:**
+**Router is NOT a runtime middleware.** It is a development-time SDK generation tool.
 
-- Phase 2 plans completed: 4
-- Phase 3 plans completed: 7 (4 core + 3 gap closure)
+| Layer | What | LLM? | When | Complexity |
+|-------|------|------|------|-----------|
+| Runtime | SDK (pure code) | ❌ | Every call | Minimal |
+| Evolution | synapse evolve | ✅ OK | Development only | Complex |
+| Monitoring | synapse watchdog | ❌ | Background | Configurable |
 
-**By Phase:**
-
-| Phase | Plans | Completed |
-|-------|-------|-----------|
-| 1. Negotiator 可靠性增强 | 4 | (v1.0 shipped) |
-| 2. E2E End-to-End Testing | 4 | ✓ |
-| 3. Playground Web UI | 7 | ✓ |
-| Phase 04-provider-smoke-tests P01 | 579 | 2 tasks | 2 files |
-
-## Phase 3 Artifacts
-
-| File | Purpose |
-|------|---------|
-| apps/playground/ | Vite 8 + React 19 + Tailwind v4 SPA |
-| apps/playground/src/context.ts | AppState useReducer (11 action types) |
-| apps/playground/src/lib/api.ts | API client (getProviders/negotiate/execute) |
-| apps/playground/src/components/ProviderSelector.tsx | LEFT panel — card-style provider list |
-| apps/playground/src/components/SchemaEditor.tsx | CENTER panel — CodeMirror JSON editor |
-| apps/playground/src/components/ActionBar.tsx | Negotiate/Execute/Mock Test buttons |
-| apps/playground/src/components/ResponseViewer.tsx | RIGHT panel — 6 tabs (Formatted/Raw/Logs/Errors/TS/Python) |
-| apps/playground/src/components/MockTestSection.tsx | Collapsible mock test with pass/fail display |
-| apps/playground/src/App.tsx | Three-panel layout with draggable dividers |
+.synapse/ data sync via Git (primary), synapse export/import (fallback).
 
 ## Next
 
-Proceed to Phase 4: Provider Smoke Tests
+Complete Phase 3 gap closure → Phase 4 smoke tests → Phase 5 SDK Generator
 
 ## Accumulated Context
 
 ### Decisions
 
-- Phase 3: Hand-rolled resizable panels (CSS Grid + mouse events, no library)
-- Phase 3: CodeMirror 6 for schema editor, @uiw/react-codemirror for read-only tabs
-- Phase 3: React Context + useReducer for state management
-- Phase 3: API-only mock test (no local LLM), POST /execute endpoint
-- [Phase 04-provider-smoke-tests]: D-01: Use connector.connect() layer for smoke tests
-- [Phase 04-provider-smoke-tests]: D-02: Framework lives in apps/cli/src/commands/smoke.ts
-- [Phase 04-provider-smoke-tests]: D-03: One runSmokeTest function per provider
-- [Phase 04-provider-smoke-tests]: D-04: --provider is required
-- [Phase 04-provider-smoke-tests]: D-05: Supported flags: --provider, --timeout, --format, --verbose, --api-key
-- [Phase 04-provider-smoke-tests]: D-06: OpenAI: gpt-4o-mini, verify choices[0].message.content
-- [Phase 04-provider-smoke-tests]: D-07: Replicate: hardcoded SDXL model version
-- [Phase 04-provider-smoke-tests]: D-08: Verify response shape beyond HTTP 200
+| Decision | Outcome |
+|----------|---------|
+| Router ≠ 运行时中间件 | Router is dev-time tool, output is SDK |
+| 运行时 = 纯 SDK | No LLM, no randomness, no external deps |
+| .synapse/ 通过 Git 同步 | Git 天然适合文本/md/json |
+| Watchdog 为独立进程 | SDK 保持极薄 |
+| EVOLVE-01~04 已写入详细 plan | .planning/phases/06-local-evolution-engine/ |
 
 ### Pending Todos
 
-None.
-
-### Blockers/Concerns
-
-None.
+- Phase 3 gap closure (03-05, 03-06, 03-07)
+- Phase 4 smoke tests planning
+- Phase 5 detailed planning
 
 ## Deferred Items
 
-Items carried forward from v1.0 milestone close:
-
 | Category | Item | Status | Deferred At |
 |----------|------|--------|-------------|
-| Testing | 真实 Provider 冒烟测试 | Phase 4 of v1.1 | v1.0 close |
-| Testing | E2E 测试 | Phase 2 of v1.1 ✓ | v1.0 close |
-| UI | Web UI/Playground | Phase 3 of v1.1 ✓ | v1.0 close |
 | SDK | SDK 缓存优化 | Deferred | v1.0 close |
 | API | API 认证中间件 | Deferred | v1.0 close |
-| Registry | Registry contract_verifications 表和 API | Deferred (synapse-registry) | v1.0 close |
-
-## Session Continuity
-
-Last session: 2026-05-08T10:19:54.747Z
-Stopped at: Completed 04-provider-smoke-tests-01-PLAN.md
-Resume file: None
+| Registry | Registry contract_verifications | Deferred | v1.0 close |

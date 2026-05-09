@@ -2,6 +2,10 @@
 
 面向 AI Agent 的受控 Schema 协商与多 Provider 路由层。位于 AI Agent 与多 Provider API 之间，确保每次请求在执行前都有明确契约。
 
+> **更新时间**: 2026-05-09
+>
+> **核心定位**: Router 不是运行时中间件，而是**开发时 SDK 生成引擎**。应用代码里没有 Router，只有生成的 SDK。所有协商、路由决策、Provider 选择在开发时完成，运行时只有纯代码 SDK。
+
 ## 技术栈
 
 - **语言**: TypeScript 5.9+ (strict mode)
@@ -58,6 +62,11 @@ pnpm dev              # 启动 API Server 开发模式
 4. **输出标准化** — 应用代码消费 Router 定义的结果类型，Provider 私有响应结构限制在 Adapter 内
 5. **Core 最小，边界可扩展** — Core 只定义契约、协商结果、路由决策和错误形态
 6. **路由可观察** — 每次路由决策可解释：请求 Schema、选中 Provider、协商结果和原因码可追踪
+7. **开发时协商，运行时无感** — 复杂逻辑（Schema 协商、Provider 选择、降级策略）在开发时完成，运行时只有纯代码
+8. **无运行时 LLM** — 运行时路径零 Token 成本，不依赖任何 LLM 调用
+9. **运行时 = 纯代码 SDK** — 运行时环境无 Router、无 LLM、无随机决策，只有生成的确定性 SDK 代码
+10. **产线日志回流开发** — `.synapse/` 日志通过 Git 从产线同步到开发环境，用于反馈驱动优化
+11. **Watchdog 独立部署** — synapse watchdog 是独立进程，不嵌入 SDK，保持 SDK 零依赖
 
 ## 关键设计约束
 
