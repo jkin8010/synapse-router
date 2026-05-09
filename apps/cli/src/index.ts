@@ -893,7 +893,7 @@ async function main(): Promise<void> {
         if (flags.has("help") || args.includes("--help") || args.includes("-h")) {
           printPackHelp();
         } else {
-          await handlePackCommand(args);
+          await handlePackCommand(args, flags);
         }
         break;
       case "smoke":

@@ -4,6 +4,7 @@
  * Uses @synapse-router/registry-client for API calls and filesystem operations.
  */
 
+import { readFile } from "node:fs/promises";
 import { join } from "node:path";
 import { homedir } from "node:os";
 import {
@@ -67,10 +68,47 @@ function parsePackRef(
 }
 
 // ---------------------------------------------------------------------------
+// Config helpers
+// ---------------------------------------------------------------------------
+
+async function loadSynapseConfig(): Promise<Record<string, unknown>> {
+  const configPath = join(homedir(), ".synapse", "config.json");
+  try {
+    const content = await readFile(configPath, "utf8");
+    return JSON.parse(content);
+  } catch {
+    return {};
+  }
+}
+
+function getRegistryUrlFromConfig(config: Record<string, unknown>): string | undefined {
+  if (process.env["SYNAPSE_REGISTRY_URL"]) return process.env["SYNAPSE_REGISTRY_URL"];
+  const registry = config.registry as { url?: string } | undefined;
+  return registry?.url;
+}
+
+function parseSemver(v: string): number[] {
+  return v.split(".").map(Number);
+}
+
+function computeVersionDiff(installed: string, latest: string): string {
+  const a = parseSemver(installed);
+  const b = parseSemver(latest);
+  if (a.length < 2 || b.length < 2) return "version changed";
+  if (b[0] > a[0]) return "breaking (major)";
+  if (b[1] > a[1]) return "compatible (minor)";
+  if (b.length >= 3 && a.length >= 3 && b[2] > a[2]) return "compatible (patch)";
+  return "version changed";
+}
+
+// ---------------------------------------------------------------------------
 // Command handlers
 // ---------------------------------------------------------------------------
 
-export async function handlePackCommand(args: string[]): Promise<void> {
+export async function handlePackCommand(
+  args: string[],
+  flags?: Set<string>,
+): Promise<void> {
   const subcommand = args[0] ?? "help";
 
   switch (subcommand) {
@@ -84,13 +122,16 @@ export async function handlePackCommand(args: string[]): Promise<void> {
       await handlePackList();
       break;
     case "update":
-      await handlePackUpdate(args.slice(1));
+      await handlePackUpdate(args.slice(1), flags);
       break;
     case "remove":
       await handlePackRemove(args.slice(1));
       break;
     case "show":
       await handlePackShow(args.slice(1));
+      break;
+    case "check":
+      await handlePackCheck();
       break;
     case "help":
     default:
@@ -188,13 +229,144 @@ async function handlePackList(): Promise<void> {
   }
 }
 
-async function handlePackUpdate(args: string[]): Promise<void> {
+async function handlePackCheck(): Promise<void> {
+  const config = await loadSynapseConfig();
+  const registryUrl = getRegistryUrlFromConfig(config);
+
+  if (!registryUrl) {
+    console.error("Error: Registry not configured.");
+    console.error("Set a registry URL with: synapse config set registry.url <url>");
+    console.error("Or set the SYNAPSE_REGISTRY_URL environment variable.");
+    process.exit(1);
+  }
+
+  const entries = await listInstalledPacks();
+
+  if (entries.length === 0) {
+    console.log("No packs installed.\n");
+    console.log("Install a pack: synapse pack add openai");
+    return;
+  }
+
+  const client = createRegistryClient({ registryUrl });
+
+  console.log(`Checking packs against ${registryUrl}...\n`);
+
+  const rows: Array<{
+    name: string;
+    installed: string;
+    latest: string;
+    change: string;
+  }> = [];
+
+  for (const entry of entries.sort((a, b) => a.name.localeCompare(b.name))) {
+    try {
+      const detail = await client.getPack(entry.ns, entry.name);
+      const latest = detail.version;
+
+      if (latest !== entry.version) {
+        const change = computeVersionDiff(entry.version, latest);
+        rows.push({
+          name: `@${entry.ns}/${entry.name}`,
+          installed: entry.version,
+          latest,
+          change,
+        });
+      }
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : "Unknown error";
+      rows.push({
+        name: `@${entry.ns}/${entry.name}`,
+        installed: entry.version,
+        latest: "ERROR",
+        change: message,
+      });
+    }
+  }
+
+  if (rows.length === 0) {
+    console.log("All packs are up to date.\n");
+    return;
+  }
+
+  // Output table
+  const outdated = rows.filter((r) => r.latest !== "ERROR");
+  const errors = rows.filter((r) => r.latest === "ERROR");
+
+  console.log(`Outdated packs (${outdated.length}):\n`);
+  console.log(`  ${"NAME".padEnd(30)} ${"INSTALLED".padEnd(12)} ${"LATEST".padEnd(12)} CHANGE`);
+  console.log(`  ${"─".repeat(30)} ${"─".repeat(12)} ${"─".repeat(12)} ${"─".repeat(34)}`);
+
+  for (const row of outdated) {
+    const arrow = `${row.installed} → ${row.latest}`;
+    console.log(
+      `  ${row.name.padEnd(30)} ${row.installed.padEnd(12)} ${row.latest.padEnd(12)} ${row.change}`,
+    );
+  }
+
+  if (errors.length > 0) {
+    console.log(`\nErrors (${errors.length}):`);
+    for (const err of errors) {
+      console.log(`  ${err.name.padEnd(30)} ${err.change}`);
+    }
+  }
+}
+
+async function handlePackUpdate(
+  args: string[],
+  flags?: Set<string>,
+): Promise<void> {
   const targetName = args[0];
+  const yesFlag = flags?.has("yes") ?? false;
+
+  const config = await loadSynapseConfig();
+  const registryUrl = getRegistryUrlFromConfig(config);
+
+  if (!registryUrl) {
+    console.error("Error: Registry not configured.");
+    console.error("Set a registry URL with: synapse config set registry.url <url>");
+    console.error("Or set the SYNAPSE_REGISTRY_URL environment variable.");
+    process.exit(1);
+  }
+
+  const client = createRegistryClient({ registryUrl });
+
+  // Show changelog for specific pack targets before updating
+  if (targetName) {
+    const entries = await listInstalledPacks();
+    const entry = entries.find((e) => e.name === targetName);
+
+    if (entry) {
+      try {
+        const detail = await client.getPack(entry.ns, entry.name);
+        if (detail.version !== entry.version) {
+          const change = computeVersionDiff(entry.version, detail.version);
+          console.log(
+            `Update available: ${entry.version} → ${detail.version} (${change})\n`,
+          );
+
+          const latestVersion = detail.versions.find(
+            (v) => v.version === detail.version,
+          );
+          if (latestVersion?.changelog) {
+            console.log("Changelog:");
+            console.log(latestVersion.changelog);
+            console.log();
+          }
+
+          if (!yesFlag) {
+            console.log("Use --yes to skip confirmation in the future.\n");
+          }
+        }
+      } catch {
+        // If we can't fetch details, proceed with update anyway
+      }
+    }
+  }
 
   console.log("Checking for updates...\n");
 
   try {
-    const client = createClient();
     const { updated, upToDate, failed } = await updatePack(client, targetName);
 
     for (const name of upToDate) {
@@ -298,6 +470,7 @@ Usage:
   synapse pack add <pack>@<version>          Install specific version
   synapse pack search <query>                Search Registry for packs
   synapse pack list                          List installed packs
+  synapse pack check                         Check for registry updates
   synapse pack update [name]                 Update a pack (or all)
   synapse pack remove <name>                 Remove an installed pack
   synapse pack show <name>                   Show pack details
@@ -307,11 +480,15 @@ Arguments:
   <version>                Semver version (e.g. 2.0.0)
   <query>                  Search term
 
+Options:
+  --yes                    Skip confirmation prompts (non-interactive)
+
 Examples:
   synapse pack add openai
   synapse pack add @official/openai@2.0.0
   synapse pack search "chat completions"
   synapse pack list
+  synapse pack check
   synapse pack update openai
   synapse pack update          # update all
   synapse pack remove openai
