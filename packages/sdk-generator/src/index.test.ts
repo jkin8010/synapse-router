@@ -101,20 +101,32 @@ describe("TypeScript SDK generation (from openai pack)", () => {
     const packData = await loadPackData(OPENAI_PACK);
     const files = generateTypeScript(packData);
 
+    // Check per-feature files
+    const chatFile = files.find((f) => f.path === "chatCompletions.ts")!;
+    assert.ok(chatFile, "chatCompletions.ts should exist");
+    assert.match(chatFile.content, /export interface ChatCompletionsInput/);
+    assert.match(chatFile.content, /export interface ChatCompletionsOutput/);
+
+    const embedFile = files.find((f) => f.path === "embeddings.ts")!;
+    assert.ok(embedFile, "embeddings.ts should exist");
+    assert.match(embedFile.content, /export interface EmbeddingsInput/);
+    assert.match(embedFile.content, /export interface EmbeddingsOutput/);
+
+    const imgFile = files.find((f) => f.path === "imagesGenerations.ts")!;
+    assert.ok(imgFile, "imagesGenerations.ts should exist");
+    assert.match(imgFile.content, /export interface ImagesGenerationsInput/);
+    assert.match(imgFile.content, /export interface ImagesGenerationsOutput/);
+
+    const audioFile = files.find((f) => f.path === "audioTranscriptions.ts")!;
+    assert.ok(audioFile, "audioTranscriptions.ts should exist");
+    assert.match(audioFile.content, /export interface AudioTranscriptionsInput/);
+    assert.match(audioFile.content, /export interface AudioTranscriptionsOutput/);
+
+    // types.ts should be a barrel re-export
     const typesFile = files.find((f) => f.path === "types.ts")!;
     assert.ok(typesFile, "types.ts should exist");
-
-    // Check input types
-    assert.match(typesFile.content, /export interface ChatCompletionsInput/);
-    assert.match(typesFile.content, /export interface EmbeddingsInput/);
-    assert.match(typesFile.content, /export interface ImagesGenerationsInput/);
-    assert.match(typesFile.content, /export interface AudioTranscriptionsInput/);
-
-    // Check output types
-    assert.match(typesFile.content, /export interface ChatCompletionsOutput/);
-    assert.match(typesFile.content, /export interface EmbeddingsOutput/);
-    assert.match(typesFile.content, /export interface ImagesGenerationsOutput/);
-    assert.match(typesFile.content, /export interface AudioTranscriptionsOutput/);
+    assert.match(typesFile.content, /chatCompletions\.js/);
+    assert.match(typesFile.content, /embeddings\.js/);
   });
 
   it("uses OpenAI as default provider", async () => {
@@ -139,20 +151,20 @@ describe("TypeScript SDK generation (from openai pack)", () => {
     const packData = await loadPackData(OPENAI_PACK);
     const files = generateTypeScript(packData);
 
-    const typesFile = files.find((f) => f.path === "types.ts")!;
-    // encoding_format has enum: ["float", "base64"]
-    assert.match(typesFile.content, /'float' \| 'base64'/);
+    // encoding_format has enum: ["float", "base64"] — in embeddings feature
+    const embedFile = files.find((f) => f.path === "embeddings.ts")!;
+    assert.match(embedFile.content, /'float' \| 'base64'/);
   });
 
   it("marks optional fields with ?", async () => {
     const packData = await loadPackData(OPENAI_PACK);
     const files = generateTypeScript(packData);
 
-    const typesFile = files.find((f) => f.path === "types.ts")!;
-    // temperature is optional
-    assert.match(typesFile.content, /temperature\?: number/);
+    // temperature is optional — in chatCompletions feature
+    const chatFile = files.find((f) => f.path === "chatCompletions.ts")!;
+    assert.match(chatFile.content, /temperature\?: number/);
     // messages is required
-    assert.match(typesFile.content, /messages: unknown\[\]/);
+    assert.match(chatFile.content, /messages: unknown\[\]/);
   });
 });
 

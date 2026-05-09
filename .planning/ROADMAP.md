@@ -91,9 +91,9 @@ Plans:
 **Plans**: 3 plans
 
 Plans:
-- [ ] 05-01-PLAN.md — `synapse evolve` 基础命令（读取 provider packs → 协商 → 生成 SDK 到指定目录）
-- [ ] 05-02-PLAN.md — SDK 生成增强（含环境配置入口、错误处理、重试逻辑、`.synapse/` 日志钩子）
-- [ ] 05-03-PLAN.md — 应用集成流程（README 示例、`synapse init` 初始化项目 SDK）
+- [x] 05-01-PLAN.md — `synapse evolve` 基础命令（读取 provider packs → 协商 → 生成 SDK 到指定目录）
+- [x] 05-02-PLAN.md — SDK 生成增强（含环境配置入口、错误处理、重试逻辑、`.synapse/` 日志钩子）
+- [x] 05-03-PLAN.md — 应用集成流程（README 示例、`synapse init` 初始化项目 SDK）
 
 ### v2.0 Offline Evolution (Planned)
 
@@ -111,10 +111,10 @@ Plans:
 **Plans**: 4 plans
 
 Plans:
-- [ ] 06-01-PLAN.md — `.synapse/` 运行时日志系统 + Provider Profile 聚合
-- [ ] 06-02-PLAN.md — `synapse watchdog` 规则引擎 + 自动 Issue 创建
-- [ ] 06-03-PLAN.md — `synapse export`/`import` + `.synapse/` Git 同步方案
-- [ ] 06-04-PLAN.md — `synapse evolve` 完整演化闭环（读 .synapse/ → 读 Provider Packs → 协商 → 生成 SDK）
+- [x] 06-01-PLAN.md — `.synapse/` 运行时日志系统 + Provider Profile 聚合
+- [x] 06-02-PLAN.md — `synapse watchdog` 规则引擎 + 自动 Issue 创建
+- [x] 06-03-PLAN.md — `synapse export`/`import` + `.synapse/` Git 同步方案
+- [x] 06-04-PLAN.md — `synapse evolve` 完整演化闭环（读 .synapse/ → 读 Provider Packs → 协商 → 生成 SDK）
 
 #### Phase 7: Registry-Router Collaboration
 **Goal**: Registry 的 Provider API change-detector 通过 `synapse evolve` 影响 SDK 生成，形成 Registry ↔ Router ↔ 应用的完整生态闭环。
@@ -127,9 +127,9 @@ Plans:
 **Plans**: 3 plans
 
 Plans:
-- [ ] 07-01-PLAN.md — Registry 变更通知 → `synapse evolve` 触发链路
-- [ ] 07-02-PLAN.md — `synapse evolve` registry 数据源集成（拉取最新 pack，对比本地版本）
-- [ ] 07-03-PLAN.md — SDK 版本通知（CI/CD 集成：检测新 SDK 可用 → 自动 PR）
+- [x] 07-01-PLAN.md — Registry 变更通知 → `synapse evolve` 触发链路
+- [x] 07-02-PLAN.md — `synapse evolve` registry 数据源集成（拉取最新 pack，对比本地版本）
+- [x] 07-03-PLAN.md — SDK 版本通知（CI/CD 集成：检测新 SDK 可用 → 自动 PR）
 
 ## Progress
 
@@ -138,9 +138,9 @@ Plans:
 | Phase | Milestone | Plans Complete | Status | Completed |
 |-------|-----------|----------------|--------|-----------|
 | 1. Negotiator Reliability | v1.0 | 4/4 | Complete | 2026-05-07 |
-| 2. E2E End-to-End Testing | v1.1 | 0/0 | Not started | - |
-| 3. Playground Web UI | v1.1 | 4/7 | Gap Closure | 2026-05-08 |
-| 4. Provider Smoke Tests | v1.1 | 0/0 | Not started | - |
-| 5. Router as SDK Generator | v1.2 | 0/3 | Planned | - |
-| 6. Local Evolution Engine | v2.0 | 0/4 | Planned | - |
-| 7. Registry-Router Collaboration | v2.0 | 0/3 | Planned | - |
+| 2. E2E End-to-End Testing | v1.1 | 4/4 | Complete | 2026-05-08 |
+| 3. Playground Web UI | v1.1 | 7/7 | Complete | 2026-05-09 |
+| 4. Provider Smoke Tests | v1.1 | 1/1 | Complete | 2026-05-09 |
+| 5. Router as SDK Generator | v1.2 | 3/3 | Complete | 2026-05-09 |
+| 6. Local Evolution Engine | v2.0 | 4/4 | Complete | 2026-05-09 |
+| 7. Collaborative Evolution | v2.0 | 3/3 | Complete | 2026-05-09 |
