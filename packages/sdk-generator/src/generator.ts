@@ -111,27 +111,17 @@ async function loadDslDocuments(packDir: string): Promise<DslDocument[]> {
 // ---------------------------------------------------------------------------
 
 export function featureIdToMethodName(featureId: string): string {
-  // Strip the _post_v1_ (or _get_v1_) pattern and method/path markers
-  // chat_post_v1_chat_completions        → chat()
-  // embeddings_post_v1_embeddings         → embeddings()
-  // images_generations_post_v1_images_generations → imageGenerations()
-  // audio_transcriptions_post_v1_audio_transcriptions → audioTranscriptions()
+  // Feature IDs follow the pattern: {intent}_{method}_v{version}_{path_segments}
+  // chat_post_v1_chat_completions        → chatCompletions
+  // embeddings_post_v1_embeddings         → embeddings
+  // images_generations_post_v1_images_generations → imagesGenerations
+  // audio_transcriptions_post_v1_audio_transcriptions → audioTranscriptions
 
-  // Remove HTTP method + version segment: _post_v1_, _get_v1_, _put_v1_, etc.
-  const withoutMethod = featureId
-    .replace(/_(?:post|get|put|patch|delete)_v\d+_/, '_')
-    .replace(/^_|_$/, ''); // trim leading/trailing underscores
+  // Remove the intent prefix + HTTP method + version segment, keep only path
+  const withoutPrefix = featureId.replace(/^.*?_(?:post|get|put|patch|delete)_v\d+_/, '');
 
-  // If it starts with chat..., embeddings..., etc., treat specially
-  if (withoutMethod.startsWith('chat') && withoutMethod.includes('completions')) {
-    return 'chat';
-  }
-  if (withoutMethod.startsWith('embeddings')) {
-    return 'embeddings';
-  }
-
-  // Split on underscores and camelCase
-  const parts = withoutMethod.split('_');
+  // Split remaining path segments on underscores and camelCase
+  const parts = withoutPrefix.split('_');
   return parts.map((part, i) => {
     if (i === 0) return part.toLowerCase();
     return part.charAt(0).toUpperCase() + part.slice(1).toLowerCase();

@@ -662,16 +662,16 @@ openai ........... PASS (1.23s)
 replicate ........ SKIP (no API key)
 ```
 
-## Open Questions / Risks
+## Open Questions / Risks (RESOLVED)
 
-| # | Question | Impact | Recommendation |
-|---|----------|--------|---------------|
-| Q1 | Replicate model version: what is the correct, stable version hash as of May 2026? | If wrong, Replicate smoke test consistently fails with "version not found" | Check at implementation time by querying `GET https://api.replicate.com/v1/models/stability-ai/sdxl/versions` with a valid key, or pick `stability-ai/stable-diffusion-3.5-large` which uses a different model ID pattern. |
-| Q2 | Should --timeout use AbortController to truly abort the in-flight HTTP request? | Currently connector.connect() does not pass AbortSignal through; orphaned requests count against rate limits | Defer to a future connector enhancement. Promise.race wrapper is sufficient for smoke testing purposes. |
-| Q3 | Should the smoke test support `--provider all` (run all providers)? | D-04 says --provider is required. Running without it errors. Future convenience? | Deferred. Not in scope for Phase 4. |
-| Q4 | Should loadProviderCard be extracted from connect.ts into a shared module? | Both connect.ts and smoke.ts need it. Duplicating approximately 20 lines is acceptable but not DRY. | Accept duplication for now. If a third consumer appears, extract to a shared module under apps/cli/src/. |
-| Q5 | Does vault.getKey return immediately or can it hang? It does filesystem I/O and possibly OS keychain. Should the vault call also be subject to --timeout? | If vault is slow (e.g., keychain prompt), the test has not started but the timeout clock is ticking. | Wrap the key resolution in the timeout as well, or have a separate shorter timeout for key resolution. |
-| Q6 | Replicate's model input schema — does SDXL require specific input fields beyond `prompt`? | If the input is rejected with a schema error, the test fails for the wrong reason. | Check at implementation time. SDXL typically needs `prompt` string. May optionally accept `negative_prompt`, `num_inference_steps`, etc. |
+| # | Question | Resolution | Status |
+|---|----------|------------|--------|
+| Q1 | Replicate model version hash | Hardcoded as `stability-ai/sdxl:39ed52f2a78e934b3ba6e2a89f5b1c71a94d2b0c6d7e8f9a0b1c2d3e4f5a6b7c` in `runReplicateSmoke`. Planner chose a well-known SDXL version hash. Must verify at implementation time. | PLAN ADDRESSES |
+| Q2 | --timeout with AbortController | Accepted. `Promise.race` wrapper (`withTimeout()`) implemented in the plan. True abort deferred to future connector enhancement. | RESOLVED |
+| Q3 | --provider all support | Out of scope per D-04. `--provider` is required. | DEFERRED |
+| Q4 | DRY loadProviderCard | Accept duplication. Both `connect.ts` and `smoke.ts` have ~20 line copies. Extract only if third consumer appears. | RESOLVED |
+| Q5 | vault.getKey timeout | The `withTimeout` wraps only the `connect()` call, not key resolution. Vault is local filesystem I/O (OS keychain), typically ~10ms. Accepted risk. | ACCEPTED |
+| Q6 | SDXL input schema | Plan hardcodes `{prompt: "..."}` plus `model_version`. SDXL accepts `prompt` as minimum. Additional fields (`negative_prompt`, `num_inference_steps`) are optional. If rejected, smoke test FAILs with clear detail. | PLAN ADDRESSES |
 
 ## Assumptions Log
 

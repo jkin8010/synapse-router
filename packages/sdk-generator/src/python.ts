@@ -10,8 +10,10 @@ import type { ProviderCard } from "@synapse-router/core";
 
 function toPascalCase(str: string): string {
   return str
+    .replace(/([a-z])([A-Z])/g, '$1_$2')
     .split(/[_\s-]+/)
-    .map((word) => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
+    .filter((part) => part.length > 0)
+    .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
     .join("");
 }
 

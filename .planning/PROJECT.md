@@ -10,14 +10,14 @@ v1.0 实现了完整的契约验证闭环：Schema 协商 → Manifest 匹配 �
 
 **"先有契约，再调用"** — 每次路由都从 Schema 契约开始，只有契约明确后才允许调用 Provider。v1.0 通过 `negotiateAndVerify` 全链路验证将协商成功率从单次 LLM 调用提升到重试验证闭环。
 
-## Current Milestone: v1.1 Testing & Playground
+## Current Milestone: v1.1 Testing & Playground (Completed 2026-05-08)
 
 **Goal:** 建立完整的端到端测试覆盖和可视化调试界面，确保全链路可验证、可观测。
 
-**Target features:**
-- E2E 测试框架和关键路径测试 (negotiate → verify → SDK generation → Mock test)
-- Playground Web UI 可视化调试界面 (Schema 编辑、Provider 选择、实时响应查看)
-- 真实 Provider 冒烟测试 (openai, replicate 等)
+**Completed features:**
+- ✅ E2E 测试框架和关键路径测试 (Phase 2)
+- ✅ Playground Web UI 可视化调试界面 (Phase 3)
+- ✅ 真实 Provider 冒烟测试 CLI — `synapse smoke --provider <name>` (Phase 4)
 
 ## Requirements
 
@@ -31,12 +31,12 @@ v1.0 实现了完整的契约验证闭环：Schema 协商 → Manifest 匹配 �
 - ✅ 多 Provider Pack 支持 (openai, replicate, stability, comfyui) — v1.0
 - ✅ TypeScript/Python SDK 自动生成 — v1.0 (24 tests passing)
 - ✅ CLI 工具链 (connect/setup/config/vault/lock/sdk/pack) — v1.0
+- ✅ E2E 端到端测试框架和关键路径 (Phase 2 — 4 plans, 4 summaries) — v1.1
+- ✅ Playground Web UI 可视化界面 (Phase 3 — 7 plans) — v1.1
+- ✅ 真实 Provider 冒烟测试 CLI (Phase 4 — `synapse smoke --provider <name>`) — v1.1
 
 ### Active
 
-- [ ] 真实 Provider 冒烟测试 — v1.1
-- [ ] Web UI/Playground 可视化界面 — v1.1
-- [ ] E2E 端到端测试框架和关键路径 — v1.1
 - [ ] API 认证中间件
 - [ ] SDK 缓存优化
 - [ ] Registry `contract_verifications` 表和 API
@@ -48,10 +48,10 @@ v1.0 实现了完整的契约验证闭环：Schema 协商 → Manifest 匹配 �
 
 ## Context
 
-Shipped v1.0 with ~25,750 LOC TypeScript across 14 packages + 4 apps.
+Shipped v1.1 with ~26,250 LOC TypeScript across 14 packages + 5 apps.
 Tech stack: TypeScript 5.9+ strict, Node.js 22+, pnpm 10+ monorepo.
 14 packages: core, negotiator, providers, router, connector, lock, vault, pack-generator, sdk-generator, sdk, billing, observability, contract-mocker, registry-client.
-4 apps: cli, api, mcp-server, playground, comfy-node.
+5 apps: cli, api, mcp-server, playground, comfy-node.
 ~430 tests passing across all packages.
 
 ## Key Decisions
@@ -63,6 +63,7 @@ Tech stack: TypeScript 5.9+ strict, Node.js 22+, pnpm 10+ monorepo.
 | MAX_RETRIES=2 硬编码 | ✅ Good — prevents infinite loops, 2 retries sufficient |
 | Registry fire-and-forget | ✅ Good — pipeline never blocked by Registry unavailability |
 | 动态 import 解决 verifier↔retry 循环依赖 | ⚠️ Revisit — pragmatic for now, refactor to event-driven later |
+| 冒烟测试直接 connector.connect() | ✅ Good — exercises same code path as production synapse connect |
 
 ## Constraints
 
@@ -90,4 +91,4 @@ This document evolves at phase transitions and milestone boundaries.
 4. Update Context with current state
 
 ---
-*Last updated: 2026-05-07 — v1.1 milestone started*
+*Last updated: 2026-05-08 — v1.1 milestone completed*
