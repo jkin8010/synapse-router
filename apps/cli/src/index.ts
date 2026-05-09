@@ -19,6 +19,7 @@ import { handleConfigCommand, printConfigHelp } from "./commands/config.js";
 import { handleLockCommand, printLockHelp } from "./commands/lock.js";
 import { handleSdkCommand, printSdkHelp } from "./commands/sdk.js";
 import { handlePackCommand, printPackHelp } from "./commands/pack.js";
+import { handleRouteCommand, printRouteHelp } from "./commands/route.js";
 import { getOrCreateLock, detectOutdatedLocks, type SchemaLock } from "@synapse-router/lock";
 import { createRegistryClient } from "@synapse-router/registry-client";
 import { readFileSync, existsSync } from "node:fs";
@@ -116,6 +117,7 @@ Commands:
   sdk generate                  Generate SDK from Provider Pack
   pack add|search|list|update|remove|show  Manage provider packs from Registry
   evolve                        Generate zero-dependency SDK from all provider packs
+  route <intent>                Route to best provider using multi-dimensional scoring
   init                          Initialize a synapse-sdk project
   watchdog                      Monitor events and auto-create Git Issues
   profile list|show|reset|stats  View and manage Provider Profiles
@@ -138,6 +140,7 @@ Detailed help:
   synapse generate --help       Pack generation
   synapse sdk --help            SDK generation
   synapse evolve --help         Evolve SDK generation
+  synapse route --help          Route to best provider
   synapse init --help           Init project setup
   synapse watchdog --help        Watchdog monitoring
   synapse profile --help         Profile management
@@ -796,6 +799,9 @@ async function main(): Promise<void> {
         case "profile":
           printProfileHelp();
           return;
+        case "route":
+          printRouteHelp();
+          return;
         case "export":
           printExportHelp();
           return;
@@ -936,6 +942,13 @@ async function main(): Promise<void> {
           printExportHelp();
         } else {
           await handleExportCommand(rawArgs);
+        }
+        break;
+      case "route":
+        if (flags.has("help") || args.includes("--help") || args.includes("-h")) {
+          printRouteHelp();
+        } else {
+          await handleRouteCommand(rawArgs);
         }
         break;
       case "import":

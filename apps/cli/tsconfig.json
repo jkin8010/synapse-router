@@ -12,6 +12,7 @@
     { "path": "../../packages/lock" },
     { "path": "../../packages/negotiator" },
     { "path": "../../packages/registry-client" },
+    { "path": "../../packages/router" },
     { "path": "../../packages/sdk-generator" },
     { "path": "../../packages/vault" }
   ],
