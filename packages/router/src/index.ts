@@ -1,7 +1,7 @@
 /**
  * @synapse-router/router — 路由引擎
  *
- * 多维度评分路由引擎，支持 5 种策略：
+ * 多维度评分路由引擎，支持 5 种策略 + 自定义策略：
  *   cheap: 成本优先
  *   fast: 速度优先
  *   quality: 质量优先
@@ -29,11 +29,21 @@ export type {
   RouteResult,
   FilterResult,
   RoutingStrategy,
+  CustomStrategyConfig,
   StrategyId,
 } from "./types.js";
 
+export { BUILTIN_STRATEGY_IDS, Dimension } from "./types.js";
+
 // 策略
-export { getStrategies, getStrategy, route } from "./ranking.js";
+export {
+  getStrategies,
+  getStrategy,
+  route,
+  registerCustomStrategy,
+  registerCustomStrategies,
+  unregisterCustomStrategy,
+} from "./ranking.js";
 
 // 评分（低级 API，供有自定义策略需求的用户使用）
 export {
@@ -46,5 +56,5 @@ export {
   weightedTotal,
 } from "./scorer.js";
 
-// ⚡ 快捷 API：单函数路由
+// 快捷 API
 export { route as pickProvider } from "./ranking.js";

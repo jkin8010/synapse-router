@@ -27,6 +27,17 @@ export interface RoutingRequest {
 
   /** 优先选择的 Provider（排序时提权，但不会绕过上述过滤条件） */
   preferredProviders?: string[];
+
+  // ─── Phase 2: 增强过滤 ──────────────────────────────────────────────────────
+
+  /** 显式排除的 Provider 列表（完全排除，不参与评分） */
+  excludeProviders?: string[];
+
+  /** 偏好地区（如 "us-east"、"eu-west"、"apac"），会影响延迟评分 */
+  region?: string;
+
+  /** 最低模型版本（如 "3.5"、"4.0"），通过 feature ID 字符串比较 */
+  minVersion?: string;
 }
 
 // ─── Provider 能力描述 ──────────────────────────────────────────────────────
@@ -48,6 +59,14 @@ export interface ProviderCapability {
     /** 可靠性 0~1 */
     reliability: number;
   };
+
+  // ─── Phase 2: 增强描述 ──────────────────────────────────────────────────────
+
+  /** Provider 部署地区（如 "us-east"、"eu-west"、"apac"），影响延迟评分 */
+  region?: string;
+
+  /** 模型版本号（如 "gpt-4o-mini-2024-07-18"），用于版本比较 */
+  version?: string;
 }
 
 export interface FeatureDescriptor {
@@ -88,7 +107,11 @@ export interface DimensionScores {
 
 // ─── 策略定义 ───────────────────────────────────────────────────────────────
 
-export type StrategyId = "cheap" | "fast" | "quality" | "balanced" | "cost-capped";
+export const BUILTIN_STRATEGY_IDS = [
+  "cheap", "fast", "quality", "balanced", "cost-capped",
+] as const;
+
+export type StrategyId = typeof BUILTIN_STRATEGY_IDS[number] | (string & {});
 
 /** 策略 = 各维度的权重向量 + 附加约束 */
 export interface RoutingStrategy {
@@ -102,6 +125,19 @@ export interface RoutingStrategy {
     /** 最低可靠性过滤 */
     minReliability?: number;
   };
+}
+
+/**
+ * 自定义策略配置（用户可持久化保存的格式）。
+ * 与 CLI config 联动。
+ */
+export interface CustomStrategyConfig {
+  id: string;
+  name: string;
+  description: string;
+  weights: Partial<DimensionScores>;
+  maxCost?: number;
+  minReliability?: number;
 }
 
 // ─── 路由结果 ───────────────────────────────────────────────────────────────

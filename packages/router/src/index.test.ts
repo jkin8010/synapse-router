@@ -12,6 +12,10 @@ import {
   route,
   getStrategies,
   getStrategy,
+  registerCustomStrategy,
+  registerCustomStrategies,
+  unregisterCustomStrategy,
+  BUILTIN_STRATEGY_IDS,
   type ProviderCapability,
   type RoutingRequest,
 } from "./index.js";
@@ -363,7 +367,206 @@ describe("weightedTotal", () => {
   });
 });
 
-// ─── Integration Tests ───────────────────────────────────────────────────────
+// ─── Phase 2: Exclude Filter ──────────────────────────────────────────────────
+
+describe("excludeProviders", () => {
+  test("excluded provider is not considered", () => {
+    const result = route(ALL_PROVIDERS, {
+      intent: "chat",
+      excludeProviders: ["groq"],
+    }, "fast");
+    assert.notEqual(result.provider, "groq");
+    // Should fall to next fastest chat provider
+    assert.equal(result.provider, "openai");
+  });
+
+  test("exclude all matching providers returns empty", () => {
+    const result = route(ALL_PROVIDERS, {
+      intent: "chat",
+      excludeProviders: ["openai", "anthropic", "groq"],
+    }, "balanced");
+    assert.equal(result.provider, "");
+  });
+
+  test("empty exclude list does nothing", () => {
+    const result = route(ALL_PROVIDERS, { intent: "chat", excludeProviders: [] }, "fast");
+    assert.ok(result.provider.length > 0);
+  });
+});
+
+// ─── Phase 2: Region Bonus ───────────────────────────────────────────────────
+
+describe("region match", () => {
+  const usEastOpenAI: ProviderCapability = {
+    ...openAI,
+    region: "us-east",
+  };
+  const euWestOpenAI: ProviderCapability = {
+    ...openAI,
+    id: "openai-eu",
+    name: "OpenAI EU",
+    region: "eu-west",
+  };
+  const usWestGroq: ProviderCapability = {
+    ...groq,
+    region: "us-west",
+  };
+  const regionProviders = [usEastOpenAI, euWestOpenAI, usWestGroq];
+
+  test("exact region match boosts preferred provider", () => {
+    // With region bonus, the us-east provider should have higher latency score
+    // than the eu-west provider (all else being equal)
+    const usEastScore = usEastOpenAI;
+    const euWestScore = euWestOpenAI;
+    const result = route([usEastScore, euWestScore], { intent: "chat", region: "us-east" }, "balanced");
+    // us-east matched provider should score higher
+    const usEast = result.candidates.find(c => c.provider === "openai")!;
+    const euWest = result.candidates.find(c => c.provider === "openai-eu")!;
+    assert.ok(usEast.dimensions.latency > euWest.dimensions.latency);
+  });
+
+  test("prefix region match gives partial bonus", () => {
+    const result = route(regionProviders, { intent: "chat", region: "eu-central" }, "fast");
+    // eu prefix matches eu-west, so openai-eu should have a latency boost
+    const euLatency = result.candidates.find(c => c.provider === "openai-eu")!.dimensions.latency;
+    const baseLatency = scoreLatency("quality");
+    assert.ok(euLatency >= baseLatency);
+  });
+
+  test("no region preference does nothing", () => {
+    const result = route(regionProviders, { intent: "chat" }, "fast");
+    assert.ok(result.provider.length > 0);
+  });
+});
+
+// ─── Phase 2: Version Filter ─────────────────────────────────────────────────
+
+describe("version filter", () => {
+  const gpt4: ProviderCapability = {
+    ...openAI,
+    version: "4.0",
+  };
+  const gpt35: ProviderCapability = {
+    ...openAI,
+    id: "openai-gpt35",
+    name: "OpenAI GPT-3.5",
+    version: "3.5",
+    features: [{
+      id: "chat_post_v1_chat_completions",
+      intent: "chat",
+      costPerUnit: 0.01,
+      estimatedLatencyMs: 200,
+    }],
+  };
+
+  test("minVersion filters out older providers", () => {
+    const result = route([gpt4, gpt35], { intent: "chat", minVersion: "4.0" }, "balanced");
+    // GPT-3.5 should have featureMatch ≤ 30, so it's excluded
+    const gpt35Cand = result.candidates.find(c => c.provider === "openai-gpt35");
+    assert.equal(gpt35Cand, undefined);
+  });
+
+  test("minVersion passes compatible providers", () => {
+    const result = route([gpt4, gpt35], { intent: "chat", minVersion: "3.0" }, "balanced");
+    const candidates = result.candidates.map(c => c.provider);
+    assert.ok(candidates.includes("openai"));
+    assert.ok(candidates.includes("openai-gpt35"));
+  });
+
+  test("no minVersion does nothing", () => {
+    const result = route([gpt4, gpt35], { intent: "chat" }, "balanced");
+    assert.ok(result.candidates.length >= 2);
+  });
+});
+
+// ─── Phase 2: Custom Strategies ──────────────────────────────────────────────
+
+describe("registerCustomStrategy", () => {
+  test("registers a custom strategy that can be used in route()", () => {
+    registerCustomStrategy({
+      id: "custom-test",
+      name: "Test Custom",
+      description: "Only cares about cost",
+      weights: { cost: 10, latency: 0.1, reliability: 0.1, featureMatch: 0.1 },
+    });
+
+    const result = route(ALL_PROVIDERS, { intent: "chat" }, "custom-test");
+    assert.ok(result.provider.length > 0);
+    assert.equal(result.strategy, "custom-test");
+
+    // Cleanup
+    unregisterCustomStrategy("custom-test");
+  });
+
+  test("custom strategy cannot override built-in", () => {
+    assert.throws(() => {
+      registerCustomStrategy({
+        id: "fast",
+        name: "Hack",
+        description: "trying to override",
+        weights: { cost: 100 },
+      });
+    });
+  });
+});
+
+describe("registerCustomStrategies", () => {
+  test("registers multiple strategies at once", () => {
+    registerCustomStrategies([
+      {
+        id: "latency-only",
+        name: "Latency Only",
+        description: "Pure latency focus",
+        weights: { latency: 10 },
+      },
+      {
+        id: "reliability-only",
+        name: "Reliability Only",
+        description: "Pure reliability focus",
+        weights: { reliability: 10 },
+      },
+    ]);
+
+    assert.ok(getStrategy("latency-only"));
+    assert.ok(getStrategy("reliability-only"));
+
+    unregisterCustomStrategy("latency-only");
+    unregisterCustomStrategy("reliability-only");
+  });
+});
+
+describe("unregisterCustomStrategy", () => {
+  test("removes a previously registered strategy", () => {
+    registerCustomStrategy({
+      id: "temp",
+      name: "Temporary",
+      description: "will be removed",
+      weights: { cost: 1 },
+    });
+    assert.ok(getStrategy("temp"));
+
+    unregisterCustomStrategy("temp");
+    assert.equal(getStrategy("temp"), undefined);
+  });
+});
+
+describe("getStrategies with custom strategies", () => {
+  test("includes both built-in and custom strategies", () => {
+    registerCustomStrategy({
+      id: "custom-count-test",
+      name: "Count Test",
+      description: "for counting",
+      weights: { cost: 1 },
+    });
+
+    const all = getStrategies();
+    const ids = all.map(s => s.id);
+    assert.ok(ids.includes("cheap"));
+    assert.ok(ids.includes("custom-count-test"));
+
+    unregisterCustomStrategy("custom-count-test");
+  });
+});
 
 describe("integration — full routing pipeline", () => {
   test("all 5 strategies find a provider for text-to-image", () => {
