@@ -35,7 +35,7 @@ interface ProfileEvent {
   cost?: number;
 }
 
-interface ProviderProfile {
+export interface ProviderProfile {
   provider: string;
   updated_at: string;
   sample_count: number;
@@ -191,7 +191,7 @@ async function saveProfile(profile: ProviderProfile): Promise<void> {
   await writeFile(join(dir, `${profile.provider}.json`), JSON.stringify(profile, null, 2) + "\n", "utf8");
 }
 
-async function loadAllProfiles(): Promise<ProviderProfile[]> {
+export async function loadAllProfiles(): Promise<ProviderProfile[]> {
   const dir = profilesDir();
   const results: ProviderProfile[] = [];
   let entries;

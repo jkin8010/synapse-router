@@ -5,6 +5,7 @@ import { generateSdk } from "@synapse-router/sdk-generator";
 import { readdir, readFile, writeFile, mkdir, rm } from "node:fs/promises";
 import { join, resolve, isAbsolute } from "node:path";
 import { homedir } from "node:os";
+import { loadAllProfiles, ProviderProfile } from "./profile.js";
 
 // ---------------------------------------------------------------------------
 // Types
@@ -15,6 +16,7 @@ interface EvolveOptions {
   outDir: string;
   dryRun: boolean;
   force: boolean;
+  withProfile: boolean;
 }
 
 interface PackEntry {
@@ -39,12 +41,30 @@ Options:
   --provider <names>    Comma-separated provider IDs to include (default: all)
   --dry-run             Preview changes without writing files
   --force               Regenerate even if no provider changes detected
+  --with-profile        Read .synapse/profiles/ to inform SDK generation
 
 Description:
   Reads provider packs from built-in packs/ and ~/.synapse/packs/, then
   generates a zero-dependency TypeScript SDK for each provider into the
   output directory. The generated SDK uses native fetch only — no LLM,
   no @synapse-router dependencies, no network dependencies beyond provider APIs.
+
+  With --with-profile, evolve reads production profiles from .synapse/profiles/
+  and includes them in the SDK output as genesis.json with per-provider stats,
+  success rates, and latency data. This enables development-time visibility
+  into production runtime behavior.
+
+Evolve Workflow:
+  1. Production SDK generates events -> .synapse/watchdog/events.ndjson
+  2. synapse profile refresh  -> aggregates events into .synapse/profiles/*.json
+  3. synapse export           -> packages .synapse/ as tar.gz for dev transfer
+  4. synapse import           -> restores .synapse/ in dev environment (via git or pipe)
+  5. synapse evolve --with-profile  -> reads profiles, generates SDK + genesis.json
+  6. Test -> deploy the new SDK
+  7. Repeat -- production data loops back to improve every evolve cycle
+
+  All complexity lives at development time. The generated SDK remains
+  pure zero-dependency code with no runtime Router or LLM dependency.
 
 Output structure:
   <out-dir>/
@@ -56,6 +76,7 @@ Output structure:
   │   └── README.md
   ├── replicate/
   │   └── ...
+  ├── genesis.json           # Profile-informed metadata (with --with-profile)
   ├── synapse.json           # Generation metadata
   └── tsconfig.json          # TypeScript config
 
@@ -71,6 +92,9 @@ Examples:
 
   # Custom output directory
   synapse evolve --out-dir ./my-sdk
+
+  # Include production profiles in SDK output
+  synapse evolve --with-profile
 `);
 }
 
@@ -83,6 +107,7 @@ export function parseEvolveArgs(argv: string[]): EvolveOptions {
     outDir: "./synapse-sdk",
     dryRun: false,
     force: false,
+    withProfile: false,
   };
 
   for (let i = 0; i < argv.length; i++) {
@@ -95,6 +120,8 @@ export function parseEvolveArgs(argv: string[]): EvolveOptions {
       options.dryRun = true;
     } else if (arg === "--force") {
       options.force = true;
+    } else if (arg === "--with-profile") {
+      options.withProfile = true;
     }
   }
 
@@ -251,6 +278,39 @@ async function writeSynapseJson(
   await writeFile(join(outDir, "synapse.json"), content, "utf8");
 }
 
+async function writeGenesisJson(
+  outDir: string,
+  profiles: ProviderProfile[],
+): Promise<void> {
+  const genesis = {
+    generated_at: new Date().toISOString(),
+    source: ".synapse/profiles/",
+    description: "Production profile data that informed this SDK generation",
+    providers: profiles.map((p) => ({
+      id: p.provider,
+      sample_count: p.sample_count,
+      success_rate: Math.round(p.success_rate * 10000) / 100,
+      latency_ms: {
+        p50: p.latency_ms.p50,
+        p95: p.latency_ms.p95,
+      },
+      cost_per_1k: p.cost_per_1k,
+      features: Object.entries(p.features).map(([name, fp]) => ({
+        name,
+        sample_count: fp.sample_count,
+        success_rate: Math.round(fp.success_rate * 10000) / 100,
+        latency_p50: fp.latency_p50,
+      })),
+      error_rates: Object.fromEntries(
+        Object.entries(p.error_breakdown).map(([code, rate]) => [code, Math.round(rate * 10000) / 100]),
+      ),
+    })),
+  };
+
+  const content = JSON.stringify(genesis, null, 2) + "\n";
+  await writeFile(join(outDir, "genesis.json"), content, "utf8");
+}
+
 async function writeTopLevelTsconfig(outDir: string): Promise<void> {
   const config = {
     compilerOptions: {
@@ -331,16 +391,35 @@ export async function handleEvolveCommand(argv: string[]): Promise<void> {
     process.exit(1);
   }
 
+  // Load profiles if --with-profile
+  let profiles: ProviderProfile[] = [];
+  if (options.withProfile) {
+    profiles = await loadAllProfiles();
+  }
+
   // Header
-  if (!options.dryRun) {
-    console.log(`\nSynapse Evolve — Generating SDK`);
-    console.log(`  Output:   ${outDir}`);
-  } else {
+  if (options.dryRun) {
     console.log(`\nSynapse Evolve — Preview (dry-run)`);
     console.log(`  Output:   ${outDir} (not written)`);
+  } else {
+    console.log(`\nSynapse Evolve — Generating SDK`);
+    console.log(`  Output:   ${outDir}`);
   }
   console.log(`  Providers: ${targetPacks.map((p) => p.id).join(", ")}`);
+  if (options.withProfile) {
+    console.log(`  Profiles:  ${profiles.length > 0 ? `${profiles.length} provider(s) loaded from .synapse/profiles/` : "none found"}`);
+  }
   console.log("");
+
+  // Profile summary
+  if (options.withProfile && profiles.length > 0) {
+    console.log("  Production data:");
+    for (const p of profiles) {
+      const rate = (p.success_rate * 100).toFixed(1);
+      console.log(`    ${p.provider.padEnd(18)} ${String(p.sample_count).padStart(6)} samples  ${rate}% success  p50=${p.latency_ms.p50}ms  p95=${p.latency_ms.p95}ms`);
+    }
+    console.log("");
+  }
 
   // Generate for each provider
   const results: EvolveResult[] = [];
@@ -367,6 +446,9 @@ export async function handleEvolveCommand(argv: string[]): Promise<void> {
       await writeTopLevelTsconfig(outDir);
       await writeSynapseJson(outDir, results);
       await writeTopLevelIndex(outDir, results);
+      if (options.withProfile && profiles.length > 0) {
+        await writeGenesisJson(outDir, profiles);
+      }
     }
   }
 
@@ -386,6 +468,9 @@ export async function handleEvolveCommand(argv: string[]): Promise<void> {
     console.log(
       `Done: ${successCount} provider(s), ${totalFeatures} feature(s) → ${outDir}`,
     );
+    if (options.withProfile && profiles.length > 0) {
+      console.log(`Profile metadata: genesis.json written to ${outDir}`);
+    }
   }
   if (failCount > 0) {
     console.log(`${failCount} provider(s) failed (see errors above)`);
