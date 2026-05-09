@@ -11,6 +11,7 @@ import { handleConnectCommand, printConnectHelp } from "./commands/connect.js";
 import { handleSmokeCommand, printSmokeHelp } from "./commands/smoke.js";
 import { handleEvolveCommand, printEvolveHelp } from "./commands/evolve.js";
 import { handleInitCommand, printInitHelp } from "./commands/init.js";
+import { handleWatchdogCommand, printWatchdogHelp } from "./commands/watchdog.js";
 import { handleSetupCommand, printSetupHelp } from "./commands/setup.js";
 import { handleConfigCommand, printConfigHelp } from "./commands/config.js";
 import { handleLockCommand, printLockHelp } from "./commands/lock.js";
@@ -114,6 +115,7 @@ Commands:
   pack add|search|list|update|remove|show  Manage provider packs from Registry
   evolve                        Generate zero-dependency SDK from all provider packs
   init                          Initialize a synapse-sdk project
+  watchdog                      Monitor events and auto-create Git Issues
 
 Getting started:
   synapse setup                 Configure your first provider
@@ -132,6 +134,7 @@ Detailed help:
   synapse sdk --help            SDK generation
   synapse evolve --help         Evolve SDK generation
   synapse init --help           Init project setup
+  synapse watchdog --help        Watchdog monitoring
 `);
 }
 
@@ -779,6 +782,9 @@ async function main(): Promise<void> {
         case "init":
           printInitHelp();
           return;
+        case "watchdog":
+          printWatchdogHelp();
+          return;
       }
     }
     printHelp();
@@ -892,6 +898,13 @@ async function main(): Promise<void> {
           printInitHelp();
         } else {
           await handleInitCommand(rawArgs);
+        }
+        break;
+      case "watchdog":
+        if (flags.has("help") || args.includes("--help") || args.includes("-h")) {
+          printWatchdogHelp();
+        } else {
+          await handleWatchdogCommand(rawArgs);
         }
         break;
       case "execute":
