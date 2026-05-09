@@ -9,6 +9,8 @@ import { createVault } from "@synapse-router/vault";
 import { handleGenerateCommand } from "./commands/generate.js";
 import { handleConnectCommand, printConnectHelp } from "./commands/connect.js";
 import { handleSmokeCommand, printSmokeHelp } from "./commands/smoke.js";
+import { handleEvolveCommand, printEvolveHelp } from "./commands/evolve.js";
+import { handleInitCommand, printInitHelp } from "./commands/init.js";
 import { handleSetupCommand, printSetupHelp } from "./commands/setup.js";
 import { handleConfigCommand, printConfigHelp } from "./commands/config.js";
 import { handleLockCommand, printLockHelp } from "./commands/lock.js";
@@ -110,6 +112,8 @@ Commands:
   lock list|show|remove|migrate|outdated  Manage Schema Locks
   sdk generate                  Generate SDK from Provider Pack
   pack add|search|list|update|remove|show  Manage provider packs from Registry
+  evolve                        Generate zero-dependency SDK from all provider packs
+  init                          Initialize a synapse-sdk project
 
 Getting started:
   synapse setup                 Configure your first provider
@@ -126,6 +130,8 @@ Detailed help:
   synapse setup --help          Setup wizard
   synapse generate --help       Pack generation
   synapse sdk --help            SDK generation
+  synapse evolve --help         Evolve SDK generation
+  synapse init --help           Init project setup
 `);
 }
 
@@ -767,6 +773,12 @@ async function main(): Promise<void> {
         case "smoke":
           printSmokeHelp();
           return;
+        case "evolve":
+          printEvolveHelp();
+          return;
+        case "init":
+          printInitHelp();
+          return;
       }
     }
     printHelp();
@@ -866,6 +878,20 @@ async function main(): Promise<void> {
           printSmokeHelp();
         } else {
           await handleSmokeCommand(rawArgs);
+        }
+        break;
+      case "evolve":
+        if (flags.has("help") || args.includes("--help") || args.includes("-h")) {
+          printEvolveHelp();
+        } else {
+          await handleEvolveCommand(rawArgs);
+        }
+        break;
+      case "init":
+        if (flags.has("help") || args.includes("--help") || args.includes("-h")) {
+          printInitHelp();
+        } else {
+          await handleInitCommand(rawArgs);
         }
         break;
       case "execute":
