@@ -12,6 +12,8 @@ import { handleSmokeCommand, printSmokeHelp } from "./commands/smoke.js";
 import { handleEvolveCommand, printEvolveHelp } from "./commands/evolve.js";
 import { handleInitCommand, printInitHelp } from "./commands/init.js";
 import { handleWatchdogCommand, printWatchdogHelp } from "./commands/watchdog.js";
+import { handleProfileCommand, printProfileHelp } from "./commands/profile.js";
+import { handleExportCommand, printExportHelp, handleImportCommand, printImportHelp } from "./commands/export.js";
 import { handleSetupCommand, printSetupHelp } from "./commands/setup.js";
 import { handleConfigCommand, printConfigHelp } from "./commands/config.js";
 import { handleLockCommand, printLockHelp } from "./commands/lock.js";
@@ -116,6 +118,9 @@ Commands:
   evolve                        Generate zero-dependency SDK from all provider packs
   init                          Initialize a synapse-sdk project
   watchdog                      Monitor events and auto-create Git Issues
+  profile list|show|reset|stats  View and manage Provider Profiles
+  export [--output|--stdout]     Export .synapse/ data (tar.gz)
+  import <file> [--stdin]        Import .synapse/ data
 
 Getting started:
   synapse setup                 Configure your first provider
@@ -135,6 +140,9 @@ Detailed help:
   synapse evolve --help         Evolve SDK generation
   synapse init --help           Init project setup
   synapse watchdog --help        Watchdog monitoring
+  synapse profile --help         Profile management
+  synapse export --help          Export data
+  synapse import --help          Import data
 `);
 }
 
@@ -785,6 +793,15 @@ async function main(): Promise<void> {
         case "watchdog":
           printWatchdogHelp();
           return;
+        case "profile":
+          printProfileHelp();
+          return;
+        case "export":
+          printExportHelp();
+          return;
+        case "import":
+          printImportHelp();
+          return;
       }
     }
     printHelp();
@@ -905,6 +922,27 @@ async function main(): Promise<void> {
           printWatchdogHelp();
         } else {
           await handleWatchdogCommand(rawArgs);
+        }
+        break;
+      case "profile":
+        if (flags.has("help") || args.includes("--help") || args.includes("-h")) {
+          printProfileHelp();
+        } else {
+          await handleProfileCommand(rawArgs);
+        }
+        break;
+      case "export":
+        if (flags.has("help") || args.includes("--help") || args.includes("-h")) {
+          printExportHelp();
+        } else {
+          await handleExportCommand(rawArgs);
+        }
+        break;
+      case "import":
+        if (flags.has("help") || args.includes("--help") || args.includes("-h")) {
+          printImportHelp();
+        } else {
+          await handleImportCommand(rawArgs);
         }
         break;
       case "execute":
