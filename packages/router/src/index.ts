@@ -1,45 +1,50 @@
-import {
-  getProviders,
-  loadAllSpecs,
-  type ProviderSpec,
-  type Provider
-} from "@synapse-router/providers";
+/**
+ * @synapse-router/router — 路由引擎
+ *
+ * 多维度评分路由引擎，支持 5 种策略：
+ *   cheap: 成本优先
+ *   fast: 速度优先
+ *   quality: 质量优先
+ *   balanced: 均衡策略（默认）
+ *   cost-capped: 预算封顶
+ *
+ * 架构定位：
+ *   - Paradigm 层: 声明式策略 → 权重向量
+ *   - Adaptation 层: 实时评分 + failover
+ *   - Evolution 层: 由 `synapse evolve` 离线完成（不在本包）
+ *
+ * 核心约束：
+ *   - 纯函数，无运行时 LLM
+ *   - 所有评分确定性的（相同输入 → 相同输出）
+ *   - 路由决策可解释（返回完整 score + explanation）
+ */
 
-export interface RouteDefinition {
-  source: string;
-  target: string;
-}
+// 类型
+export type {
+  RoutingRequest,
+  ProviderCapability,
+  FeatureDescriptor,
+  DimensionScores,
+  ScoredProvider,
+  RouteResult,
+  FilterResult,
+  RoutingStrategy,
+  StrategyId,
+} from "./types.js";
 
-export type RoutingStrategy = "cheap" | "fast" | "quality";
+// 策略
+export { getStrategies, getStrategy, route } from "./ranking.js";
 
-export type ProviderName = string;
+// 评分（低级 API，供有自定义策略需求的用户使用）
+export {
+  scoreCost,
+  scoreLatency,
+  scoreReliability,
+  scoreFeatureMatch,
+  scorePreference,
+  scoreProvider,
+  weightedTotal,
+} from "./scorer.js";
 
-const DEFAULT_PROVIDER_BY_STRATEGY: Record<RoutingStrategy, ProviderName> = {
-  cheap: "replicate",
-  fast: "openai",
-  quality: "comfyui"
-};
-
-export function route(task: string, strategy: RoutingStrategy): ProviderName {
-  const providers = getProvidersForTask(task);
-  const preferredProvider = DEFAULT_PROVIDER_BY_STRATEGY[strategy];
-  const matchedProvider = providers.find((provider) => provider.name === preferredProvider) ?? providers[0];
-
-  if (matchedProvider === undefined) {
-    throw new Error(`No provider supports task: ${task}`);
-  }
-
-  return matchedProvider.name;
-}
-
-export function getProvidersForTask(task: string): Provider[] {
-  return getProviders().filter((provider) => provider.supports(task));
-}
-
-export function getProviderSpecsForTask(task: string): ProviderSpec[] {
-  const normalizedTask = task.toLowerCase();
-
-  return loadAllSpecs().filter((spec) =>
-    spec.capabilities.tasks.some((capability) => normalizedTask.includes(capability))
-  );
-}
+// ⚡ 快捷 API：单函数路由
+export { route as pickProvider } from "./ranking.js";
