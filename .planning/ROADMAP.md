@@ -40,10 +40,10 @@ Plans:
 **Plans**: 7 plans (4 core + 3 gap closure)
 
 Plans:
-- [ ] 02-01-PLAN.md -- E2E test framework infrastructure (helpers, fixtures, test:e2e script)
-- [ ] 02-02-PLAN.md -- CLI connect and API /negotiate entry point E2E tests
-- [ ] 02-03-PLAN.md -- MCP Server negotiate tool and negotiateAndVerify pipeline E2E tests
-- [ ] 02-04-PLAN.md -- SDK generated code compilation and execution validation
+- [x] 02-01-PLAN.md -- E2E test framework infrastructure (helpers: helpers.ts, fixtures.ts)
+- [x] 02-02-PLAN.md -- CLI connect and API /negotiate entry point E2E tests (cli-connect.test.ts, api-negotiate.test.ts)
+- [x] 02-03-PLAN.md -- MCP Server negotiate tool and negotiateAndVerify pipeline E2E tests (mcp-negotiate.test.ts, pipeline.test.ts)
+- [x] 02-04-PLAN.md -- SDK generated code compilation and execution validation (sdk-compile.test.ts)
 
 #### Phase 3: Playground Web UI
 **Goal**: Developers can visually compose, send, and debug negotiate requests through a web interface without needing CLI or API knowledge
@@ -73,7 +73,10 @@ Plans:
   1. Smoke test framework supports API key injection (env/CLI/config), timeout control, and skip markers for unavailable providers
   2. OpenAI chat completions and Replicate smoke tests pass against live production APIs
   3. `synapse smoke --provider <name>` CLI command runs specific provider smoke tests and displays structured pass/fail results per test case
-**Plans**: TBD
+**Plans**: 1 plan
+
+Plans:
+- [x] 04-01-PLAN.md — Smoke test framework (vault-bridge + OpenAI/Replicate test cases) + `synapse smoke` CLI
 
 ### v1.2 Router Integration (Planned)
 
@@ -144,3 +147,25 @@ Plans:
 | 5. Router as SDK Generator | v1.2 | 3/3 | Complete | 2026-05-09 |
 | 6. Local Evolution Engine | v2.0 | 4/4 | Complete | 2026-05-09 |
 | 7. Collaborative Evolution | v2.0 | 3/3 | Complete | 2026-05-09 |
+
+## Post-Roadmap Enhancement: Router Package Rewrite (2026-05-09)
+
+After all 7 phases shipped, `packages/router/` was rewritten from a 45-line stub into a full multi-dimensional scoring routing engine:
+
+| Metric | Before | After |
+|--------|--------|-------|
+| Lines of code | 45 | ~1,400 |
+| Tests | 4 | 55 |
+| Architecture | Hardcoded strategy→provider map | Pure-function scorers × 5 dimensions |
+| Strategies | 3 (cheap/fast/quality) | 5 + custom |
+| CLI command | None | `synapse route <intent>` |
+| Evolve integration | None | `synapse evolve --tune` |
+
+### New CLI Commands
+- `synapse route <intent>` — Multi-dimensional routing with scoring transparency
+- `synapse evolve --tune` — Offline strategy weight tuning from production profiles
+
+### New router capabilities
+- `excludeProviders`, `region` (geographic match bonus), `minVersion` (model version filter)
+- `registerCustomStrategy()` API + config persistence via `synapse config set route.strategies.*`
+- Decision explanation (score breakdown, failover chain) in every route result

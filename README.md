@@ -18,6 +18,10 @@ Registry (Provider API Pack)     .synapse/ (产线运行时日志)
                    ▼
          synapse evolve
       (可含 LLM，一次性，离线)
+         ├── 协商 Schema 契约
+         ├── 多维度路由评分
+         ├── 生成纯代码 SDK
+         └── 策略权重调优 (--tune)
                    │
                    ▼
         纯代码 SDK (TypeScript/Python)
@@ -44,6 +48,42 @@ Registry (Provider API Pack)     .synapse/ (产线运行时日志)
 | **演化** | `synapse evolve` | ✅ 可含 | 开发时，一次性 | 复杂 |
 | **监控** | `synapse watchdog` | ❌ 无 | 后台常驻/CI | 可配置 |
 
+## 路由引擎
+
+多维度评分路由引擎，为给定 intent 选择最优 Provider。5 种预置策略 + 自定义策略：
+
+| 策略 | 用途 | 权重重点 |
+|------|------|---------|
+| `cheap` | 成本优先 | 成本 5x |
+| `fast` | 速度优先 | 延迟 5x |
+| `quality` | 质量优先 | 可靠性 6x + 功能匹配 4x |
+| `balanced` | 均衡（默认） | 均等权重 |
+| `cost-capped` | 预算封顶 | 成本 3x + 质量 2x |
+
+每个 Provider 在 5 个维度上独立评分（0-100），然后加权汇总：
+
+- **cost**: 对数曲线，$0.001→100, $1→40, $10→20
+- **latency**: 类别 (fast/cheap/quality) + ms 精度调整
+- **reliability**: 4 次方曲线，0.99→96, 0.95→81, 0.9→66
+- **featureMatch**: 精确匹配 100, 模糊 70, 不匹配→排除
+- **preference**: 用户偏好 Provider +30 分
+
+并支持高级过滤：`excludeProviders`、`region`（地区匹配加分）、`minVersion`（最低模型版本）。
+
+### 自定义策略
+
+```bash
+# 持久化自定义策略到 config
+synapse config set route.strategies.myCustom.weights.cost 3
+synapse config set route.strategies.myCustom.weights.reliability 2
+
+# 使用自定义策略
+synapse route chat --strategy myCustom
+
+# 或一次性权重覆盖
+synapse route chat --strategy-weights '{"cost":5,"latency":1}'
+```
+
 ## 快速开始
 
 ### 安装
@@ -65,12 +105,31 @@ synapse vault set openai sk-xxx
 synapse vault set deepseek sk-xxx --base-url https://api.deepseek.com/v1
 ```
 
+### 路由 — 选择最优 Provider
+
+```bash
+# 默认均衡策略
+synapse route chat
+
+# 速度优先
+synapse route chat --strategy fast --format table
+
+# 预算控制 + 排除
+synapse route text-to-image --strategy cheap --max-cost 0.01 --exclude replicate --format table
+
+# 地区偏好 + 版本过滤
+synapse route chat --region us-east --min-version 4.0
+```
+
 ### 生成 SDK（核心路径）
 
 ```bash
+# 基础生成
 synapse evolve --out-dir ./sdk
 
-# 你的应用代码现在可以 import 生成的 SDK
+# 包含产线数据 + 策略调优
+synapse profile refresh       # 从日志聚合产线数据
+synapse evolve --with-profile --tune  # 生成 SDK + 自动调优策略权重
 ```
 
 ### 开发调试
@@ -87,30 +146,52 @@ synapse export --stdout | ssh dev "synapse import --stdin"
 synapse watchdog --daemon       # 监控异常，自动创建 Issue
 ```
 
+### 所有 CLI 命令
+
+```
+  connect <provider> <intent>   连接到 Provider 并执行功能
+  smoke --provider <name>       运行 Provider 冒烟测试
+  setup                         交互式首次配置向导
+  config set|get|list           配置管理
+  provider list|show            Provider Pack 管理
+  generate <source>             从 OpenAPI Spec 生成 Provider Pack
+  vault set|list|get|remove     管理 API Key
+  negotiate <schema-file>       运行 Schema 协商
+  lock list|show|remove|migrate Schema Lock 管理
+  sdk generate                  从 Pack 生成 SDK
+  pack add|search|list|update   从 Registry 管理 Pack
+  route <intent>                路由到最优 Provider
+  evolve                        生成零依赖 SDK + 策略调优
+  init                          初始化项目
+  watchdog                      监控异常自动创建 Issue
+  profile list|show|reset|stats Provider 产线数据
+  export|import                 导出/导入 .synapse/ 数据
+```
+
 ## 架构
 
 ```ascii
 synapse-router/
 ├── packages/
-│   ├── core/              # Schema 类型定义 + 校验 + 规范化
-│   ├── negotiator/        # Schema 协商引擎（Intent 匹配 + 能力验证）
+│   ├── core/              # Schema 类型定义 + 校验 + 规范化 (86 tests)
+│   ├── negotiator/        # Schema 协商引擎（Intent 匹配 + 能力验证）(42 tests)
 │   ├── providers/         # Provider Registry + Adapter 接口
-│   ├── router/            # 路由策略 + evolve 演化引擎
-│   ├── connector/         # HTTP 连接层（字段映射 + base_url 覆盖）
-│   ├── lock/              # Schema Lock（缓存/存储/迁移）
-│   ├── vault/             # API Key 加密存储
-│   ├── pack-generator/    # 从 OpenAPI Spec 生成 Provider Pack
-│   ├── sdk-generator/     # 从 Pack DSL 生成 TypeScript / Python SDK
-│   ├── sdk/               # SDK 运行时支持（含 Logger）
-│   ├── billing/           # 用量计费
-│   └── observability/     # 可观测性
+│   ├── router/            # 多维度评分路由引擎 (55 tests)
+│   ├── connector/         # HTTP 连接层（字段映射 + base_url 覆盖）(26 tests)
+│   ├── lock/              # Schema Lock（缓存/存储/迁移）(19 tests)
+│   ├── vault/             # API Key 加密存储 (77 tests)
+│   ├── pack-generator/    # 从 OpenAPI Spec 生成 Provider Pack (23 tests)
+│   ├── sdk-generator/     # 从 Pack DSL 生成 TypeScript / Python SDK (24 tests)
+│   ├── sdk/               # SDK 运行时支持（含 Logger）(6 tests)
+│   ├── billing/           # 用量计费 (92 tests)
+│   └── observability/     # 可观测性 (73 tests)
 ├── apps/
-│   ├── cli/               # CLI 工具
+│   ├── cli/               # CLI 工具 (14 个命令, 21 tests)
 │   ├── api/               # HTTP API Server
 │   ├── mcp-server/        # MCP Server
 │   └── playground/        # 可视化调试界面
 ├── packs/                 # 预置 Provider Pack
-└── tests/                 # E2E 测试
+└── tests/                 # E2E 测试 (5 个测试文件)
 ```
 
 ## 关键设计原则
@@ -120,6 +201,7 @@ synapse-router/
 3. **确定性路由** — 相同的 SDK 输入永远产生相同的 Provider 选择
 4. **薄运行时** — SDK 只做 HTTP 调用 + 一行日志写入，不包含判断逻辑
 5. **日志即反馈** — `.synapse/` 通过 Git 同步，watchdog 监控异常
+6. **策略可调优** — `synapse evolve --tune` 用产线数据自动调优策略权重
 
 ## 与 Synapse Registry 的关系
 
@@ -129,26 +211,51 @@ Registry                          Router
 
 提供 Provider Pack             开发时读取 Pack → 协商 → 生成 SDK
 检测 Provider API 变化         产生运行时日志写入 .synapse/
-提供 Intelligence 统计数据      evolve 时拉取作为参考
+提供 Intelligence 统计数据     evolve 时拉取作为参考
+                                策略权重调优输出到 strategies.json
 ```
 
 ## 状态
 
-| 里程碑 | Phase | 状态 |
-|--------|-------|------|
-| v1.0 Negotiator Reliability | Phase 1 | ✅ Shipped |
-| v1.1 Testing & Playground | Phases 2-4 | 🔄 In progress |
-| v1.2 Router as SDK Generator | Phase 5 | 📋 Planned |
-| v2.0 Offline Evolution | Phases 6-7 | 📋 Planned |
+| 里程碑 | Phase | 状态 | 完成日 |
+|--------|-------|------|--------|
+| v1.0 Negotiator Reliability | 1. 协商可靠性 | ✅ Complete | 2026-05-07 |
+| v1.1 Testing & Playground | 2. E2E 测试 | ✅ Complete | 2026-05-08 |
+| v1.1 Testing & Playground | 3. 可视化调试 | ✅ Complete | 2026-05-09 |
+| v1.1 Testing & Playground | 4. Provider 冒烟测试 | ✅ Complete | 2026-05-09 |
+| v1.2 Router Integration | 5. Router SDK 生成 | ✅ Complete | 2026-05-09 |
+| v2.0 离线演化 | 6. 本地演化引擎 | ✅ Complete | 2026-05-09 |
+| v2.0 离线演化 | 7. Registry 协作 | ✅ Complete | 2026-05-09 |
 
-## 开发
+**最新**: `packages/router` 从 45 行存根重写为 1,400+ 行多维度评分路由引擎。55 tests all pass。
+
+## 测试
 
 ```bash
 pnpm install
 pnpm build
-pnpm test          # 280+ tests
+pnpm test          # 550+ tests (14 个包)
 pnpm typecheck
 ```
+
+| 包 | 测试数 | 状态 |
+|----|--------|------|
+| core | 86 | ✅ |
+| negotiator | 42 | ✅ |
+| router | 55 | ✅ |
+| connector | 26 | ✅ |
+| lock | 19 | ✅ |
+| vault | 77 | ✅ |
+| providers | 9 | ✅ |
+| billing | 92 | ✅ |
+| observability | 73 | ✅ |
+| sdk-generator | 24 | ✅ |
+| pack-generator | 23 | ✅ |
+| registry-client | 4 | ✅ |
+| sdk | 6 | ✅ |
+| contract-mocker | 18 | ✅ |
+| cli | 21 | ✅ |
+| **总计** | **~575** | ✅ |
 
 ## License
 

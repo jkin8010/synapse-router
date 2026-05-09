@@ -428,6 +428,154 @@ synapse connect zhipu embeddings \
 
 ---
 
+### 工作流四：路由 — 多维度智能选择最优 Provider
+
+从 Provider 列表中选择最适合指定 intent 的 Provider。支持 5 种策略和自定义权重。
+
+```
+┌─────────────┐     ┌──────────────┐     ┌──────────────┐
+│ Provider     │ ──▶ │ 多维度评分    │ ──▶ │ 输出最佳选择  │
+│ 列表        │     │ (route)     │     │ (JSON/Table) │
+└─────────────┘     └──────┬───────┘     └──────────────┘
+                          │
+                    5 个维度评分:
+                    cost · latency · reliability
+                    featureMatch · preference
+```
+
+#### 基础路由
+
+```bash
+# 默认均衡策略
+synapse route chat
+
+# 速度优先
+synapse route chat --strategy fast
+
+# 成本优先，表格输出
+synapse route text-to-image --strategy cheap --format table
+```
+
+输出示例（JSON）：
+
+```json
+{
+  "provider": "groq",
+  "score": { "totalScore": 85.3, "dimensions": { ... } },
+  "candidates": [
+    { "provider": "groq", "totalScore": 85.3, ... },
+    { "provider": "openai", "totalScore": 72.1, ... }
+  ],
+  "strategy": "fast",
+  "explanation": { "intent": "chat", "totalCandidates": 5, ... }
+}
+```
+
+表格输出（`--format table`）：
+
+```
+Selected Provider: groq
+Strategy:          fast
+Score:             85.3/100
+
+Dimensions:
+  Cost:             86.0
+  Latency:          89.8
+  Reliability:      78.0
+  Feature Match:    100.0
+
+Candidates:
+  → groq             85.3
+    openai           72.1
+    anthropic        63.5
+```
+
+#### 高级过滤
+
+```bash
+# 预算控制 + 排除特定 Provider
+synapse route text-to-image --strategy cheap --max-cost 0.01 --exclude replicate
+
+# 偏好 + 地区 + 版本
+synapse route chat --prefer openai,anthropic --region us-east --min-version 4.0
+
+# 最低可靠性阈值
+synapse route chat --min-reliability 0.95
+```
+
+#### 自定义策略
+
+一次性权重覆盖：
+
+```bash
+synapse route chat --strategy-weights '{"cost":5,"latency":1}'
+```
+
+持久化到 config：
+
+```bash
+synapse config set route.strategies.myCustom.weights.cost 3
+synapse config set route.strategies.myCustom.weights.reliability 2
+synapse config set route.strategies.myCustom.maxCost 0.05
+
+# 使用自定义策略
+synapse route chat --strategy myCustom
+```
+
+### 工作流五：演化闭环 — 产线数据驱动策略调优
+
+完整的"开发时协商 → 运行时纯 SDK → 产线日志 → 策略调优 → 下一轮迭代"闭环。
+
+```
+┌─────────────┐     ┌──────────────┐     ┌──────────────┐     ┌──────────────┐
+│ 开发时 evolve│ ──▶ │ 运行时 SDK   │ ──▶ │ 产线日志收集  │ ──▶ │ 策略权重调优   │
+│ (生成 SDK)  │     │ (纯代码)     │     │ (.synapse/)  │     │ (--tune)    │
+└─────────────┘     └──────────────┘     └──────────────┘     └──────┬───────┘
+                                                                    │
+                                                                    ▼
+                                                             ┌──────────────┐
+                                                             │ 下一轮 evolve│
+                                                             │ (优化后权重) │
+                                                             └──────────────┘
+```
+
+```bash
+# 1. 产线日志 → 聚合 Profile
+synapse profile refresh
+
+# 2. 生成 SDK + 策略调优
+synapse evolve --with-profile --tune
+#   Tuning strategy weights from production data...
+#   Evaluated 3 provider(s) across 4 strategy/strategies
+#     cheap           2 match  1 under  0 over
+#     fast            1 match  2 under  0 over
+#     quality         3 match  0 under  0 over
+#     balanced        2 match  1 under  0 over
+
+# 3. 生成的 SDK 目录包含策略调优报告
+#    ./synapse-sdk/strategies.json   — JSON 格式调优结果
+#    ./synapse-sdk/STRATEGIES.md     — Markdown 格式调优报告
+```
+
+调优报告示例（STRATEGIES.md）：
+
+```markdown
+## Strategy: cheap
+
+**Summary:** Strategy "cheap" may be underpredicting — consider increasing weights for observed dimensions
+
+### Weights
+
+| Dimension | Current | Suggested | Change |
+|-----------|---------|-----------|--------|
+| cost | 5.0 | 6.5 | +1.5 |
+| latency | 1.0 | 0.7 | -0.3 |
+| reliability | 1.0 | 0.7 | -0.3 |
+| featureMatch | 1.0 | 1.0 | — |
+```
+
+---
+
 ### Speech-to-Text — 语音转文字
 
 音频文件转写为文本，支持多语言、时间戳、分段输出。
