@@ -2,9 +2,12 @@
 // Reads all provider packs → generates zero-dependency SDK
 
 import { generateSdk } from "@synapse-router/sdk-generator";
+import { createRegistryClient, installPack } from "@synapse-router/registry-client";
+import type { PackDetail } from "@synapse-router/registry-client";
 import { readdir, readFile, writeFile, mkdir, rm } from "node:fs/promises";
 import { join, resolve, isAbsolute } from "node:path";
 import { homedir } from "node:os";
+import { createInterface } from "node:readline";
 import { loadAllProfiles, ProviderProfile } from "./profile.js";
 
 // ---------------------------------------------------------------------------
@@ -17,6 +20,16 @@ interface EvolveOptions {
   dryRun: boolean;
   force: boolean;
   withProfile: boolean;
+  fromRegistry: boolean;
+  yes: boolean;
+  registryUrl?: string;
+}
+
+interface RegistryUpdate {
+  provider: string;
+  localVersion: string;
+  remoteVersion: string;
+  isBreaking: boolean;
 }
 
 interface PackEntry {
@@ -42,6 +55,9 @@ Options:
   --dry-run             Preview changes without writing files
   --force               Regenerate even if no provider changes detected
   --with-profile        Read .synapse/profiles/ to inform SDK generation
+  --from-registry       Check registry for newer pack versions before generation
+  --registry-url <url>  Registry URL (implies --from-registry, overrides config/env)
+  --yes, -y             Non-interactive mode (auto-confirm downloads)
 
 Description:
   Reads provider packs from built-in packs/ and ~/.synapse/packs/, then
@@ -108,6 +124,8 @@ export function parseEvolveArgs(argv: string[]): EvolveOptions {
     dryRun: false,
     force: false,
     withProfile: false,
+    fromRegistry: false,
+    yes: false,
   };
 
   for (let i = 0; i < argv.length; i++) {
@@ -122,6 +140,13 @@ export function parseEvolveArgs(argv: string[]): EvolveOptions {
       options.force = true;
     } else if (arg === "--with-profile") {
       options.withProfile = true;
+    } else if (arg === "--from-registry") {
+      options.fromRegistry = true;
+    } else if (arg === "--yes" || arg === "-y") {
+      options.yes = true;
+    } else if (arg === "--registry-url" && argv[i + 1]) {
+      options.registryUrl = argv[++i];
+      options.fromRegistry = true; // --registry-url implies --from-registry
     }
   }
 
@@ -199,6 +224,108 @@ async function getAllPacks(): Promise<PackEntry[]> {
   }
 
   return [...allPacks.values()];
+}
+
+// ---------------------------------------------------------------------------
+// Registry update check
+// ---------------------------------------------------------------------------
+
+async function resolveRegistryUrl(options: EvolveOptions): Promise<string | null> {
+  // Priority: --registry-url flag > config.json > SYNAPSE_REGISTRY_URL env
+  if (options.registryUrl) return options.registryUrl;
+
+  const configPath = join(homedir(), ".synapse", "config.json");
+  try {
+    const content = await readFile(configPath, "utf8");
+    const config = JSON.parse(content);
+    if (config.registry?.url) return config.registry.url;
+  } catch { /* no config */ }
+
+  return process.env["SYNAPSE_REGISTRY_URL"] ?? null;
+}
+
+async function checkRegistryUpdates(
+  packs: PackEntry[],
+  registryUrl: string,
+): Promise<RegistryUpdate[]> {
+  const client = createRegistryClient({ registryUrl });
+  const updates: RegistryUpdate[] = [];
+
+  for (const pack of packs) {
+    try {
+      const cardPath = join(pack.dir, "provider-card.json");
+      const card = JSON.parse(await readFile(cardPath, "utf8"));
+      const localVersion = card.service?.version;
+      if (!localVersion) continue;
+
+      const detail: PackDetail = await client.getPack("official", pack.id);
+
+      if (detail.version !== localVersion) {
+        const isBreaking =
+          detail.versions?.some(
+            (v) =>
+              v.version === detail.version &&
+              v.changelog?.toLowerCase().includes("breaking"),
+          ) ?? false;
+
+        updates.push({
+          provider: pack.id,
+          localVersion,
+          remoteVersion: detail.version,
+          isBreaking,
+        });
+      }
+    } catch {
+      // Skip packs that can't be checked against registry
+    }
+  }
+
+  return updates;
+}
+
+async function confirmDownloads(
+  updates: RegistryUpdate[],
+  yes: boolean,
+): Promise<boolean> {
+  if (updates.length === 0) return false;
+
+  console.log(`\n  Pack updates available:`);
+  for (const u of updates) {
+    const tag = u.isBreaking ? " ⚠ breaking" : " ✅ compatible";
+    console.log(
+      `    ${u.provider.padEnd(16)} ${u.localVersion} → ${u.remoteVersion}${tag}`,
+    );
+  }
+
+  if (yes) return true;
+
+  const rl = createInterface({ input: process.stdin, output: process.stdout });
+  const answer = await new Promise<string>((resolve) => {
+    rl.question(
+      `\n  Download and update ${updates.length} pack(s)? [Y/n] `,
+      resolve,
+    );
+  });
+  rl.close();
+
+  return answer.trim().toLowerCase() !== "n";
+}
+
+async function downloadRegistryUpdates(
+  updates: RegistryUpdate[],
+  registryUrl: string,
+): Promise<void> {
+  const client = createRegistryClient({ registryUrl });
+
+  for (const u of updates) {
+    process.stdout.write(`  Downloading ${u.provider}@${u.remoteVersion}... `);
+    try {
+      await installPack(client, `@official/${u.provider}@${u.remoteVersion}`);
+      console.log("✓");
+    } catch (err: any) {
+      console.log(`✗ ${err?.message ?? "download failed"}`);
+    }
+  }
 }
 
 // ---------------------------------------------------------------------------
@@ -370,7 +497,7 @@ export async function handleEvolveCommand(argv: string[]): Promise<void> {
     : resolve(process.cwd(), options.outDir);
 
   // Discover packs
-  const allPacks = await getAllPacks();
+  let allPacks = await getAllPacks();
 
   if (allPacks.length === 0) {
     console.error("Error: No provider packs found.");
@@ -380,7 +507,7 @@ export async function handleEvolveCommand(argv: string[]): Promise<void> {
   }
 
   // Filter by --provider if specified
-  const targetPacks = options.providers
+  let targetPacks = options.providers
     ? allPacks.filter((p) => options.providers!.includes(p.id))
     : allPacks;
 
@@ -389,6 +516,37 @@ export async function handleEvolveCommand(argv: string[]): Promise<void> {
       `Error: No matching providers. Available: ${allPacks.map((p) => p.id).join(", ")}`,
     );
     process.exit(1);
+  }
+
+  // Registry update check
+  if (options.fromRegistry) {
+    const registryUrl = await resolveRegistryUrl(options);
+
+    if (registryUrl) {
+      console.log(`\n  Registry: ${registryUrl}`);
+      const updates = await checkRegistryUpdates(targetPacks, registryUrl);
+
+      if (updates.length > 0) {
+        const shouldDownload = await confirmDownloads(updates, options.yes);
+        if (shouldDownload) {
+          await downloadRegistryUpdates(updates, registryUrl);
+          // Rediscover packs after downloads (registry source overrides builtin)
+          allPacks = await getAllPacks();
+          targetPacks = options.providers
+            ? allPacks.filter((p) => options.providers!.includes(p.id))
+            : allPacks;
+          console.log("");
+        } else {
+          console.log("  Skipped.\n");
+        }
+      } else {
+        console.log("  All packs up to date.\n");
+      }
+    } else {
+      console.log(
+        "\n  Registry not configured. Use --registry-url or SYNAPSE_REGISTRY_URL.\n",
+      );
+    }
   }
 
   // Load profiles if --with-profile
