@@ -177,3 +177,51 @@ export class BillingError extends Error {
     this.code = code;
   }
 }
+
+// --- Billing Connector Wrapper Types ---
+
+/**
+ * Billing metadata attached to every connector response.
+ * Addresses WRAPPER-05: Billing metadata envelope.
+ */
+export interface BillingResult {
+  /** Total number of API calls made in this session */
+  callCount: number;
+  /** Remaining quota per quotaId (e.g., {"cost-quota": 87.5, "request-quota": 958}) */
+  remainingQuota: Record<string, number>;
+  /** Pre-call estimated cost in USD */
+  estimatedCost: number;
+  /** Post-call actual cost in USD from usage */
+  actualCost: number;
+  /** Status of all quotas after the call */
+  quotaStatuses: Array<{
+    quotaId: string;
+    remaining: number;
+    limit: number;
+    isExceeded: boolean;
+    isNearThreshold: boolean;
+  }>;
+  /** Warning message if near threshold */
+  warning?: string;
+}
+
+/**
+ * Error handling strategy for billing failures.
+ * Addresses WRAPPER-04: Graceful degradation.
+ */
+export type BillingOnError = 'warn' | 'reject' | 'downgrade' | 'notify';
+
+/**
+ * Configuration for createBillingConnector().
+ * Addresses WRAPPER-01: Wrapper factory config.
+ */
+export interface BillingConnectorConfig {
+  /** Pricing rules keyed by feature_id */
+  pricing: Record<string, PricingRule>;
+  /** Quota definitions */
+  quotas: Quota[];
+  /** Error handling strategy (default: 'warn') */
+  onError?: BillingOnError;
+  /** Provider ID used for FileQuotaStorage file path */
+  providerId: string;
+}
