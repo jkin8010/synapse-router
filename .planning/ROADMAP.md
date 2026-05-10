@@ -167,7 +167,7 @@ Plans:
 
 Plans:
 - [x] 08-01-PLAN.md -- Type foundation + FileQuotaStorage (WRAPPER-02) + pricing-bridge (WRAPPER-03)
-- [ ] 08-02-PLAN.md -- BillingConnector Wrapper (WRAPPER-01, WRAPPER-04, WRAPPER-05) + index exports
+- [x] 08-02-PLAN.md -- BillingConnector Wrapper (WRAPPER-01, WRAPPER-04, WRAPPER-05) + index exports
 
 #### Phase 9: SDK Pricing Emission
 **Goal**: SDK Generator emits a standalone, zero-dependency `BillingTracker` class alongside generated SDK code when `--with-billing` flag is active

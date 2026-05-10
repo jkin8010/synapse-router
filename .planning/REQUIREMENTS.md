@@ -8,11 +8,11 @@
 
 ## WRAPPER — Connector Wrapper 层
 
-- [ ] **WRAPPER-01**: `createBillingConnector()` wrapper factory — 包裹 connector 的 pre-call（配额检查）和 post-call（用量记录），不修改 connector 内部代码
+- [x] **WRAPPER-01**: `createBillingConnector()` wrapper factory — 包裹 connector 的 pre-call（配额检查）和 post-call（用量记录），不修改 connector 内部代码
 - [x] **WRAPPER-02**: `FileQuotaStorage` — 实现 `QuotaStorage` 接口，写入 `~/.synapse/quotas/<provider>.json`，原子写入（.tmp + rename），JSON 文件持久化配额状态
 - [x] **WRAPPER-03**: Pricing bridge — pack `provider-card.json` 的 `{input, output, unit}` 格式 → billing `PricingRule` 映射函数，支持缺失字段的默认值填充
-- [ ] **WRAPPER-04**: Graceful degradation — billing 错误（配置缺失/配额不足/写入失败）不阻塞 API 调用，默认 warn 而非 reject，可配置降级策略
-- [ ] **WRAPPER-05**: Billing metadata — wrapper 返回结果包含调用次数、剩余配额、预估费用等元数据，作为 `BillingResult` 附加在 connector response 上
+- [x] **WRAPPER-04**: Graceful degradation — billing 错误（配置缺失/配额不足/写入失败）不阻塞 API 调用，默认 warn 而非 reject，可配置降级策略
+- [x] **WRAPPER-05**: Billing metadata — wrapper 返回结果包含调用次数、剩余配额、预估费用等元数据，作为 `BillingResult` 附加在 connector response 上
 
 ## SDKBILL — SDK Billing 生成
 
@@ -48,11 +48,11 @@
 
 | REQ-ID | Phase | Status |
 |--------|-------|--------|
-| WRAPPER-01 | Phase 8 | pending |
+| WRAPPER-01 | Phase 8 | Complete |
 | WRAPPER-02 | Phase 8 | Complete |
 | WRAPPER-03 | Phase 8 | Complete |
-| WRAPPER-04 | Phase 8 | pending |
-| WRAPPER-05 | Phase 8 | pending |
+| WRAPPER-04 | Phase 8 | Complete |
+| WRAPPER-05 | Phase 8 | Complete |
 | SDKBILL-01 | Phase 9 | pending |
 | SDKBILL-02 | Phase 9 | pending |
 | SDKBILL-03 | Phase 9 | pending |
