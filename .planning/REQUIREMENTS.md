@@ -1,96 +1,62 @@
-# Synapse Router — Requirements v1.1
+# Synapse Router — Requirements v2.1
 
-## Milestone v1.1: Testing & Playground
+## Milestone v2.1: Billing Integration
 
-**Goal:** 建立完整的端到端测试覆盖和可视化调试界面，确保全链路可验证、可观测。
-
----
-
-## E2E — 端到端测试
-
-- [ ] **E2E-01**: 建立 E2E 测试框架基础设施（测试运行器、fixture 管理、断言工具）
-- [ ] **E2E-02**: CLI `connect` 命令端到端测试（synapse connect --task "..." 全流程）
-- [ ] **E2E-03**: API `/negotiate` 端点端到端测试（HTTP request → response 验证）
-- [ ] **E2E-04**: MCP Server negotiate tool 端到端测试
-- [ ] **E2E-05**: `negotiateAndVerify` 全链路测试（negotiate → manifest match → SDK gen → mock test）
-- [ ] **E2E-06**: SDK 生成后代码可编译/可执行验证
-
-## PLAYGROUND — Web 可视化调试
-
-- [ ] **PLAYGROUND-01**: Playground 基础 UI 框架（React/Vite，左右分栏布局）
-- [ ] **PLAYGROUND-02**: Schema 编辑器面板（JSON 编辑、语法高亮、格式化）
-- [ ] **PLAYGROUND-03**: Provider 选择器（列出已安装 packs，选择 provider/base_url）
-- [ ] **PLAYGROUND-04**: 实时请求/响应查看（发送 negotiate 请求、展示返回的 schema + SDK 代码）
-- [ ] **PLAYGROUND-05**: Mock 测试面板（对返回 schema 运行 mock 测试，展示结果）
-
-## SMOKE — Provider 冒烟测试
-
-- [ ] **SMOKE-01**: 冒烟测试框架（真实 API key 输入、超时控制、skip 标记）
-- [ ] **SMOKE-02**: OpenAI chat completions 冒烟测试
-- [ ] **SMOKE-03**: Replicate 冒烟测试
-- [ ] **SMOKE-04**: 冒烟测试 CLI 命令（synapse smoke --provider openai）
+**Goal:** 将 `@synapse-router/billing` 模块集成到 Connector、SDK Generator 和 CLI，实现 API 调用计量计费、配额管理和降级策略。
 
 ---
 
-## Milestone v1.2: Router Integration
+## WRAPPER — Connector Wrapper 层
 
-**Goal:** Router 从 CLI 工具进化为 SDK 生成引擎。`synapse evolve` 为核心命令，输出纯代码 SDK。
+- [ ] **WRAPPER-01**: `createBillingConnector()` wrapper factory — 包裹 connector 的 pre-call（配额检查）和 post-call（用量记录），不修改 connector 内部代码
+- [x] **WRAPPER-02**: `FileQuotaStorage` — 实现 `QuotaStorage` 接口，写入 `~/.synapse/quotas/<provider>.json`，原子写入（.tmp + rename），JSON 文件持久化配额状态
+- [x] **WRAPPER-03**: Pricing bridge — pack `provider-card.json` 的 `{input, output, unit}` 格式 → billing `PricingRule` 映射函数，支持缺失字段的默认值填充
+- [ ] **WRAPPER-04**: Graceful degradation — billing 错误（配置缺失/配额不足/写入失败）不阻塞 API 调用，默认 warn 而非 reject，可配置降级策略
+- [ ] **WRAPPER-05**: Billing metadata — wrapper 返回结果包含调用次数、剩余配额、预估费用等元数据，作为 `BillingResult` 附加在 connector response 上
+
+## SDKBILL — SDK Billing 生成
+
+- [ ] **SDKBILL-01**: `--with-billing` SDK 生成标志 — sdk-generator 支持输出 billing 辅助代码
+- [ ] **SDKBILL-02**: `BillingTracker` 类模板 — standalone 零依赖的计费追踪类，内联定价常量（不 import `@synapse-router/*`）
+- [ ] **SDKBILL-03**: TS/JS SDK 生成时 companion 目录包含 billing tracker 输出（`.synapse/billing/`）
+
+## CLIBILL — CLI Billing 命令
+
+- [ ] **CLIBILL-01**: `synapse billing init` — 项目 billing 配置初始化（选择计价策略、设置配额限制）
+- [ ] **CLIBILL-02**: `synapse billing config` — 查看/设置 billing 配置（`synapse config set billing.*` 扩展）
+- [ ] **CLIBILL-03**: `synapse billing status` — 查看配额状态（剩余调用次数、重置时间、预估费用）
+- [ ] **CLIBILL-04**: `synapse connect` 自动读取 billing 配置并包裹 connector
 
 ---
 
-## GEN — SDK 生成引擎
+## Future Requirements (Deferred)
 
-- [ ] **GEN-01**: `synapse evolve` 基础命令（读取 provider packs → 协商 → 输出 SDK 到指定目录）
-- [ ] **GEN-02**: SDK 生成增强（环境配置入口、错误处理、重试逻辑、`.synapse/` 日志钩子）
-- [ ] **GEN-03**: `synapse init` 项目初始化（生成 SDK 集成模板和 CI/CD 配置）
+- Python SDK billing 支持
+- Redis/DB 配额存储后端
+- Registry-hosted pricing 自动同步
+- Streaming cost estimation
+- Provider packs pricing 数据补充（留在研究阶段，无需此 milestone 完成）
 
----
+## Out of Scope
 
-## Milestone v2.0: Offline Evolution
-
-**Goal:** 建立开发时协商 → 运行时纯 SDK → 产线日志 → Git 同步 → 下一轮演化的完整闭环。
-
----
-
-## EVOLVE — 本地演化引擎
-
-- [ ] **EVOLVE-01**: `.synapse/` 运行时日志系统（SDK 一行 JSON append 到 events.ndjson，Profile 聚合）
-- [ ] **EVOLVE-02**: `synapse watchdog` 规则引擎（纯代码规则匹配，致命/关键错误自动 gh issue create）
-- [ ] **EVOLVE-03**: `synapse export`/`import` + `.synapse/` Git 集成（产线 → 开发数据同步）
-- [ ] **EVOLVE-04**: `synapse evolve` 完整闭环（读 .synapse/ → 读 Provider Packs → 协商 → 生成 SDK）
-
-## COEVOLVE — 双端协同进化
-
-- [ ] **COEVOLVE-01**: Registry 变更通知 → `synapse evolve` 触发链路
-- [ ] **COEVOLVE-02**: `synapse evolve` registry 数据源集成（拉取最新 pack，对比本地版本）
-- [ ] **COEVOLVE-03**: SDK 版本通知（CI/CD 集成：检测新 SDK 可用 → 自动 PR）
+- Connector 内部添加 billing hook — wrapper 模式是强制约束
+- 生成的 SDK 代码中 import billing 包 — 使用 companion 文件模式
+- 运行时计费服务 — billing 是开发时和 CLI 层关注，非运行时服务
+- 支付集成 — 仅计量和配额管理，不做真正的扣费/支付
 
 ## Traceability
 
 | REQ-ID | Phase | Status |
 |--------|-------|--------|
-| E2E-01 | Phase 2 | pending |
-| E2E-02 | Phase 2 | pending |
-| E2E-03 | Phase 2 | pending |
-| E2E-04 | Phase 2 | pending |
-| E2E-05 | Phase 2 | pending |
-| E2E-06 | Phase 2 | pending |
-| PLAYGROUND-01 | Phase 3 | pending |
-| PLAYGROUND-02 | Phase 3 | pending |
-| PLAYGROUND-03 | Phase 3 | pending |
-| PLAYGROUND-04 | Phase 3 | pending |
-| PLAYGROUND-05 | Phase 3 | pending |
-| SMOKE-01 | Phase 4 | pending |
-| SMOKE-02 | Phase 4 | pending |
-| SMOKE-03 | Phase 4 | pending |
-| SMOKE-04 | Phase 4 | pending |
-| GEN-01 | Phase 5 | pending |
-| GEN-02 | Phase 5 | pending |
-| GEN-03 | Phase 5 | pending |
-| EVOLVE-01 | Phase 6 | pending |
-| EVOLVE-02 | Phase 6 | pending |
-| EVOLVE-03 | Phase 6 | pending |
-| EVOLVE-04 | Phase 6 | pending |
-| COEVOLVE-01 | Phase 7 | pending |
-| COEVOLVE-02 | Phase 7 | pending |
-| COEVOLVE-03 | Phase 7 | pending |
+| WRAPPER-01 | Phase 8 | pending |
+| WRAPPER-02 | Phase 8 | Complete |
+| WRAPPER-03 | Phase 8 | Complete |
+| WRAPPER-04 | Phase 8 | pending |
+| WRAPPER-05 | Phase 8 | pending |
+| SDKBILL-01 | Phase 9 | pending |
+| SDKBILL-02 | Phase 9 | pending |
+| SDKBILL-03 | Phase 9 | pending |
+| CLIBILL-01 | Phase 10 | pending |
+| CLIBILL-02 | Phase 10 | pending |
+| CLIBILL-03 | Phase 10 | pending |
+| CLIBILL-04 | Phase 10 | pending |

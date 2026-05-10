@@ -6,8 +6,22 @@
 - **v1.1 Testing & Playground** — Phases 2-4 (in progress)
 - **v1.2 Router Integration** — Phase 5 (planned)
 - **v2.0 Offline Evolution** — Phases 6-7 (planned)
+- **v2.1 Billing Integration** — Phases 8-10 (planned)
 
 ## Phases
+
+- [x] **Phase 1: Negotiator Reliability** — Full contract verification loop shipped
+- [x] **Phase 2: E2E End-to-End Testing** — Core workflows covered by automated E2E tests
+- [x] **Phase 3: Playground Web UI** — Visual debugging interface for negotiate requests
+- [x] **Phase 4: Provider Smoke Tests** — Real provider API integrations verified
+- [x] **Phase 5: Router as SDK Generator** — Router evolves from CLI tool to SDK generation engine
+- [x] **Phase 6: Local Evolution Engine** — .synapse/ log system, watchdog, export/import, evolve flow
+- [x] **Phase 7: Registry-Router Collaboration** — Registry change-detector triggers evolve flow
+- [ ] **Phase 8: Connector Wrapper + FileQuotaStorage** — Billing wrapper and file-based quota storage
+- [ ] **Phase 9: SDK Pricing Emission** — SDK Generator emits BillingTracker with --with-billing flag
+- [ ] **Phase 10: CLI Billing Commands** — billing init/config/status commands and connect auto-wrap
+
+## Phase Details
 
 <details>
 <summary>v1.0 Negotiator Reliability (Phase 1) — SHIPPED 2026-05-07</summary>
@@ -134,9 +148,53 @@ Plans:
 - [x] 07-02-PLAN.md — `synapse evolve` registry 数据源集成（拉取最新 pack，对比本地版本）
 - [x] 07-03-PLAN.md — SDK 版本通知（CI/CD 集成：检测新 SDK 可用 → 自动 PR）
 
+### v2.1 Billing Integration (Planned)
+
+**Milestone Goal:** Integrate `@synapse-router/billing` v0.1.0 with Connector wrapper, SDK Generator pricing emission, and CLI billing commands. Enable API call metering, quota management, and graceful degradation without violating zero-dependency or wrapper-pattern constraints.
+
+#### Phase 8: Connector Wrapper + FileQuotaStorage
+**Goal**: Developers can wrap any connector with billing -- pre-call quota checking, post-call usage recording, file-based quota persistence, and graceful billing error handling -- without modifying connector internals
+**Depends on**: Phase 7
+**Requirements**: WRAPPER-01, WRAPPER-02, WRAPPER-03, WRAPPER-04, WRAPPER-05
+**Success Criteria** (what must be TRUE):
+  1. Developer calls `createBillingConnector(connector, config)` and receives a billing-aware connector that checks quota pre-call and records usage post-call
+  2. Quota state persists across CLI invocations via `FileQuotaStorage` writing to `~/.synapse/quotas/<provider>.json` using atomic `.tmp + rename` writes
+  3. Provider pack `provider-card.json` pricing fields (`{input, output, unit}`) are automatically bridged to billing `PricingRule` format via the pricing bridge function, with sensible defaults for missing fields
+  4. Billing errors (config missing, quota exhausted, storage write failure) do not block API calls -- default behavior is `warn`, configurable to `reject`/`downgrade`/`notify` per strategy
+  5. Every connector response includes billing metadata: call count, remaining quota, and estimated cost as a `BillingResult` envelope on the response object
+**Research flags**: Standard mode (skip research-phase) -- wrapper pattern already mature in the codebase
+**Plans**: 2 plans
+
+Plans:
+- [x] 08-01-PLAN.md -- Type foundation + FileQuotaStorage (WRAPPER-02) + pricing-bridge (WRAPPER-03)
+- [ ] 08-02-PLAN.md -- BillingConnector Wrapper (WRAPPER-01, WRAPPER-04, WRAPPER-05) + index exports
+
+#### Phase 9: SDK Pricing Emission
+**Goal**: SDK Generator emits a standalone, zero-dependency `BillingTracker` class alongside generated SDK code when `--with-billing` flag is active
+**Depends on**: Phase 8 (needs billing types and pricing bridge from Phase 8)
+**Requirements**: SDKBILL-01, SDKBILL-02, SDKBILL-03
+**Success Criteria** (what must be TRUE):
+  1. `sdk-generator --with-billing` flag causes billing tracking code to be emitted alongside the SDK, without importing any `@synapse-router/*` package
+  2. Generated `BillingTracker` class is a standalone zero-dependency class with inline pricing constants (no async imports, no external dependencies)
+  3. SDK generation outputs a companion directory at `.synapse/billing/` containing the billing tracker source file and pricing configuration for the generated SDK
+**Research flags**: Needs deep research -- SDK template BillingTracker design (handlebars template strings are fragile; evaluate alternatives)
+**Plans**: TBD
+
+#### Phase 10: CLI Billing Commands
+**Goal**: Users can initialize, configure, and inspect billing state via CLI commands, and `synapse connect` automatically wraps the connector with billing
+**Depends on**: Phase 8 (requires wrapper), optionally Phase 9
+**Requirements**: CLIBILL-01, CLIBILL-02, CLIBILL-03, CLIBILL-04
+**Success Criteria** (what must be TRUE):
+  1. `synapse billing init` guides the user through pricing strategy selection and quota limit configuration, writing to `.synapse/billing-config.json`
+  2. `synapse billing config` (and `synapse config set billing.*`) allows viewing and modifying billing configuration with immediate validation
+  3. `synapse billing status` displays per-provider remaining quota, reset time, and estimated cost summary in a readable table format
+  4. `synapse connect` automatically detects billing configuration and wraps the connector with `createBillingConnector()`, no manual wrapping required
+**Research flags**: Needs deep research -- Provider real pricing data (manual collection from OpenAI/Replicate/Stability/ComfyUI official pricing pages)
+**Plans**: TBD
+
 ## Progress
 
-**Execution Order:** Phase 2 -> Phase 3 -> Phase 4 -> Phase 5 -> Phase 6 -> Phase 7
+**Execution Order:** Phase 2 -> Phase 3 -> Phase 4 -> Phase 5 -> Phase 6 -> Phase 7 -> Phase 8 -> Phase 9 -> Phase 10
 
 | Phase | Milestone | Plans Complete | Status | Completed |
 |-------|-----------|----------------|--------|-----------|
@@ -147,6 +205,9 @@ Plans:
 | 5. Router as SDK Generator | v1.2 | 3/3 | Complete | 2026-05-09 |
 | 6. Local Evolution Engine | v2.0 | 4/4 | Complete | 2026-05-09 |
 | 7. Collaborative Evolution | v2.0 | 3/3 | Complete | 2026-05-09 |
+| 8. Connector Wrapper + FileQuotaStorage | v2.1 | 1/2 | In Progress|  |
+| 9. SDK Pricing Emission | v2.1 | 0/0 | Not started | - |
+| 10. CLI Billing Commands | v2.1 | 0/0 | Not started | - |
 
 ## Post-Roadmap Enhancement: Router Package Rewrite (2026-05-09)
 
