@@ -5,6 +5,15 @@
 // Core
 export { Billing } from './billing.js';
 
+// Wrapper
+export { createBillingConnector } from "./wrapper.js";
+
+// File Storage
+export { FileQuotaStorage } from "./file-storage.js";
+
+// Pricing Bridge
+export { pricingFromProviderCard } from "./pricing-bridge.js";
+
 // Types
 export type {
   PricingStrategy,
@@ -30,6 +39,9 @@ export type {
   PricingConfig,
   BillingConfig,
   QuotaStorage,
+  BillingResult,
+  BillingOnError,
+  BillingConnectorConfig,
 } from './types.js';
 
 export { BillingError } from './types.js';
