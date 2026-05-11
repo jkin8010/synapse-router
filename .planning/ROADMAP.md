@@ -18,7 +18,7 @@
 - [x] **Phase 6: Local Evolution Engine** — .synapse/ log system, watchdog, export/import, evolve flow
 - [x] **Phase 7: Registry-Router Collaboration** — Registry change-detector triggers evolve flow
 - [ ] **Phase 8: Connector Wrapper + FileQuotaStorage** — Billing wrapper and file-based quota storage
-- [ ] **Phase 9: SDK Pricing Emission** — SDK Generator emits BillingTracker with --with-billing flag
+- [x] **Phase 9: SDK Pricing Emission** — SDK Generator emits BillingTracker with --with-billing flag
 - [ ] **Phase 10: CLI Billing Commands** — billing init/config/status commands and connect auto-wrap
 
 ## Phase Details
@@ -169,17 +169,19 @@ Plans:
 - [x] 08-01-PLAN.md -- Type foundation + FileQuotaStorage (WRAPPER-02) + pricing-bridge (WRAPPER-03)
 - [x] 08-02-PLAN.md -- BillingConnector Wrapper (WRAPPER-01, WRAPPER-04, WRAPPER-05) + index exports
 
-#### Phase 9: SDK Pricing Emission
+#### Phase 9: SDK Pricing Emission ✅
 **Goal**: SDK Generator emits a standalone, zero-dependency `BillingTracker` class alongside generated SDK code when `--with-billing` flag is active
 **Depends on**: Phase 8 (needs billing types and pricing bridge from Phase 8)
 **Requirements**: SDKBILL-01, SDKBILL-02, SDKBILL-03
 **Success Criteria** (what must be TRUE):
-  1. `sdk-generator --with-billing` flag causes billing tracking code to be emitted alongside the SDK, without importing any `@synapse-router/*` package
-  2. Generated `BillingTracker` class is a standalone zero-dependency class with inline pricing constants (no async imports, no external dependencies)
-  3. SDK generation outputs a companion directory at `.synapse/billing/` containing the billing tracker source file and pricing configuration for the generated SDK
-**Research flags**: Needs deep research -- SDK template BillingTracker design (handlebars template strings are fragile; evaluate alternatives)
-**Plans**: TBD
+  1. ✅ `sdk-generator --with-billing` flag causes billing tracking code to be emitted alongside the SDK, without importing any `@synapse-router/*` package
+  2. ✅ Generated `BillingTracker` class is a standalone zero-dependency class with inline pricing constants (no async imports, no external dependencies)
+  3. ✅ SDK generation outputs a companion directory at `.synapse/billing/` containing the billing tracker source file and pricing configuration for the generated SDK
+**Plans**: 2 plans
 
+Plans:
+- [x] 09-01: BillingTracker code generator (billing.ts + billing.test.ts + dependency setup)
+- [x] 09-02: withBilling pipeline wiring (generator.ts + integration tests)
 #### Phase 10: CLI Billing Commands
 **Goal**: Users can initialize, configure, and inspect billing state via CLI commands, and `synapse connect` automatically wraps the connector with billing
 **Depends on**: Phase 8 (requires wrapper), optionally Phase 9
@@ -206,7 +208,7 @@ Plans:
 | 6. Local Evolution Engine | v2.0 | 4/4 | Complete | 2026-05-09 |
 | 7. Collaborative Evolution | v2.0 | 3/3 | Complete | 2026-05-09 |
 | 8. Connector Wrapper + FileQuotaStorage | v2.1 | 1/2 | In Progress|  |
-| 9. SDK Pricing Emission | v2.1 | 0/0 | Not started | - |
+| 9. SDK Pricing Emission | v2.1 | 0/2 | Planned | - |
 | 10. CLI Billing Commands | v2.1 | 0/0 | Not started | - |
 
 ## Post-Roadmap Enhancement: Router Package Rewrite (2026-05-09)

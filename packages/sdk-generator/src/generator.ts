@@ -5,6 +5,7 @@ import { join } from "node:path";
 import type { ProviderCard } from "@synapse-router/core";
 import { generateTypeScript } from "./typescript.js";
 import { generatePython } from "./python.js";
+import { generateBillingTracker, generatePricingSnapshot } from "./billing.js";
 
 // ---------------------------------------------------------------------------
 // Public types
@@ -21,6 +22,7 @@ export interface SdkGenerateOptions {
   outputDir: string;           // Output directory
   providerOverride?: string;   // Override provider name (e.g. "deepseek" using openai pack)
   baseUrlOverride?: string;    // Override default base_url
+  withBilling?: boolean;       // When true, emit BillingTracker companion files alongside SDK
 }
 
 export interface SdkGenerateResult {
@@ -28,6 +30,7 @@ export interface SdkGenerateResult {
   lang: string;
   provider: string;
   features: number;
+  billingFile?: GeneratedFile;  // Billing tracker file when withBilling is true
 }
 
 // ---------------------------------------------------------------------------
@@ -184,6 +187,14 @@ export async function generateSdk(options: SdkGenerateOptions): Promise<SdkGener
       throw new Error(`Unsupported language: ${lang}`);
   }
 
+  // Billing emission (TS-only for Phase 9 per D4)
+  let billingFile: GeneratedFile | undefined;
+  if (options.withBilling && lang === "typescript") {
+    billingFile = generateBillingTracker(packData);
+    const pricingSnapshot = generatePricingSnapshot(packData);
+    files = [...files, billingFile, pricingSnapshot];
+  }
+
   // Write to disk
   await mkdir(outputDir, { recursive: true });
   for (const file of files) {
@@ -199,5 +210,6 @@ export async function generateSdk(options: SdkGenerateOptions): Promise<SdkGener
     lang,
     provider: providerId,
     features: providerCard.features.length,
+    ...(billingFile ? { billingFile } : {}),
   };
 }

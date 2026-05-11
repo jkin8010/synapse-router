@@ -292,6 +292,80 @@ describe("generateSdk (full pipeline)", () => {
 });
 
 // ---------------------------------------------------------------------------
+// generateSdk with --with-billing
+// ---------------------------------------------------------------------------
+
+describe("generateSdk with --with-billing", () => {
+  const testOutputDir = join(projectRoot, ".test-sdk-billing-output");
+
+  it("withBilling: true includes billing files in result.files", async () => {
+    await rm(testOutputDir, { recursive: true, force: true });
+    const result = await generateSdk({
+      packDir: OPENAI_PACK, lang: "typescript", outputDir: testOutputDir,
+      withBilling: true,
+    });
+    const paths = result.files.map(f => f.path);
+    assert.ok(paths.includes(".synapse/billing/tracker.ts"), "should include tracker.ts");
+    assert.ok(paths.includes(".synapse/billing/pricing.json"), "should include pricing.json");
+    assert.ok(result.billingFile, "result.billingFile should be defined");
+    assert.equal(result.billingFile!.path, ".synapse/billing/tracker.ts");
+    await rm(testOutputDir, { recursive: true, force: true });
+  });
+
+  it("generated billing tracker has zero @synapse-router imports", async () => {
+    await rm(testOutputDir, { recursive: true, force: true });
+    const result = await generateSdk({
+      packDir: OPENAI_PACK, lang: "typescript", outputDir: testOutputDir,
+      withBilling: true,
+    });
+    const tracker = result.files.find(f => f.path === ".synapse/billing/tracker.ts")!;
+    assert.ok(tracker, "tracker.ts should exist");
+    assert.doesNotMatch(tracker.content, /import.*@synapse-router/);
+    assert.match(tracker.content, /class BillingTracker/);
+    await rm(testOutputDir, { recursive: true, force: true });
+  });
+
+  it("default (no withBilling) does not generate billing files", async () => {
+    await rm(testOutputDir, { recursive: true, force: true });
+    const result = await generateSdk({
+      packDir: OPENAI_PACK, lang: "typescript", outputDir: testOutputDir,
+    });
+    const billingFiles = result.files.filter(f => f.path.includes("billing/"));
+    assert.equal(billingFiles.length, 0, "no billing files when withBilling is not set");
+    assert.equal(result.billingFile, undefined, "billingFile should be undefined");
+    await rm(testOutputDir, { recursive: true, force: true });
+  });
+
+  it("writes billing files to disk", async () => {
+    await rm(testOutputDir, { recursive: true, force: true });
+    await generateSdk({
+      packDir: OPENAI_PACK, lang: "typescript", outputDir: testOutputDir,
+      withBilling: true,
+    });
+    const entries = await readdir(join(testOutputDir, ".synapse", "billing"));
+    assert.ok(entries.includes("tracker.ts"), "tracker.ts should exist on disk");
+    assert.ok(entries.includes("pricing.json"), "pricing.json should exist on disk");
+    const pricingContent = await readFile(join(testOutputDir, ".synapse", "billing", "pricing.json"), "utf8");
+    const pricing = JSON.parse(pricingContent);
+    assert.ok(pricing.provider, "pricing snapshot has provider");
+    assert.ok(pricing.pricing, "pricing snapshot has pricing map");
+    assert.ok(pricing.generatedAt, "pricing snapshot has generatedAt");
+    await rm(testOutputDir, { recursive: true, force: true });
+  });
+
+  it("withBilling has no effect on Python generation (D4)", async () => {
+    await rm(testOutputDir, { recursive: true, force: true });
+    const result = await generateSdk({
+      packDir: OPENAI_PACK, lang: "python", outputDir: testOutputDir,
+      withBilling: true,
+    });
+    const billingFiles = result.files.filter(f => f.path.includes("billing/"));
+    assert.equal(billingFiles.length, 0, "no billing files for python even when withBilling is true");
+    await rm(testOutputDir, { recursive: true, force: true });
+  });
+});
+
+// ---------------------------------------------------------------------------
 // Helper: load pack data
 // ---------------------------------------------------------------------------
 

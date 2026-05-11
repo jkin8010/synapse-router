@@ -14,21 +14,14 @@
 
 **"开发时协商，运行时无感"** — 协商阶段可以复杂、可以调用 LLM、可以探索，因为它是离线的、一次性的。运行时只有纯代码逻辑的 SDK，确定性、零 Token 成本、零 LLM 意外。
 
-## Current Milestone: v1.1 Testing & Playground
+## Current Milestone: v2.1 Billing Integration
 
-**Goal:** 建立完整的端到端测试覆盖和可视化调试界面，确保全链路可验证、可观测。
+**Phase 8 complete — Connector Wrapper + FileQuotaStorage**
+Billing wrapper now wraps any connector with pre-call quota checking and post-call usage recording. FileQuotaStorage persists quotas atomically. Pricing bridge converts provider-card pricing to PricingRule format.
 
-**Target features:**
-- E2E 测试框架和关键路径测试 (negotiate → verify → SDK generation → Mock test)
-- Playground Web UI 可视化调试界面 (Schema 编辑、Provider 选择、实时响应查看)
-- 真实 Provider 冒烟测试 (openai, replicate 等)
-
-### Future Milestones
-| Milestone | Version | Phases | Status |
-|-----------|---------|--------|--------|
-| Router Integration | v1.2 | Phase 5 | Planned |
-| Offline Evolution | v2.0 | Phase 6 | Planned |
-| Registry Collaboration | v2.0 | Phase 7 | Planned |
+**Remaining phases:**
+- Phase 9: SDK Generator emits BillingTracker with --with-billing flag
+- Phase 10: CLI billing init/config/status commands and connect auto-wrap
 
 ## Requirements
 
@@ -42,6 +35,11 @@
 - ✅ 多 Provider Pack 支持 (openai, replicate, stability, comfyui) — v1.0
 - ✅ TypeScript/Python SDK 自动生成 — v1.0 (24 tests passing)
 - ✅ CLI 工具链 (connect/setup/config/vault/lock/sdk/pack) — v1.0
+- ✅ FileQuotaStorage 原子文件持久化 (SYNAPSE_QUOTA_DIR, .tmp+rename) — v2.1 (Phase 8)
+- ✅ pricingFromProviderCard 纯函数桥接 — v2.1 (Phase 8)
+- ✅ createBillingConnector wrapper 工厂 (preCall/postCall 编排) — v2.1 (Phase 8)
+- ✅ BillingTracker SDK generation with --with-billing flag — v2.1 (Phase 9)
+- ✅ Zero-dependency BillingTracker companion class at .synapse/billing/tracker.ts — v2.1 (Phase 9)
 
 ### Active
 
@@ -115,4 +113,4 @@ This document evolves at phase transitions and milestone boundaries.
 4. Update Context with current state
 
 ---
-*Last updated: 2026-05-09 — v1.1 milestone in progress, v1.2/v2.0 planned*
+*Last updated: 2026-05-10 — Phase 8 complete (Connector Wrapper + FileQuotaStorage)*

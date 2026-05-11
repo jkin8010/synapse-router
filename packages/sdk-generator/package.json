@@ -16,6 +16,7 @@
     "typecheck": "tsc --noEmit -p tsconfig.json"
   },
   "dependencies": {
-    "@synapse-router/core": "workspace:*"
+    "@synapse-router/core": "workspace:*",
+    "@synapse-router/billing": "workspace:*"
   }
 }
