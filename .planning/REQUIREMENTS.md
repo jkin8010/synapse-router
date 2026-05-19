@@ -64,10 +64,10 @@
 
 ## SKILLINSTALL -- Install 安装 CLI
 
-- [ ] **SKILLINSTALL-01**: `npx @synapse-router/install-skill` CLI -- 一键安装脚手架
-- [ ] **SKILLINSTALL-02**: 环境自动检测 -- 检测当前 AI Agent 环境并安装到正确位置
-- [ ] **SKILLINSTALL-03**: 手动指定 -- `--platform` 和 `--dir` 标志覆盖自动检测
-- [ ] **SKILLINSTALL-04**: 安装确认和回滚 -- `--dry-run` 预览，`--uninstall` 卸载
+- [x] **SKILLINSTALL-01**: `npx @synapse-router/install-skill` CLI -- 一键安装脚手架
+- [x] **SKILLINSTALL-02**: 环境自动检测 -- 检测当前 AI Agent 环境并安装到正确位置
+- [x] **SKILLINSTALL-03**: 手动指定 -- `--platform` 和 `--dir` 标志覆盖自动检测
+- [x] **SKILLINSTALL-04**: 安装确认和回滚 -- `--dry-run` 预览，`--uninstall` 卸载
 
 ## SKILLGIT -- GitHub 分销
 
@@ -119,10 +119,10 @@
 | SKILLPKG-03 | Phase 11 | Complete |
 | SKILLPKG-04 | Phase 11 | Complete |
 | SKILLPKG-05 | Phase 11 | Complete |
-| SKILLINSTALL-01 | Phase 12 | pending |
-| SKILLINSTALL-02 | Phase 12 | pending |
-| SKILLINSTALL-03 | Phase 12 | pending |
-| SKILLINSTALL-04 | Phase 12 | pending |
+| SKILLINSTALL-01 | Phase 12 | Complete |
+| SKILLINSTALL-02 | Phase 12 | Complete |
+| SKILLINSTALL-03 | Phase 12 | Complete |
+| SKILLINSTALL-04 | Phase 12 | Complete |
 | SKILLGIT-01 | Phase 11 | Complete |
 | SKILLGIT-02 | Phase 11 | Complete |
 | SKILLGIT-03 | Phase 12 | pending |
