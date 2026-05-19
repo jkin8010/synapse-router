@@ -1,0 +1,39 @@
+{
+  "name": "@synapse-router/skill",
+  "version": "0.1.0",
+  "type": "module",
+  "description": "Synapse Router AI Agent Skill — multi-platform agent configuration for Synapse Router CLI, API, and SDK guidance",
+  "keywords": [
+    "synapse-router",
+    "skill",
+    "ai-agent",
+    "claude-code",
+    "cursor",
+    "codex"
+  ],
+  "license": "MIT",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    }
+  },
+  "files": [
+    "dist/",
+    "skills/"
+  ],
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "typecheck": "tsc --noEmit -p tsconfig.json"
+  },
+  "devDependencies": {
+    "typescript": "^5.9.0"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/qise-tech/synapse-router",
+    "directory": "packages/skill"
+  }
+}
