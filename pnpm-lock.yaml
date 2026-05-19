@@ -32,6 +32,9 @@ importers:
 
   apps/cli:
     dependencies:
+      '@synapse-router/billing':
+        specifier: workspace:*
+        version: link:../../packages/billing
       '@synapse-router/connector':
         specifier: workspace:*
         version: link:../../packages/connector
