@@ -3,6 +3,7 @@
 // Supports both imperative (full args) and interactive (auto-degraded) modes.
 
 import { readFile } from "node:fs/promises";
+import { existsSync, readFileSync } from "node:fs";
 import { join, dirname } from "node:path";
 import { homedir } from "node:os";
 import { createVault } from "@synapse-router/vault";
@@ -25,6 +26,7 @@ interface ConnectOptions {
   lock?: string;          // path to lock file
   raw?: boolean;
   format?: "json" | "table" | "compact";
+  withBilling?: boolean;  // --with-billing (true) or --no-billing (false)
 }
 
 interface ProviderConfig {
@@ -45,6 +47,7 @@ interface SynapseConfig {
 // ---------------------------------------------------------------------------
 
 const CONFIG_PATH = join(homedir(), ".synapse", "config.json");
+const BILLING_CONFIG_PATH = join(homedir(), ".synapse", "billing-config.json");
 
 async function loadConfig(): Promise<SynapseConfig> {
   try {
@@ -279,6 +282,8 @@ Options:
   --lock <path>         Use existing schema lock file
   --raw                 Output raw provider response
   --format <fmt>        Output format: json | table | compact (default: json)
+  --with-billing          Enable billing tracking (skip prompt)
+  --no-billing            Disable billing tracking (skip prompt)
 
 Modes:
   Imperative    Full parameters provided — no interaction
@@ -306,6 +311,14 @@ Examples:
 
   # Override base URL
   synapse connect deepseek chat --base-url https://custom-api.example.com/v1 --raw
+
+Billing:
+  If a billing configuration exists (synapse billing init), connect will prompt
+  to enable billing tracking. When enabled, connector output includes billing
+  metadata: call count, remaining quota, and estimated cost.
+
+  --with-billing          Force-enable billing (skip prompt)
+  --no-billing            Skip billing even if config exists
 
 See also:
   synapse setup   — Interactive first-time setup
@@ -344,6 +357,10 @@ export function parseConnectArgs(argv: string[]): ConnectOptions {
       options.raw = true;
     } else if (arg === "--format" && argv[i + 1]) {
       options.format = argv[++i] as "json" | "table" | "compact";
+    } else if (arg === "--with-billing") {
+      options.withBilling = true;
+    } else if (arg === "--no-billing") {
+      options.withBilling = false;
     } else if (!arg.startsWith("-")) {
       positional.push(arg);
     }
@@ -432,6 +449,44 @@ export async function handleConnectCommand(argv: string[]): Promise<void> {
   if (!intent) {
     intent = await promptSelectIntent(packsDir, provider);
   }
+
+  // ---- Billing auto-detection (CLIBILL-04, D-06) ----
+  let billingWrapperConfig: Record<string, unknown> | null = null;
+
+  if (options.withBilling !== false) {
+    try {
+      if (existsSync(BILLING_CONFIG_PATH)) {
+        let enableBilling = options.withBilling === true;
+
+        if (!enableBilling) {
+          // Interactive prompt: "Detected billing configuration. Enable billing tracking? [Y/n]"
+          const readline = await import("node:readline");
+          const rl = readline.createInterface({ input: process.stdin, output: process.stdout });
+          const answer = await new Promise<string>((resolve) => {
+            rl.question("\nDetected billing configuration. Enable billing tracking? [Y/n]: ", resolve);
+          });
+          rl.close();
+          const normalized = answer.trim().toLowerCase();
+          enableBilling = normalized === "" || normalized === "y" || normalized === "yes";
+        }
+
+        if (enableBilling) {
+          const raw = readFileSync(BILLING_CONFIG_PATH, "utf-8");
+          const billingConfig = JSON.parse(raw);
+          const providerConfig = billingConfig.providers?.[provider ?? ""];
+          if (providerConfig) {
+            billingWrapperConfig = { ...providerConfig, providerId: provider };
+            console.log(`Billing tracking enabled for ${provider}`);
+          } else {
+            console.warn(`Warning: No billing config for provider "${provider}". Skipping billing.`);
+          }
+        }
+      }
+    } catch (err) {
+      console.warn(`Warning: Failed to load billing config: ${err instanceof Error ? err.message : String(err)}. Proceeding without billing.`);
+    }
+  }
+  // --------------------------------------------------------
 
   // Resolve input
   let input: Record<string, unknown>;
@@ -598,9 +653,26 @@ export async function handleConnectCommand(argv: string[]): Promise<void> {
 
   // ---- Execute the connection ----
   try {
-    // Try dynamic import of connector
     const { connect } = await import("@synapse-router/connector");
-    const result = await connect(params);
+
+    // Billing wrapper (CLIBILL-04, D-06)
+    let executeConnect: (p: ConnectParams) => Promise<ConnectResult>;
+    if (billingWrapperConfig) {
+      try {
+        const { createBillingConnector } = await import("@synapse-router/billing");
+        executeConnect = createBillingConnector(
+          connect,
+          billingWrapperConfig as unknown as Parameters<typeof createBillingConnector>[1]
+        );
+      } catch (importErr) {
+        console.warn(`Warning: @synapse-router/billing import failed. Proceeding without billing.`);
+        executeConnect = connect;
+      }
+    } else {
+      executeConnect = connect;
+    }
+
+    const result = await executeConnect(params);
     console.log(formatOutput(result, format, options.raw));
   } catch (err: any) {
     // Connector not available — output debug info
