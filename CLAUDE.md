@@ -6,6 +6,14 @@
 >
 > **核心定位**: Router 不是运行时中间件，而是**开发时 SDK 生成引擎**。应用代码里没有 Router，只有生成的 SDK。所有协商、路由决策、Provider 选择在开发时完成，运行时只有纯代码 SDK。
 
+<!-- Language Preferences -->
+## Communication
+
+- **交流语言**: 简体中文 — 所有与用户的交流使用简体中文
+- **Code Comments**: English — all code comments, docstrings, and inline documentation must be written in English
+- **Log Messages**: English — log messages should be in English
+- **Variable/Function Names**: English — all identifiers in English
+
 ## 技术栈
 
 - **语言**: TypeScript 5.9+ (strict mode)

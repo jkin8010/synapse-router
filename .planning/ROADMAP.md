@@ -19,7 +19,7 @@
 - [x] **Phase 7: Registry-Router Collaboration** — Registry change-detector triggers evolve flow
 - [ ] **Phase 8: Connector Wrapper + FileQuotaStorage** — Billing wrapper and file-based quota storage
 - [x] **Phase 9: SDK Pricing Emission** — SDK Generator emits BillingTracker with --with-billing flag
-- [ ] **Phase 10: CLI Billing Commands** — billing init/config/status commands and connect auto-wrap
+- [x] **Phase 10: CLI Billing Commands** — billing init/config/status commands and connect auto-wrap (completed 2026-05-19)
 
 ## Phase Details
 
@@ -214,7 +214,7 @@ Plans:
 | 7. Collaborative Evolution | v2.0 | 3/3 | Complete | 2026-05-09 |
 | 8. Connector Wrapper + FileQuotaStorage | v2.1 | 1/2 | In Progress|  |
 | 9. SDK Pricing Emission | v2.1 | 0/2 | Planned | - |
-| 10. CLI Billing Commands | v2.1 | 3/3 | Complete   | 2026-05-19 |
+| 10. CLI Billing Commands | v2.1 | 3/3 | Complete    | 2026-05-19 |
 
 ## Post-Roadmap Enhancement: Router Package Rewrite (2026-05-09)
 
