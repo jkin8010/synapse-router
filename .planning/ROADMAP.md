@@ -21,7 +21,7 @@
 - [ ] **Phase 8: Connector Wrapper + FileQuotaStorage** — Billing wrapper and file-based quota storage
 - [x] **Phase 9: SDK Pricing Emission** — SDK Generator emits BillingTracker with --with-billing flag
 - [x] **Phase 10: CLI Billing Commands** — billing init/config/status commands and connect auto-wrap (completed 2026-05-19)
-- [ ] **Phase 11: Skill 包创建与内容覆盖** — Create @synapse-router/skill package with multi-platform agent formats and full content coverage
+- [x] **Phase 11: Skill 包创建与内容覆盖** — Create @synapse-router/skill package with multi-platform agent formats and full content coverage (completed 2026-05-19)
 - [ ] **Phase 12: Install CLI + 自动化分发** — One-command install CLI with auto-detection and CI/CD publishing
 
 ## Phase Details
@@ -219,10 +219,10 @@ Plans:
 **Plans**: 4 plans in 2 waves
 
 Plans:
-- [ ] 11-01-PLAN.md — Package scaffolding: package.json, tsconfig.json, skills/ directory structure (SKILLPKG-01, SKILLPKG-02)
-- [ ] 11-02-PLAN.md — Enhanced CLAUDE.md with full content + root skill.md entry file (SKILLCOVER-01—05, SKILLGIT-02)
-- [ ] 11-03-PLAN.md — Claude Code skill.md + Cursor .cursorrules platform files (SKILLPKG-03, SKILLPKG-04)
-- [ ] 11-04-PLAN.md — Codex agent.yaml + OpenClaw/Hermes agent.md platform files (SKILLPKG-05, SKILLGIT-01)
+- [x] 11-01-PLAN.md — Package scaffolding: package.json, tsconfig.json, skills/ directory structure (SKILLPKG-01, SKILLPKG-02)
+- [x] 11-02-PLAN.md — Enhanced CLAUDE.md with full content + root skill.md entry file (SKILLCOVER-01—05, SKILLGIT-02)
+- [x] 11-03-PLAN.md — Claude Code skill.md + Cursor .cursorrules platform files (SKILLPKG-03, SKILLPKG-04)
+- [x] 11-04-PLAN.md — Codex agent.yaml + OpenClaw/Hermes agent.md platform files (SKILLPKG-05, SKILLGIT-01)
 
 #### Phase 12: Install CLI + 自动化分发
 **Goal**: 用户运行一条 npx 命令即可安装 Synapse Router Skill 到任何 AI Agent 平台，CI/CD 自动将新版本发布到 npm
@@ -233,7 +233,11 @@ Plans:
   2. 用户通过 `--platform` 标志跳过自动检测手动指定目标平台，通过 `--dir` 标志指定自定义安装路径
   3. `--dry-run` 显示安装计划和目标位置但不执行写入，`--uninstall` 移除所有已安装的 skill 文件并清理已写入的目录
   4. GitHub Actions CI/CD 在 tag 推送时自动构建并发布 `@synapse-router/skill` 和 `@synapse-router/install-skill` 包到 npm registry
-**Plans**: TBD
+**Plans**: 2 plans
+
+Plans:
+- [ ] 12-01-PLAN.md — install-skill CLI 包：平台检测、安装/卸载、备份/清单管理 (SKILLINSTALL-01~04)
+- [ ] 12-02-PLAN.md — CI/CD 发布工作流：tag 触发、双包发布、GitHub Release 自动生成 (SKILLGIT-03)
 
 ## Progress
 
@@ -251,8 +255,8 @@ Plans:
 | 8. Connector Wrapper + FileQuotaStorage | v2.1 | 1/2 | In Progress|  |
 | 9. SDK Pricing Emission | v2.1 | 0/2 | Planned | - |
 | 10. CLI Billing Commands | v2.1 | 3/3 | Complete    | 2026-05-19 |
-| 11. Skill 包创建与内容覆盖 | v3.0 | 0/4 | Planned | - |
-| 12. Install CLI + 自动化分发 | v3.0 | 0/0 | Planned | - |
+| 11. Skill 包创建与内容覆盖 | v3.0 | 4/4 | Complete    | 2026-05-19 |
+| 12. Install CLI + 自动化分发 | v3.0 | 0/2 | Planned | - |
 
 ## Post-Roadmap Enhancement: Router Package Rewrite (2026-05-09)
 
