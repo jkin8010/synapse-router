@@ -41,6 +41,70 @@ async function saveConfig(config: SynapseConfig): Promise<void> {
   await writeFile(CONFIG_PATH, JSON.stringify(config, null, 2) + "\n", "utf8");
 }
 
+// ---------------------------------------------------------------------------
+// Billing config helpers (billing.* key redirect)
+// ---------------------------------------------------------------------------
+
+const BILLING_CONFIG_PATH = join(SYNAPSE_DIR, "billing-config.json");
+
+async function loadBillingConfigFile(): Promise<Record<string, unknown>> {
+  try {
+    const content = await readFile(BILLING_CONFIG_PATH, "utf8");
+    return JSON.parse(content);
+  } catch {
+    return { version: "1", providers: {} };
+  }
+}
+
+async function saveBillingConfigFile(config: Record<string, unknown>): Promise<void> {
+  await mkdir(SYNAPSE_DIR, { recursive: true });
+  await writeFile(BILLING_CONFIG_PATH, JSON.stringify(config, null, 2) + "\n", "utf8");
+}
+
+function validateBillingField(key: string, value: string): void {
+  const parts = key.split(".");
+  const lastSegment = parts[parts.length - 1];
+  const numericFields = new Set(["limit", "used", "threshold", "inputPrice", "outputPrice", "unitPrice", "costPerCall"]);
+
+  switch (lastSegment) {
+    case "strategy": {
+      const valid = ["perToken", "perUnit", "tiered", "flat"];
+      if (!valid.includes(value)) {
+        console.error(`Error: Invalid pricing strategy '${value}'. Use: perToken, perUnit, tiered, flat`);
+        process.exit(1);
+      }
+      break;
+    }
+    case "onError": {
+      const valid = ["warn", "reject", "downgrade", "notify"];
+      if (!valid.includes(value)) {
+        console.error(`Error: Invalid onError value '${value}'. Use: warn, reject, downgrade, notify`);
+        process.exit(1);
+      }
+      break;
+    }
+    case "period": {
+      const valid = ["minute", "hour", "day", "month", "oneTime"];
+      if (!valid.includes(value)) {
+        console.error(`Error: Invalid quota period '${value}'. Use: minute, hour, day, month, oneTime`);
+        process.exit(1);
+      }
+      break;
+    }
+    default:
+      if (numericFields.has(lastSegment)) {
+        const num = Number(value);
+        if (isNaN(num) || num < 0) {
+          console.error(`Error: '${lastSegment}' must be a non-negative number`);
+          process.exit(1);
+        }
+      } else if (!["unit", "type", "id"].includes(lastSegment)) {
+        console.error(`Error: Unknown billing field '${lastSegment}'. Supported fields: strategy, onError, period, limit, used, threshold, inputPrice, outputPrice, unitPrice, costPerCall, unit, type, id`);
+        process.exit(1);
+      }
+  }
+}
+
 /**
  * Get a nested value from config using dot notation.
  * e.g. "deepseek.base_url" → config.providers.deepseek.base_url
@@ -158,6 +222,13 @@ Examples:
   # List all configuration
   synapse config list
 
+Billing configuration:
+  Billing settings are stored in ~/.synapse/billing-config.json and accessed
+  via the "billing.*" prefix:
+    synapse config set billing.openai.onError reject
+    synapse config get billing.openai.onError
+    synapse config set billing.openai.pricing.chat.strategy perToken
+
 See also:
   synapse setup    — Interactive provider setup
   synapse vault    — Manage API keys
@@ -176,6 +247,21 @@ async function configSet(key: string, value: string): Promise<void> {
     process.exit(1);
   }
 
+  // Redirect billing.* keys to billing-config.json
+  if (key.startsWith("billing.")) {
+    const billingKey = key.slice(8);
+    if (!billingKey) {
+      console.error("Error: billing key required after 'billing.'");
+      process.exit(1);
+    }
+    const billingConfig = await loadBillingConfigFile();
+    validateBillingField(billingKey, value);
+    setNestedValue(billingConfig, billingKey, value);
+    await saveBillingConfigFile(billingConfig);
+    console.log(`✓ ${key} = ${value}`);
+    return;
+  }
+
   const config = await loadConfig();
   setNestedValue(config, key, value);
   await saveConfig(config);
@@ -187,6 +273,23 @@ async function configGet(key: string): Promise<void> {
     console.error("Error: key is required");
     console.error("Usage: synapse config get <key>");
     process.exit(1);
+  }
+
+  // Redirect billing.* keys to billing-config.json
+  if (key.startsWith("billing.")) {
+    const billingKey = key.slice(8);
+    if (!billingKey) {
+      console.error("Error: billing key required after 'billing.'");
+      process.exit(1);
+    }
+    const billingConfig = await loadBillingConfigFile();
+    const value = getNestedValue(billingConfig, billingKey);
+    if (value === undefined) {
+      console.log(`(not set)`);
+    } else {
+      console.log(`${key} = ${typeof value === "object" ? JSON.stringify(value, null, 2) : value}`);
+    }
+    return;
   }
 
   const config = await loadConfig();
