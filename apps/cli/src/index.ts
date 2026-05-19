@@ -16,6 +16,7 @@ import { handleProfileCommand, printProfileHelp } from "./commands/profile.js";
 import { handleExportCommand, printExportHelp, handleImportCommand, printImportHelp } from "./commands/export.js";
 import { handleSetupCommand, printSetupHelp } from "./commands/setup.js";
 import { handleConfigCommand, printConfigHelp } from "./commands/config.js";
+import { handleBillingCommand, printBillingHelp } from "./commands/billing.js";
 import { handleLockCommand, printLockHelp } from "./commands/lock.js";
 import { handleSdkCommand, printSdkHelp } from "./commands/sdk.js";
 import { handlePackCommand, printPackHelp } from "./commands/pack.js";
@@ -108,6 +109,7 @@ Commands:
   smoke --provider <name>       Run provider smoke tests against live APIs
   setup                         Interactive first-time setup wizard
   config set|get|list           Manage configuration (~/.synapse/config.json)
+  billing init|config|status       Manage billing configuration and quota status
   provider list [--remote]      List all provider packs
   provider show <id>            Show provider details
   generate <source>             Generate a Provider Pack from OpenAPI spec
@@ -136,6 +138,7 @@ Detailed help:
   synapse connect --help        Connect command options & examples
   synapse vault --help          Vault subcommands
   synapse config --help         Config management
+  synapse billing --help          Billing management
   synapse setup --help          Setup wizard
   synapse generate --help       Pack generation
   synapse sdk --help            SDK generation
@@ -763,6 +766,9 @@ async function main(): Promise<void> {
         case "config":
           printConfigHelp();
           return;
+        case "billing":
+          printBillingHelp();
+          return;
         case "vault":
           printVaultHelp();
           return;
@@ -865,6 +871,13 @@ async function main(): Promise<void> {
           printConfigHelp();
         } else {
           await handleConfigCommand(rawArgs);
+        }
+        break;
+      case "billing":
+        if (flags.has("help") || args.includes("--help") || args.includes("-h")) {
+          printBillingHelp();
+        } else {
+          await handleBillingCommand(rawArgs);
         }
         break;
       case "generate":
