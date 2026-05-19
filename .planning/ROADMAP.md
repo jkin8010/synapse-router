@@ -195,7 +195,7 @@ Plans:
 **Plans**: 3 plans in 2 waves
 
 Plans:
-- [ ] 10-01-PLAN.md -- billing command module + init wizard (CLIBILL-01, D-01/D-02/D-03)
+- [x] 10-01-PLAN.md -- billing command module + init wizard (CLIBILL-01, D-01/D-02/D-03)
 - [ ] 10-02-PLAN.md -- billing config + billing status (CLIBILL-02, CLIBILL-03, D-04/D-05)
 - [ ] 10-03-PLAN.md -- connect auto-wrap with billing (CLIBILL-04, D-06)
 
@@ -214,7 +214,7 @@ Plans:
 | 7. Collaborative Evolution | v2.0 | 3/3 | Complete | 2026-05-09 |
 | 8. Connector Wrapper + FileQuotaStorage | v2.1 | 1/2 | In Progress|  |
 | 9. SDK Pricing Emission | v2.1 | 0/2 | Planned | - |
-| 10. CLI Billing Commands | v2.1 | 0/3 | Planned | - |
+| 10. CLI Billing Commands | v2.1 | 1/3 | In Progress|  |
 
 ## Post-Roadmap Enhancement: Router Package Rewrite (2026-05-09)
 
