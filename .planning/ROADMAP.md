@@ -7,6 +7,7 @@
 - **v1.2 Router Integration** — Phase 5 (planned)
 - **v2.0 Offline Evolution** — Phases 6-7 (planned)
 - **v2.1 Billing Integration** — Phases 8-10 (planned)
+- **v3.0 AI Agent Skill Distribution** — Phases 11-12 (planned)
 
 ## Phases
 
@@ -20,6 +21,8 @@
 - [ ] **Phase 8: Connector Wrapper + FileQuotaStorage** — Billing wrapper and file-based quota storage
 - [x] **Phase 9: SDK Pricing Emission** — SDK Generator emits BillingTracker with --with-billing flag
 - [x] **Phase 10: CLI Billing Commands** — billing init/config/status commands and connect auto-wrap (completed 2026-05-19)
+- [ ] **Phase 11: Skill 包创建与内容覆盖** — Create @synapse-router/skill package with multi-platform agent formats and full content coverage
+- [ ] **Phase 12: Install CLI + 自动化分发** — One-command install CLI with auto-detection and CI/CD publishing
 
 ## Phase Details
 
@@ -90,7 +93,7 @@ Plans:
 **Plans**: 1 plan
 
 Plans:
-- [x] 04-01-PLAN.md — Smoke test framework (vault-bridge + OpenAI/Replicate test cases) + `synapse smoke` CLI
+- [x] 04-01-PLAN.md -- Smoke test framework (vault-bridge + OpenAI/Replicate test cases) + `synapse smoke` CLI
 
 ### v1.2 Router Integration (Planned)
 
@@ -108,9 +111,9 @@ Plans:
 **Plans**: 3 plans
 
 Plans:
-- [x] 05-01-PLAN.md — `synapse evolve` 基础命令（读取 provider packs → 协商 → 生成 SDK 到指定目录）
-- [x] 05-02-PLAN.md — SDK 生成增强（含环境配置入口、错误处理、重试逻辑、`.synapse/` 日志钩子）
-- [x] 05-03-PLAN.md — 应用集成流程（README 示例、`synapse init` 初始化项目 SDK）
+- [x] 05-01-PLAN.md -- `synapse evolve` 基础命令（读取 provider packs → 协商 → 生成 SDK 到指定目录）
+- [x] 05-02-PLAN.md -- SDK 生成增强（含环境配置入口、错误处理、重试逻辑、`.synapse/` 日志钩子）
+- [x] 05-03-PLAN.md -- 应用集成流程（README 示例、`synapse init` 初始化项目 SDK）
 
 ### v2.0 Offline Evolution (Planned)
 
@@ -128,10 +131,10 @@ Plans:
 **Plans**: 4 plans
 
 Plans:
-- [x] 06-01-PLAN.md — `.synapse/` 运行时日志系统 + Provider Profile 聚合
-- [x] 06-02-PLAN.md — `synapse watchdog` 规则引擎 + 自动 Issue 创建
-- [x] 06-03-PLAN.md — `synapse export`/`import` + `.synapse/` Git 同步方案
-- [x] 06-04-PLAN.md — `synapse evolve` 完整演化闭环（读 .synapse/ → 读 Provider Packs → 协商 → 生成 SDK）
+- [x] 06-01-PLAN.md -- `.synapse/` 运行时日志系统 + Provider Profile 聚合
+- [x] 06-02-PLAN.md -- `synapse watchdog` 规则引擎 + 自动 Issue 创建
+- [x] 06-03-PLAN.md -- `synapse export`/`import` + `.synapse/` Git 同步方案
+- [x] 06-04-PLAN.md -- `synapse evolve` 完整演化闭环（读 .synapse/ → 读 Provider Packs → 协商 → 生成 SDK）
 
 #### Phase 7: Registry-Router Collaboration
 **Goal**: Registry 的 Provider API change-detector 通过 `synapse evolve` 影响 SDK 生成，形成 Registry ↔ Router ↔ 应用的完整生态闭环。
@@ -144,9 +147,9 @@ Plans:
 **Plans**: 3 plans
 
 Plans:
-- [x] 07-01-PLAN.md — Registry 变更通知 → `synapse evolve` 触发链路
-- [x] 07-02-PLAN.md — `synapse evolve` registry 数据源集成（拉取最新 pack，对比本地版本）
-- [x] 07-03-PLAN.md — SDK 版本通知（CI/CD 集成：检测新 SDK 可用 → 自动 PR）
+- [x] 07-01-PLAN.md -- Registry 变更通知 → `synapse evolve` 触发链路
+- [x] 07-02-PLAN.md -- `synapse evolve` registry 数据源集成（拉取最新 pack，对比本地版本）
+- [x] 07-03-PLAN.md -- SDK 版本通知（CI/CD 集成：检测新 SDK 可用 → 自动 PR）
 
 ### v2.1 Billing Integration (Planned)
 
@@ -199,9 +202,42 @@ Plans:
 - [x] 10-02-PLAN.md -- billing config + billing status (CLIBILL-02, CLIBILL-03, D-04/D-05)
 - [x] 10-03-PLAN.md -- connect auto-wrap with billing (CLIBILL-04, D-06)
 
+### v3.0 AI Agent Skill Distribution (Planned)
+
+**Milestone Goal:** 为 Synapse Router 创建可分发的 AI Agent Skill，支持多通道安装（npm/skills add/GitHub URL），兼容主流 AI Agent 平台（Claude Code, Codex, Cursor, OpenClaw, Hermes 等）
+
+#### Phase 11: Skill 包创建与内容覆盖
+**Goal**: AI Agent 开发者可以通过 npm / GitHub URL 获取 Synapse Router Skill，项目根目录提供 skill.md 入口文件，主流 AI Agent 平台有对应配置格式
+**Depends on**: Phase 10
+**Requirements**: SKILLPKG-01, SKILLPKG-02, SKILLPKG-03, SKILLPKG-04, SKILLPKG-05, SKILLCOVER-01, SKILLCOVER-02, SKILLCOVER-03, SKILLCOVER-04, SKILLCOVER-05, SKILLGIT-01, SKILLGIT-02
+**Success Criteria** (what must be TRUE):
+  1. `@synapse-router/skill` npm 包发布到 npm registry，`skills/` 目录包含 claude-code/、cursor/、codex/、openclaw/、hermes/ 子目录，每个子目录有对应平台格式的配置文件
+  2. 项目根目录提供 skill.md 入口文件，内容完整覆盖 CLI 命令文档、Schema 协商模式、Provider 路由、Billing 集成和架构原则五大板块
+  3. 用户通过 GitHub raw URL 安装 skill 时，`skills add https://raw.githubusercontent.com/qise-tech/synapse-router/main/skill.md` 安装后 skill 内容完整可用
+  4. Claude Code 用户获取 skill.md 后可通过 "Skill" 子命令使用 CLI 补全、API 使用指南和架构上下文
+  5. Cursor 用户通过 .cursorrules 获得项目上下文和 AI 编码指导
+**Plans**: 4 plans in 2 waves
+
+Plans:
+- [ ] 11-01-PLAN.md — Package scaffolding: package.json, tsconfig.json, skills/ directory structure (SKILLPKG-01, SKILLPKG-02)
+- [ ] 11-02-PLAN.md — Enhanced CLAUDE.md with full content + root skill.md entry file (SKILLCOVER-01—05, SKILLGIT-02)
+- [ ] 11-03-PLAN.md — Claude Code skill.md + Cursor .cursorrules platform files (SKILLPKG-03, SKILLPKG-04)
+- [ ] 11-04-PLAN.md — Codex agent.yaml + OpenClaw/Hermes agent.md platform files (SKILLPKG-05, SKILLGIT-01)
+
+#### Phase 12: Install CLI + 自动化分发
+**Goal**: 用户运行一条 npx 命令即可安装 Synapse Router Skill 到任何 AI Agent 平台，CI/CD 自动将新版本发布到 npm
+**Depends on**: Phase 11 (need skill package + content to install)
+**Requirements**: SKILLINSTALL-01, SKILLINSTALL-02, SKILLINSTALL-03, SKILLINSTALL-04, SKILLGIT-03
+**Success Criteria** (what must be TRUE):
+  1. 用户运行 `npx @synapse-router/install-skill` 后自动检测当前 AI Agent 环境（Claude Code / Cursor / Codex / OpenClaw / Hermes），安装 skill 到对应平台正确位置
+  2. 用户通过 `--platform` 标志跳过自动检测手动指定目标平台，通过 `--dir` 标志指定自定义安装路径
+  3. `--dry-run` 显示安装计划和目标位置但不执行写入，`--uninstall` 移除所有已安装的 skill 文件并清理已写入的目录
+  4. GitHub Actions CI/CD 在 tag 推送时自动构建并发布 `@synapse-router/skill` 和 `@synapse-router/install-skill` 包到 npm registry
+**Plans**: TBD
+
 ## Progress
 
-**Execution Order:** Phase 2 -> Phase 3 -> Phase 4 -> Phase 5 -> Phase 6 -> Phase 7 -> Phase 8 -> Phase 9 -> Phase 10
+**Execution Order:** Phase 2 -> Phase 3 -> Phase 4 -> Phase 5 -> Phase 6 -> Phase 7 -> Phase 8 -> Phase 9 -> Phase 10 -> Phase 11 -> Phase 12
 
 | Phase | Milestone | Plans Complete | Status | Completed |
 |-------|-----------|----------------|--------|-----------|
@@ -215,6 +251,8 @@ Plans:
 | 8. Connector Wrapper + FileQuotaStorage | v2.1 | 1/2 | In Progress|  |
 | 9. SDK Pricing Emission | v2.1 | 0/2 | Planned | - |
 | 10. CLI Billing Commands | v2.1 | 3/3 | Complete    | 2026-05-19 |
+| 11. Skill 包创建与内容覆盖 | v3.0 | 0/4 | Planned | - |
+| 12. Install CLI + 自动化分发 | v3.0 | 0/0 | Planned | - |
 
 ## Post-Roadmap Enhancement: Router Package Rewrite (2026-05-09)
 
@@ -224,7 +262,7 @@ After all 7 phases shipped, `packages/router/` was rewritten from a 45-line stub
 |--------|--------|-------|
 | Lines of code | 45 | ~1,400 |
 | Tests | 4 | 55 |
-| Architecture | Hardcoded strategy→provider map | Pure-function scorers × 5 dimensions |
+| Architecture | Hardcoded strategy->provider map | Pure-function scorers x 5 dimensions |
 | Strategies | 3 (cheap/fast/quality) | 5 + custom |
 | CLI command | None | `synapse route <intent>` |
 | Evolve integration | None | `synapse evolve --tune` |
