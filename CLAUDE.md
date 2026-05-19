@@ -2,7 +2,7 @@
 
 面向 AI Agent 的受控 Schema 协商与多 Provider 路由层。位于 AI Agent 与多 Provider API 之间，确保每次请求在执行前都有明确契约。
 
-> **更新时间**: 2026-05-09
+> **更新时间**: 2026-05-19
 >
 > **核心定位**: Router 不是运行时中间件，而是**开发时 SDK 生成引擎**。应用代码里没有 Router，只有生成的 SDK。所有协商、路由决策、Provider 选择在开发时完成，运行时只有纯代码 SDK。
 
@@ -389,6 +389,178 @@ Schema Lock 类似 `package-lock.json`，是对 Schema 契约的冻结：
 - **确定性** — 相同输入得到相同输出，消除运行时意外
 - **过期检测** — `synapse lock outdated` 检测 Pack 版本变化后需要重新协商的 Lock
 - **迁移** — `synapse lock migrate` 将现有 Lock 迁移到新 Pack 版本
+
+## Provider 路由
+
+多维评分路由引擎（`@synapse-router/router`）根据策略对候选 Provider 进行评分、过滤、排序，选择最优 Provider。路由是纯函数，相同输入始终得到相同输出。
+
+### 路由策略
+
+系统提供 5 种内置策略：
+
+| 策略 ID | 名称 | 权重分布（cost/latency/reliability/featureMatch/preference） | 适用场景 |
+|---------|------|------------------------------------------------------------|---------|
+| `cheap` | 成本优先 | 5 / 1 / 1 / 1 / 0.5 | 成本敏感型场景 |
+| `fast` | 速度优先 | 1 / 5 / 1 / 1 / 0.5 | 实时交互场景 |
+| `quality` | 质量优先 | 0.25 / 0.25 / 6 / 4 / 0.5 | 质量关键型场景 |
+| `balanced` | 均衡策略（默认） | 1 / 1 / 1 / 1 / 0.5 | 通用场景 |
+| `cost-capped` | 预算封顶 | 3 / 1 / 2 / 2 / 0.5 (+ maxCost 过滤 0.01) | 有预算约束的场景 |
+
+也支持**自定义策略**，通过 `synapse config set route.strategies.xxx` 注册。
+
+### 评分维度
+
+每个候选 Provider 在 5 个维度上评分（归一化到 [0, 100]）：
+
+| 维度 | 含义 | 评分依据 |
+|------|------|---------|
+| `cost` | 成本 | Feature 级别成本系数 + 输入规模预估 |
+| `latency` | 延迟 | Provider 延迟等级（cheap/fast/quality）+ 地区匹配加分 |
+| `reliability` | 可靠性 | Provider 可靠性系数 0~1 |
+| `featureMatch` | 功能匹配 | Intent 精确/模糊匹配 + 地区前缀 + 版本过滤 |
+| `preference` | 偏好 | 用户指定的 preferredProviders 提权 |
+
+加权总分公式：`totalScore = Σ(dimensionScore × weight)`。
+
+**过滤规则：**
+- 显式排除（`--exclude`）：Provider 完全不参与评分
+- Intent 过滤：完全不匹配 intent 的 Provider 排除
+- 成本封顶（`maxCost`）：预估成本超过阈值则过滤
+- 可靠性阈值（`minReliability`）：低于阈值的 Provider 过滤
+- 版本过滤（`minVersion`）：不满足版本要求的 featureMatch 降级
+- 地区匹配：精确地区 +15，前缀匹配 +10
+
+### synapse route 命令
+
+```bash
+synapse route <intent> [--strategy <strategy>] [--exclude <providers>] [--region <region>] [--min-version <version>]
+```
+
+**示例：**
+```bash
+# 均衡策略路由
+synapse route chat
+
+# 质量优先，排除特定 Provider
+synapse route chat --strategy quality --exclude openai
+
+# 指定地区和最低版本
+synapse route chat --region apac --min-version 3.5
+```
+
+### 决策可解释
+
+每次路由结果包含完整决策记录（`RouteResult.explanation`）：
+
+- `intent` — 路由目标意图
+- `totalCandidates` — 总候选 Provider 数
+- `filteredAfterConstraints` — 被过滤的 Provider 数（含排除）
+- `strategyWeights` — 使用的权重向量
+- `failoverChain` — 降级链（若发生降级）
+
+### 运行时无路由
+
+路由决策在开发时通过 `synapse evolve` 完成，运行时路径不包含路由引擎。生成的 SDK 直接调用选定的 Provider，零决策开销。
+
+## Billing 集成
+
+Billing 模块（`@synapse-router/billing`）为 Provider 调用提供用量计费和配额管理能力。
+
+### 初始化
+
+```bash
+synapse billing init [--strategy <s>] [--limit <n>] [--provider <id>]
+```
+
+交互式向导引导用户完成：
+1. 选择 Pricing 策略
+2. 设置配额限制（USD）
+3. 选择目标 Provider
+4. 配置降级策略
+
+**示例：**
+```bash
+# 交互式初始化
+synapse billing init
+
+# 非交互式（指定参数）
+synapse billing init --strategy perToken --limit 10 --provider deepseek
+```
+
+### 配置管理
+
+```bash
+synapse billing config [subcommand]
+```
+
+通过 `synapse config set billing.*` 点号记法访问 billing-config.json：
+```bash
+synapse config set billing.strategy perToken
+synapse config set billing.limit 50
+synapse config set billing.provider deepseek
+synapse config get billing.strategy
+```
+
+### 状态查询
+
+```bash
+synapse billing status [--format json|table]
+```
+
+显示每个 Provider 的配额使用概览：
+
+```
+Provider    Cost/1k tokens    Quota Used    Limit    Reset
+deepseek    $0.014 / $0.028   $2.50         $10.00  2026-06-01
+openai      $0.150 / $0.600   $5.80         $50.00  2026-06-01
+```
+
+支持 `--format json` 输出机器可读格式。
+
+### 配额管理
+
+配额持久化使用 **FileQuotaStorage**，存储在 `~/.synapse/quotas/`：
+
+- 原子写入（`.tmp` + `rename` 模式，防止并发损坏）
+- 支持配额类型：`tokens`（Token 数）、`requests`（请求次数）、`cost`（费用金额）
+- 支持时间周期：`minute`、`hour`、`day`、`month`、`oneTime`
+- 阈值告警：到达 `threshold`（如 80%）时触发 warn
+
+### 定价策略
+
+| 策略 | 说明 | 适用场景 |
+|------|------|---------|
+| `flat` | 按次固定费率 | 固定价格 API |
+| `perToken` | 按 Token 计费（input/output 分开） | LLM API（如 OpenAI, DeepSeek） |
+| `perUnit` | 按单位计费 | 图片生成 API |
+| `tiered` | 阶梯定价（用量越大单价越低） | 批量调用 |
+
+定价规则从 Provider Card 的 `features[].pricing` 字段提取，通过 `pricingFromProviderCard` 纯函数桥接。
+
+### 自动包裹
+
+当 billing 配置存在时，`synapse connect` 自动包裹 Connector：
+
+```
+synapse connect deepseek chat --input '{...}'  →  createBillingConnector(connector)
+                                                       ↓
+                                              preCall (check quota)
+                                              execute API call
+                                              postCall (consume quota)
+```
+
+Billing 错误默认不阻塞 API 调用。
+
+### 降级策略
+
+| 策略 | 行为 |
+|------|------|
+| `warn`（默认） | 记录告警但不阻止调用 |
+| `reject` | 超出配额时拒绝调用 |
+| `downgrade` | 自动降级到低价 Provider |
+| `notify` | 发送通知并继续执行 |
+
+> **相关命令：** `synapse billing status`（查看配额）、`synapse evolve --with-billing`（生成含 BillingTracker 的 SDK）
 
 ## Sub-Agent 调度
 
