@@ -191,8 +191,13 @@ Plans:
   2. `synapse billing config` (and `synapse config set billing.*`) allows viewing and modifying billing configuration with immediate validation
   3. `synapse billing status` displays per-provider remaining quota, reset time, and estimated cost summary in a readable table format
   4. `synapse connect` automatically detects billing configuration and wraps the connector with `createBillingConnector()`, no manual wrapping required
-**Research flags**: Needs deep research -- Provider real pricing data (manual collection from OpenAI/Replicate/Stability/ComfyUI official pricing pages)
-**Plans**: TBD
+**Research flags**: Skipped -- CONTEXT.md provided comprehensive decisions with canonical code references
+**Plans**: 3 plans in 2 waves
+
+Plans:
+- [ ] 10-01-PLAN.md -- billing command module + init wizard (CLIBILL-01, D-01/D-02/D-03)
+- [ ] 10-02-PLAN.md -- billing config + billing status (CLIBILL-02, CLIBILL-03, D-04/D-05)
+- [ ] 10-03-PLAN.md -- connect auto-wrap with billing (CLIBILL-04, D-06)
 
 ## Progress
 
@@ -209,7 +214,7 @@ Plans:
 | 7. Collaborative Evolution | v2.0 | 3/3 | Complete | 2026-05-09 |
 | 8. Connector Wrapper + FileQuotaStorage | v2.1 | 1/2 | In Progress|  |
 | 9. SDK Pricing Emission | v2.1 | 0/2 | Planned | - |
-| 10. CLI Billing Commands | v2.1 | 0/0 | Not started | - |
+| 10. CLI Billing Commands | v2.1 | 0/3 | Planned | - |
 
 ## Post-Roadmap Enhancement: Router Package Rewrite (2026-05-09)
 
