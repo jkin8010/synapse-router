@@ -115,6 +115,281 @@ Provider Card 由三个顶级对象组成：`provider`（身份）、`service`�
 - 日志：通过 `@synapse-router/observability` 的 Tracer 注入点，不使用 `console.log`
 - 提交信息使用中文，格式：`<type>: <description>`
 
+## Synapse CLI
+
+Synapse CLI 是 Router 的开发者工具入口。所有协商、路由、账单管理都在 CLI 中完成。
+
+### connect — 连接 Provider 执行功能
+
+连接指定 Provider 并执行一个功能（intent）。
+
+```bash
+synapse connect <provider> <intent> [--input <json>] [--billing <strategy>]
+```
+
+**参数：**
+- `<provider>` — Provider ID（如 `deepseek`, `openai`）
+- `<intent>` — 意图类型（如 `chat`, `text-to-image`）
+- `--input <json>` — 输入参数的 JSON 字符串
+- `--billing <strategy>` — 计费策略（如 `preCall`），如果 billing 配置存在则自动包裹
+
+**示例：**
+```bash
+# 连接到 DeepSeek 执行 chat 意图
+synapse connect deepseek chat --input '{"messages":[{"role":"user","content":"hello"}]}'
+
+# 使用 billing 包裹
+synapse connect deepseek chat --input '{"messages":[]}' --billing preCall
+```
+
+> **相关命令：** `synapse billing init`（初始化计费配置）、`synapse vault set`（预存 API Key）
+
+### setup — 交互式初始化向导
+
+```bash
+synapse setup
+```
+
+首次运行的交互式设置，引导用户选择 Provider、配置 API Key 和基础参数。
+
+### config — 配置管理
+
+```bash
+synapse config set|get|list [key] [value]
+```
+
+**子命令：**
+- `set` — 设置配置值，支持点号记法（如 `billing.*`）
+- `get` — 获取配置值
+- `list` — 列出所有配置
+
+**示例：**
+```bash
+synapse config set billing.strategy perToken
+synapse config get billing.strategy
+synapse config list
+```
+
+### billing — 账单管理与配额查看
+
+```bash
+synapse billing init|config|status [options]
+```
+
+**子命令：**
+- `init [--strategy <s>] [--limit <n>] [--provider <id>]` — 交互式初始化向导
+- `config [set|get]` — 查看或修改计费配置
+- `status [--format json|table]` — 查看配额状态和预估费用
+
+**示例：**
+```bash
+# 交互式初始化计费
+synapse billing init
+
+# 指定策略和限额
+synapse billing init --strategy perToken --limit 10 --provider deepseek
+
+# 查看配额状态（表格格式）
+synapse billing status
+
+# 机器可读输出
+synapse billing status --format json
+```
+
+### route — 多维评分路由
+
+```bash
+synapse route <intent> [--strategy <strategy>] [--exclude <providers>] [--region <region>] [--min-version <version>]
+```
+
+**参数：**
+- `<intent>` — 意图类型（如 `chat`, `text-to-image`）
+- `--strategy <s>` — 路由策略：`cheap` / `fast` / `quality` / `balanced`（默认）/ `cost-capped`
+- `--exclude <ids>` — 排除的 Provider 列表
+- `--region <region>` — 偏好地区（如 `us-east`, `eu-west`, `apac`）
+- `--min-version <v>` — 最低模型版本（如 `3.5`, `4.0`）
+
+**示例：**
+```bash
+# 使用质量优先策略路由 chat 意图
+synapse route chat --strategy quality
+
+# 排除指定 Provider 并限定地区
+synapse route chat --exclude openai --region apac --min-version 3.5
+```
+
+### evolve — 生成零依赖 SDK
+
+```bash
+synapse evolve [--output <dir>] [--tune] [--with-billing]
+```
+
+**参数：**
+- `--output <dir>` — 输出目录（默认 `./synapse-sdk`）
+- `--tune` — 重新协商 Schema Lock
+- `--with-billing` — 包含 BillingTracker 类
+
+**示例：**
+```bash
+# 生成 SDK
+synapse evolve
+
+# 生成带有 Billing 追踪的 SDK
+synapse evolve --with-billing
+
+# 指定输出目录并重新协商
+synapse evolve --output ./my-sdk --tune
+```
+
+### pack — 从 Registry 管理 Provider Pack
+
+```bash
+synapse pack add|search|list|update|remove|show [options]
+```
+
+**子命令：**
+- `add <pack-id>` — 从 Registry 安装 Pack
+- `search <query>` — 在 Registry 中搜索 Pack
+- `list [--remote]` — 列出本地或远程 Pack
+- `update <pack-id>` — 更新已安装的 Pack
+- `remove <pack-id>` — 移除已安装的 Pack
+- `show <pack-id>` — 显示 Pack 详情
+
+**示例：**
+```bash
+# 搜索 Provider Pack
+synapse pack search deepseek
+
+# 安装 Pack
+synapse pack add deepseek-v3
+
+# 列出本地已安装 Pack
+synapse pack list
+```
+
+### vault — 管理加密 API Key
+
+```bash
+synapse vault set|list|get|remove|verify|rotate
+```
+
+**子命令：**
+- `set <provider> <key> [--base-url <url>] [--pack <id>]` — 存储加密 API Key（AES-256-GCM）
+- `list` — 列出已存储的 Provider（值隐藏）
+- `get <provider>` — 读取指定 Provider 的 Key
+- `remove <provider>` — 删除指定 Key
+- `verify <provider>` — 验证 Key 格式
+- `rotate <provider>` — 交互式密钥轮换
+
+**示例：**
+```bash
+# 存储 API Key 并配置 base_url
+synapse vault set deepseek sk-xxx --base-url https://api.deepseek.com/v1
+
+# 列出所有已存储 Key
+synapse vault list
+
+# 验证 Key 格式
+synapse vault verify deepseek
+```
+
+### lock — 管理 Schema Lock
+
+```bash
+synapse lock list|show|remove|migrate|outdated
+```
+
+**子命令：**
+- `list` — 列出所有 Schema Lock
+- `show <lock-id>` — 显示 Lock 详情
+- `remove <lock-id>` — 删除 Lock
+- `migrate <lock-id> <new-pack-version>` — 迁移 Lock 到新 Pack 版本
+- `outdated` — 检测过期 Lock
+
+**示例：**
+```bash
+# 列出已有 Schema Lock
+synapse lock list
+
+# 检测过期 Lock
+synapse lock outdated
+```
+
+## Schema 协商与 SDK 生成
+
+Synapse Router 的 Schema 协商管道是连接 Agent 需求与 Provider 能力的核心机制。
+
+### 1. Provider Pack Schema
+
+每个 Provider 通过 Pack 声明其能力。Pack 结构定义在 `packs/<provider-id>/` 目录：
+
+```
+packs/<provider-id>/
+├── provider-card.json   # 身份 + 服务配置 + 功能声明 + 定价 + 限速
+└── dsl/                 # 每个 Feature 一个 Agent Schema DSL 文件
+    ├── chat_post_v1_chat_completions.json
+    └── ...
+```
+
+**provider-card.json** 由三个顶级对象组成：
+
+- `provider` — 身份标识：`id`, `name`, `docs_url`, `auth_type`
+- `service` — 服务配置：`id`, `version`, `api_version`, `base_url`, `auth_type`
+- `features` — 功能声明数组：每个 feature 包含 `id`, `intent`, `name`, `input`/`output` 字段定义、`field_mappings`、`pricing`, `limits`
+
+**DSL 文件** 包含该 Feature 的 Agent Schema，定义输入输出字段类型和约束。协商引擎读取 DSL 文件与 Agent 的 Schema 进行匹配。
+
+Provider Card 详细规范见 `docs/PACKS.md` 和 `knowledge/04-技术架构/synapse-router-dsl-spec.md`。
+
+### 2. Intent 匹配
+
+协商引擎（`@synapse-router/negotiator`）将 Agent 的意图意图匹配到 Provider 的 Feature：
+
+```
+Agent Intent (如 "chat") → Negotiate → Provider Feature (如 "chat_post_v1_chat_completions")
+```
+
+**匹配结果三元组：**
+
+| 结果 | 含义 |
+|------|------|
+| `accepted` | Intent 完全匹配，Schema 兼容 |
+| `adapted` | 存在字段差异（missing、extra、type_mismatch），但可以通过 field_mappings 适配 |
+| `rejected` | 不兼容的 Schema 或缺少必要能力 |
+
+匹配过程包含字段级 Manifest 约束检查：`required`、`type`、`enum`、`minLength`、`maxLength`。差异被结构化记录为 `ManifestMatchResult`：
+
+- `missing` — Agent 缺少的必需字段
+- `extra` — Agent 多出的未声明字段
+- `type_mismatch` — 字段类型不匹配列表
+
+### 3. SDK 生成流程
+
+`synapse evolve` 是 SDK 生成的入口，其处理流程：
+
+1. **读取 Provider Pack** — 从 `packs/`、Registry 和本地目录加载所有 Provider Pack
+2. **协商 Schema Lock** — 对每个 Provider 的 Feature 执行协商，创建 Schema Lock
+3. **生成代码** — 根据 Lock 中的字段映射生成 TypeScript / Python SDK 代码
+4. **输出** — 写入 `--output` 目录（默认 `./synapse-sdk`），零外部依赖
+
+```bash
+# 完整流程
+synapse evolve --with-billing
+```
+
+SDK 生成器（`@synapse-router/sdk-generator`）将 Pack DSL 转换为纯函数代码，使用内置 `fetch`，不依赖 `@synapse-router/*`。
+
+`--with-billing` 标志会在生成的 SDK 中包含 `BillingTracker` 类，自动追踪每次调用并记录用量。
+
+### 4. Schema Lock
+
+Schema Lock 类似 `package-lock.json`，是对 Schema 契约的冻结：
+
+- **不可变** — 一旦锁定不会自动随 Pack 更新变化
+- **确定性** — 相同输入得到相同输出，消除运行时意外
+- **过期检测** — `synapse lock outdated` 检测 Pack 版本变化后需要重新协商的 Lock
+- **迁移** — `synapse lock migrate` 将现有 Lock 迁移到新 Pack 版本
+
 ## Sub-Agent 调度
 
 本项目使用 `AGENTS.md` 中定义的专用 sub-agent 来完成复杂任务。在开始非平凡任务前，检查 `AGENTS.md` 中是否有匹配的 agent，并通过 `Agent` 工具以 `subagent_type=general-purpose` 调度。常用 agent：
