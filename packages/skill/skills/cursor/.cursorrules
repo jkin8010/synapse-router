@@ -1,0 +1,126 @@
+# Synapse Router — Cursor Rules
+
+You are an expert Synapse Router developer working on a TypeScript monorepo. You create development-time SDK generation engines, not runtime middleware. You uphold contract-first architecture, zero-dependency SDKs, and observable routing decisions.
+
+## Project Identity
+
+Synapse Router is a Schema negotiation and multi-Provider routing layer between AI Agents and Provider APIs. The core philosophy is "开发时协商，运行时无感" (negotiate at dev time, zero-cost at runtime). Every request has a clear contract before execution. The project lives at `@synapse-router/*` npm scope as a pnpm monorepo with 14 packages and 4 apps.
+
+## Communication Rules
+
+- Always communicate with users in 简体中文 (Simplified Chinese)
+- Always write code comments, docstrings, and inline documentation in English
+- Always write log messages in English
+- Always use English for all identifiers (variable names, function names, type names, file names)
+- Always write commit messages in Chinese following format: `<type>: <description>`
+- Never mix languages in identifiers (e.g., no Chinese pinyin in variable names)
+- Never use console.log for logging — use @synapse-router/observability Tracer instead
+
+## Architecture Rules
+
+- Always define the Schema contract before making any Provider call (contract-first principle)
+- Always use Connector only for three things: HTTP request construction, field mapping, and base_url override — never add business logic to Connector
+- Always use createBillingConnector() wrapper to add billing to connectors, never modify connector internals directly
+- Always treat Schema Locks as immutable — once locked, never auto-update when Provider Packs change
+- Always generate zero-dependency SDK code — never import @synapse-router/* in generated SDK
+- Always encrypt API keys at rest using AES-256-GCM — never write plaintext keys to disk
+- Always redact API keys in all traces, spans, and log output (display as sk-***)
+- Never run LLM calls in the runtime path — runtime is deterministic, zero-Token-cost code
+- Never hardcode Provider preferences in the routing engine — use strategy pattern with injectable weights
+- Never implement Provider-specific logic in Connector — that belongs in Provider Adapter
+- Never auto-migrate Schema Locks when Pack versions change — require explicit `synapse lock migrate` command
+
+## Code Conventions
+
+- Always use TypeScript strict mode in every package
+- Always use ESM (`"type": "module"` in package.json)
+- Always place test files co-located with source code: `src/example.test.ts` next to `src/example.ts`
+- Always export public API through a single barrel file at `src/index.ts`
+- Always use structured error types — never throw bare strings or swallow exceptions
+- Always use Node.js native test runner (`node --experimental-test-coverage --test`) — not Vitest, Jest, or Mocha
+- Always name test files with `.test.ts` suffix, never `.spec.ts` or `.test.tsx`
+- Always follow package naming convention: `@synapse-router/<name>` scope
+- Never import from deep package paths — always import from the package barrel (`src/index.ts`)
+- Never use `any` type — prefer `unknown` with type narrowing for unsafe values
+- Never use `require()` — use ESM `import` syntax exclusively
+
+## Package Structure
+
+The monorepo follows this structure:
+
+- `packages/` — Core library packages (each independently compiled, independently published to npm)
+  - `core/` — Shared types, Schema validation, result/error shapes
+  - `negotiator/` — Schema negotiation engine (Intent matching + capability verification)
+  - `providers/` — Provider Registry + Adapter interface + capability verification
+  - `router/` — Routing strategies (cheap/fast/quality) + execution engine
+  - `connector/` — Thin connection layer: HTTP calls + field mapping + base_url override
+  - `lock/` — Schema Lock: cache/store/migration/expiry detection
+  - `vault/` — Encrypted API key storage (AES-256-GCM + OS Keychain)
+  - `pack-generator/` — Auto-generate Provider Packs from OpenAPI Spec
+  - `sdk-generator/` — Generate TypeScript/Python SDK from Pack DSL
+  - `sdk/` — SDK runtime support
+  - `billing/` — Usage metering and quota management
+  - `observability/` — Trace/Span/Event logging layer
+  - `contract-mocker/` — Contract mocking utilities
+  - `registry-client/` — Registry API client
+- `apps/` — Application entry points (cli, api, mcp-server, playground, comfy-node)
+- `packs/` — Pre-built Provider Packs (openai, replicate, stability, comfyui)
+- `docs/` — Developer documentation (API.md, PACKS.md)
+- `knowledge/` — Product planning and technical architecture docs
+- `tests/` — E2E tests
+
+## File Patterns
+
+Common file patterns and their purposes:
+
+- `src/index.ts` — Barrel exports defining the public API surface
+- `src/commands/<name>.ts` — Individual CLI command modules (e.g., `billing.ts`, `connect.ts`)
+- `packs/<provider-id>/provider-card.json` — Provider capability declaration
+- `packs/<provider-id>/dsl/*.json` — Agent Schema DSL files per feature
+- `src/*.test.ts` — Co-located test files
+- `.synapse/config.json` — User configuration
+- `.synapse/keys/` — Encrypted API key storage
+- `.synapse/quotas/` — Usage quota data files
+- `.synapse/schemas/` — Schema Lock cache
+
+## CLI Development
+
+- Always prioritize command-line interface over interactive mode — support non-interactive script usage
+- Always support `--format json|table` for machine-parsable output in data-displaying commands
+- Always include at least one complete, runnable example in every `--help` text
+- Always validate flags against their union types before use — fail early with clear error messages
+- Always structure commands as: `synapse <command> <subcommand> [arguments] [options]`
+- Always provide interactive fallback when required arguments are missing — never crash with a stack trace
+- Never put business logic inside help text functions — separate printHelp from handler logic
+- Never use process.exit() without logging a descriptive error message first
+
+## Testing Rules
+
+- Always write tests for new business logic — every new function needs a corresponding test
+- Always mock external services in unit tests — never make real HTTP calls in test suites
+- Always use descriptive test names following the pattern: `should <expected behavior> when <condition>`
+- Always clean up temporary files and directories after tests complete
+- Always use AAA pattern (Arrange-Act-Assert) to structure test bodies
+- Always place integration/E2E tests in `tests/` at project root, not inside packages
+- Never depend on external network connectivity for test execution
+- Never test trivial getters/setters or generated boilerplate — focus on logic with branching
+
+## Build & Commit Rules
+
+- Always run `pnpm typecheck` before committing to ensure no type errors
+- Always use `pnpm build` (not tsc directly) for building packages — respects monorepo dependencies
+- Always write commit messages in Chinese with conventional commit format: `feat:`, `fix:`, `docs:`, `refactor:`, `test:`, `chore:`
+- Always use `pnpm` (not npm or yarn) for package management commands
+- Never commit with `--no-verify` — pre-commit hooks must always run
+- Never commit stale dist/ directories — rebuild before committing
+- Never commit `.env` files or unencrypted credentials
+
+## Provider Pack Rules
+
+- Always place `provider-card.json` at the root of the pack directory
+- Always place DSL files in a `dsl/` subdirectory within the pack
+- Always use semantic canonical field names in `field_mappings`, never copy Provider field names directly
+- Always include `pricing` information in each feature declaration when available
+- Always include `limits` information (rate limits, max tokens) in each feature declaration
+- Never mark a `required: true` field mapping with a `fallback` — required mappings must always succeed
+- Never leave a feature without a corresponding DSL file in `dsl/`
