@@ -1,0 +1,197 @@
+# Synapse Router — Codex Agent Configuration
+# This file provides CLI command templates and project context for Codex.
+# Reference: https://github.com/qise-tech/synapse-router
+
+name: synapse-router
+description: >
+  Synapse Router is a controlled Schema negotiation and multi-Provider routing
+  layer for AI Agents. It ensures every request has an explicit contract before
+  execution. Core philosophy: "negotiate at dev time, zero-overhead at runtime."
+
+version: "0.1.0"
+repository: https://github.com/qise-tech/synapse-router
+
+commands:
+  connect:
+    description: Connect to a provider and execute a feature
+    usage: synapse connect <provider> <intent> [--input <json>] [--billing <strategy>]
+    examples:
+      - synapse connect deepseek chat --input '{"messages":[{"role":"user","content":"Hello"}]}'
+      - synapse connect openai chat --billing cost-capped
+
+  setup:
+    description: Interactive first-time setup wizard
+    usage: synapse setup
+    examples:
+      - synapse setup
+
+  config:
+    description: Manage Synapse Router configuration
+    usage: synapse config set|get|list [key] [value]
+    examples:
+      - synapse config set route.strategy quality
+      - synapse config get route.strategy
+      - synapse config list
+
+  billing:
+    description: Billing configuration and quota management
+    subcommands:
+      init:
+        description: Initialize billing configuration
+        usage: synapse billing init [--strategy flat|per-token|per-unit|tiered] [--limit <n>] [--provider <id>]
+        examples:
+          - synapse billing init --strategy per-token --limit 10000 --provider openai
+      config:
+        description: View or modify billing configuration
+        usage: synapse billing config
+        examples:
+          - synapse billing config
+      status:
+        description: View quota status and cost estimates
+        usage: synapse billing status [--format json|table]
+        examples:
+          - synapse billing status
+          - synapse billing status --format json
+
+  route:
+    description: Multi-dimensional provider routing
+    usage: synapse route <intent> [--strategy cheap|fast|quality|balanced|cost-capped] [--exclude <id>] [--region <region>]
+    examples:
+      - synapse route chat --strategy quality
+      - synapse route text-to-image --strategy fast --region us-east
+
+  evolve:
+    description: Generate zero-dependency SDK from all provider packs
+    usage: synapse evolve [--output <dir>] [--tune] [--with-billing]
+    examples:
+      - synapse evolve
+      - synapse evolve --output ./generated-sdk --with-billing
+      - synapse evolve --tune
+
+  vault:
+    description: Manage encrypted API keys
+    subcommands:
+      set:
+        description: Store an encrypted API key
+        usage: synapse vault set <provider> <key> [--base-url <url>] [--pack <id>]
+        examples:
+          - synapse vault set openai sk-xxx --base-url https://api.openai.com/v1
+      list:
+        description: List stored providers (values hidden)
+        usage: synapse vault list
+        examples:
+          - synapse vault list
+      get:
+        description: Get stored API key value
+        usage: synapse vault get <provider>
+        examples:
+          - synapse vault get openai
+      remove:
+        description: Remove a stored API key
+        usage: synapse vault remove <provider>
+        examples:
+          - synapse vault remove openai
+      verify:
+        description: Verify API key format
+        usage: synapse vault verify <provider>
+        examples:
+          - synapse vault verify deepseek
+
+  lock:
+    description: Manage Schema Locks
+    subcommands:
+      list:
+        description: List all Schema Locks
+        usage: synapse lock list
+        examples:
+          - synapse lock list
+      outdated:
+        description: Detect outdated Schema Locks
+        usage: synapse lock outdated
+        examples:
+          - synapse lock outdated
+      show:
+        description: Show Schema Lock details
+        usage: synapse lock show <lock-id>
+        examples:
+          - synapse lock show chat_openai
+      migrate:
+        description: Migrate Schema Lock to new Pack version
+        usage: synapse lock migrate <lock-id> <new-pack-version>
+        examples:
+          - synapse lock migrate chat_openai 2.0.0
+
+  pack:
+    description: Manage provider packs from Registry
+    usage: synapse pack add|search|list|update|remove|show
+    examples:
+      - synapse pack search deepseek
+      - synapse pack add deepseek-v3
+      - synapse pack list
+
+  sdk:
+    description: Generate SDK from a specific provider pack
+    usage: synapse sdk generate --pack <id> [--lang ts|py] [--output <dir>]
+    examples:
+      - synapse sdk generate --pack openai --lang typescript
+
+  provider:
+    description: List and inspect provider packs
+    subcommands:
+      list:
+        description: List available provider packs
+        usage: synapse provider list [--remote]
+        examples:
+          - synapse provider list
+          - synapse provider list --remote
+      show:
+        description: Show provider card details
+        usage: synapse provider show <id> [--remote]
+        examples:
+          - synapse provider show openai
+
+  smoke:
+    description: Run provider smoke tests against live APIs
+    usage: synapse smoke --provider <name>
+    examples:
+      - synapse smoke --provider deepseek
+
+  generate:
+    description: Generate a Provider Pack from OpenAPI spec
+    usage: synapse generate <source> [--provider <id>] [--name <name>] [--output <dir>]
+    examples:
+      - synapse generate https://api.example.com/openapi.json
+      - synapse generate ./openapi.json --provider myapi --output ./packs
+
+  negotiate:
+    description: Run schema negotiation
+    usage: synapse negotiate <schema-file> [--intent <intent>] [--provider <provider>] [--no-cache]
+    examples:
+      - synapse negotiate ./my-agent-schema.json
+      - synapse negotiate --intent chat --provider openai
+
+preferences:
+  default_strategy: balanced
+  output_format: json
+  billing_behavior: warn
+  color_output: true
+
+context:
+  tech_stack:
+    language: TypeScript 5.9+ (strict mode)
+    runtime: Node.js 22+
+    package_manager: pnpm 10+
+    test_runner: Node.js native (tsx --test)
+    build_system: tsc (per-package independent compilation)
+  architecture_principles:
+    - "Contract before call — always define Schema contract first"
+    - "Negotiate at dev time, zero overhead at runtime"
+    - "No runtime LLM — zero token cost at runtime"
+    - "SDK zero-dependency — generated code uses only native fetch"
+    - "Vault never writes plaintext — AES-256-GCM encryption"
+    - "API Key never appears in logs — all trace/spans auto-redact"
+    - "Connector is a thin wrapper — HTTP + field mapping + base_url only"
+    - "Schema Lock is immutable — does not auto-update with Pack changes"
+    - "Registry is optional enhancement — offline negotiation works with local Packs"
+    - "Watchdog is a separate process — SDK stays thin with zero dependencies"
+    - "Production logs flow back to dev — .synapse/ syncs via Git"
