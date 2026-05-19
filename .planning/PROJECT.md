@@ -14,14 +14,16 @@
 
 **"开发时协商，运行时无感"** — 协商阶段可以复杂、可以调用 LLM、可以探索，因为它是离线的、一次性的。运行时只有纯代码逻辑的 SDK，确定性、零 Token 成本、零 LLM 意外。
 
-## Current Milestone: v2.1 Billing Integration
+## Current Milestone: v3.0 AI Agent Skill Distribution
 
-**Phase 8 complete — Connector Wrapper + FileQuotaStorage**
-Billing wrapper now wraps any connector with pre-call quota checking and post-call usage recording. FileQuotaStorage persists quotas atomically. Pricing bridge converts provider-card pricing to PricingRule format.
+**Goal:** 为 Synapse Router 创建可分发的 AI Agent Skill，支持多通道安装（npm/skills add/GitHub URL），兼容主流 AI Agent 平台
 
-**Remaining phases:**
-- Phase 9: SDK Generator emits BillingTracker with --with-billing flag
-- Phase 10: CLI billing init/config/status commands and connect auto-wrap
+**Target features:**
+- `@synapse-router/skill` npm 包 — 标准的 Skill 包（含多平台格式）
+- `npx @synapse-router/install-skill` — 一键安装 CLI 工具
+- GitHub raw URL 安装支持
+- 兼容多 AI Agent 平台格式（Claude Code Skill, Cursor Rules, Codex Agent 等）
+- 自动检测当前 AI Agent 环境并安装到正确位置
 
 ## Requirements
 
@@ -40,6 +42,14 @@ Billing wrapper now wraps any connector with pre-call quota checking and post-ca
 - ✅ createBillingConnector wrapper 工厂 (preCall/postCall 编排) — v2.1 (Phase 8)
 - ✅ BillingTracker SDK generation with --with-billing flag — v2.1 (Phase 9)
 - ✅ Zero-dependency BillingTracker companion class at .synapse/billing/tracker.ts — v2.1 (Phase 9)
+- ✅ billing init/config/status CLI 命令 (billing.ts, ~1019 lines) — v2.1 (Phase 10)
+- ✅ connect 自动 wrap billing (createBillingConnector) — v2.1 (Phase 10)
+- ✅ config set billing.* 点号记法访问 billing-config.json — v2.1 (Phase 10)
+- ✅ @synapse-router/skill npm 包 scaffold (package.json/tsconfig.json/src/index.ts) — v3.0 (Phase 11)
+- ✅ CLAUDE.md 增强为通用主入口 (CLI 参考/Schema 协商/Provider 路由/Billing 集成/架构原则) — v3.0 (Phase 11)
+- ✅ Claude Code skill.md + Cursor .cursorrules 平台配置 — v3.0 (Phase 11)
+- ✅ Codex agent.yaml + OpenClaw/Hermes agent.md 平台配置 — v3.0 (Phase 11)
+- ✅ skill.md GitHub raw URL 安装入口 — v3.0 (Phase 11)
 
 ### Active
 
@@ -113,4 +123,4 @@ This document evolves at phase transitions and milestone boundaries.
 4. Update Context with current state
 
 ---
-*Last updated: 2026-05-10 — Phase 8 complete (Connector Wrapper + FileQuotaStorage)*
+*Last updated: 2026-05-19 — v2.1 Billing complete, v3.0 AI Agent Skill Distribution (Phase 11: content coverage complete)*
