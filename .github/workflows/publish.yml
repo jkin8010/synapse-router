@@ -42,16 +42,18 @@ jobs:
 
       - name: Publish @synapse-router/skill
         run: |
-          pnpm --filter @synapse-router/skill exec pnpm version ${{ steps.version.outputs.version }} --no-git-tag-version
+          pnpm --filter @synapse-router/skill exec pnpm version "$VERSION" --no-git-tag-version
           pnpm --filter @synapse-router/skill publish --provenance --access public --no-git-checks
         env:
+          VERSION: ${{ steps.version.outputs.version }}
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
 
       - name: Publish @synapse-router/install-skill
         run: |
-          pnpm --filter @synapse-router/install-skill exec pnpm version ${{ steps.version.outputs.version }} --no-git-tag-version
+          pnpm --filter @synapse-router/install-skill exec pnpm version "$VERSION" --no-git-tag-version
           pnpm --filter @synapse-router/install-skill publish --provenance --access public --no-git-checks
         env:
+          VERSION: ${{ steps.version.outputs.version }}
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
 
       - name: Create GitHub Release
