@@ -1,0 +1,36 @@
+{
+  "name": "@synapse-router/install-skill",
+  "version": "0.1.0",
+  "type": "module",
+  "description": "Synapse Router Skill Installer — one-command skill install for AI Agent platforms",
+  "license": "MIT",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "bin": {
+    "install-skill": "./dist/index.js"
+  },
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    }
+  },
+  "files": [
+    "dist/",
+    "skills/"
+  ],
+  "scripts": {
+    "prebuild": "mkdir -p skills && cp -r ../skill/skills/claude-code skills/ 2>/dev/null; cp -r ../skill/skills/cursor skills/ 2>/dev/null; cp -r ../skill/skills/codex skills/ 2>/dev/null; cp -r ../skill/skills/openclaw skills/ 2>/dev/null; cp -r ../skill/skills/hermes skills/ 2>/dev/null; echo 'Skill files bundled'",
+    "build": "tsc -p tsconfig.json",
+    "test": "tsx --test src/**/*.test.ts",
+    "typecheck": "tsc --noEmit -p tsconfig.json"
+  },
+  "devDependencies": {
+    "typescript": "^5.9.0"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/qise-tech/synapse-router",
+    "directory": "packages/install-skill"
+  }
+}
