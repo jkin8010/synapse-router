@@ -73,7 +73,7 @@
 
 - [x] **SKILLGIT-01**: GitHub raw URL 安装支持 -- `skills add https://raw.githubusercontent.com/...` 直接安装
 - [x] **SKILLGIT-02**: Repo root skill 入口 -- 项目根目录提供 skill.md 入口文件
-- [ ] **SKILLGIT-03**: CI/CD 自动化 -- GitHub Actions 自动发布 skill 包到 npm
+- [x] **SKILLGIT-03**: CI/CD 自动化 -- GitHub Actions 自动发布 skill 包到 npm
 
 ## SKILLCOVER -- Skill 内容覆盖
 
@@ -125,7 +125,7 @@
 | SKILLINSTALL-04 | Phase 12 | Complete |
 | SKILLGIT-01 | Phase 11 | Complete |
 | SKILLGIT-02 | Phase 11 | Complete |
-| SKILLGIT-03 | Phase 12 | pending |
+| SKILLGIT-03 | Phase 12 | Complete |
 | SKILLCOVER-01 | Phase 11 | Complete |
 | SKILLCOVER-02 | Phase 11 | Complete |
 | SKILLCOVER-03 | Phase 11 | Complete |

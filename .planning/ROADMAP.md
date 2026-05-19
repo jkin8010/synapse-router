@@ -237,7 +237,7 @@ Plans:
 
 Plans:
 - [x] 12-01-PLAN.md — install-skill CLI 包：平台检测、安装/卸载、备份/清单管理 (SKILLINSTALL-01~04)
-- [ ] 12-02-PLAN.md — CI/CD 发布工作流：tag 触发、双包发布、GitHub Release 自动生成 (SKILLGIT-03)
+- [x] 12-02-PLAN.md — CI/CD 发布工作流：tag 触发、双包发布、GitHub Release 自动生成 (SKILLGIT-03)
 
 ## Progress
 
@@ -256,7 +256,7 @@ Plans:
 | 9. SDK Pricing Emission | v2.1 | 0/2 | Planned | - |
 | 10. CLI Billing Commands | v2.1 | 3/3 | Complete    | 2026-05-19 |
 | 11. Skill 包创建与内容覆盖 | v3.0 | 4/4 | Complete    | 2026-05-19 |
-| 12. Install CLI + 自动化分发 | v3.0 | 1/2 | In Progress|  |
+| 12. Install CLI + 自动化分发 | v3.0 | 2/2 | Complete   | 2026-05-19 |
 
 ## Post-Roadmap Enhancement: Router Package Rewrite (2026-05-09)
 
