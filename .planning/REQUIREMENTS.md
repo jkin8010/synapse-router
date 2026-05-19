@@ -23,8 +23,8 @@
 ## CLIBILL — CLI Billing 命令
 
 - [x] **CLIBILL-01**: `synapse billing init` — 项目 billing 配置初始化（选择计价策略、设置配额限制）
-- [ ] **CLIBILL-02**: `synapse billing config` — 查看/设置 billing 配置（`synapse config set billing.*` 扩展）
-- [ ] **CLIBILL-03**: `synapse billing status` — 查看配额状态（剩余调用次数、重置时间、预估费用）
+- [x] **CLIBILL-02**: `synapse billing config` — 查看/设置 billing 配置（`synapse config set billing.*` 扩展）
+- [x] **CLIBILL-03**: `synapse billing status` — 查看配额状态（剩余调用次数、重置时间、预估费用）
 - [x] **CLIBILL-04**: `synapse connect` 自动读取 billing 配置并包裹 connector
 
 ---
@@ -57,6 +57,6 @@
 | SDKBILL-02 | Phase 9 | pending |
 | SDKBILL-03 | Phase 9 | pending |
 | CLIBILL-01 | Phase 10 | Complete |
-| CLIBILL-02 | Phase 10 | pending |
-| CLIBILL-03 | Phase 10 | pending |
+| CLIBILL-02 | Phase 10 | Complete |
+| CLIBILL-03 | Phase 10 | Complete |
 | CLIBILL-04 | Phase 10 | Complete |
