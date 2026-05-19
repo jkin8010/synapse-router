@@ -2,6 +2,7 @@
 // Manage billing configuration and quota status
 
 import { readFile, mkdir, writeFile, readdir } from "node:fs/promises";
+import { readFileSync, readdirSync } from "node:fs";
 import { join, dirname } from "node:path";
 import { homedir } from "node:os";
 import { pricingFromProviderCard } from "@synapse-router/billing";
@@ -388,12 +389,271 @@ async function setBillingConfigValue(key: string, value: string): Promise<void> 
 }
 
 // ---------------------------------------------------------------------------
-// Status command: display quota usage (implemented in Task 2)
+// Status: display quota usage
 // ---------------------------------------------------------------------------
 
-async function handleBillingStatus(_argv: string[]): Promise<void> {
-  console.log("billing status: coming soon");
-  process.exit(0);
+const QUOTAS_DIR = process.env.SYNAPSE_QUOTA_DIR ?? join(homedir(), ".synapse", "quotas");
+
+function formatResetTime(period: string): string {
+  const now = Date.now();
+  switch (period) {
+    case "minute":
+      return new Date(now + 60_000).toISOString();
+    case "hour":
+      return new Date(now + 3_600_000).toISOString();
+    case "day": {
+      const tomorrow = new Date(now);
+      tomorrow.setDate(tomorrow.getDate() + 1);
+      tomorrow.setHours(0, 0, 0, 0);
+      return tomorrow.toISOString();
+    }
+    case "month": {
+      const nextMonth = new Date(now);
+      nextMonth.setMonth(nextMonth.getMonth() + 1);
+      nextMonth.setDate(1);
+      nextMonth.setHours(0, 0, 0, 0);
+      return nextMonth.toISOString();
+    }
+    default:
+      return "N/A";
+  }
+}
+
+interface QuotaRecord {
+  id: string;
+  type: string;
+  limit: number;
+  used: number;
+  period: string;
+  threshold?: number;
+  resetAt?: string;
+}
+
+function readAllQuotaData(): Map<string, QuotaRecord[]> {
+  const result = new Map<string, QuotaRecord[]>();
+  try {
+    const files = readdirSync(QUOTAS_DIR, { withFileTypes: true });
+    for (const file of files) {
+      if (!file.isFile() || !file.name.endsWith(".json")) continue;
+      const providerId = file.name.replace(/\.json$/, "");
+      try {
+        const content = readFileSync(join(QUOTAS_DIR, file.name), "utf8");
+        const entries = JSON.parse(content) as Record<string, QuotaRecord>;
+        const quotas = Object.values(entries);
+        if (quotas.length > 0) {
+          result.set(providerId, quotas);
+        }
+      } catch {
+        // Skip corrupt files (T-10-09: DoS mitigation)
+      }
+    }
+  } catch {
+    // QUOTAS_DIR does not exist yet
+  }
+  return result;
+}
+
+function estimateCostFromQuota(
+  quota: QuotaRecord,
+  pricing: Record<string, Record<string, unknown>> | undefined,
+): number {
+  if (!pricing) return 0;
+  const featureIds = Object.keys(pricing);
+  if (featureIds.length === 0) return 0;
+
+  // Use first pricing rule for cost estimation
+  const rule = pricing[featureIds[0]];
+  if (!rule) return 0;
+
+  const strategy = String(rule.strategy ?? "");
+  switch (strategy) {
+    case "perToken": {
+      const inputPrice = Number(rule.inputPrice ?? 0);
+      const outputPrice = Number(rule.outputPrice ?? 0);
+      return quota.used * (inputPrice + outputPrice) / 2;
+    }
+    case "perUnit": {
+      const unitPrice = Number(rule.unitPrice ?? 0);
+      return quota.used * unitPrice;
+    }
+    case "flat": {
+      const costPerCall = Number(rule.costPerCall ?? 0);
+      return quota.used * costPerCall;
+    }
+    default:
+      return 0;
+  }
+}
+
+async function handleBillingStatus(argv: string[]): Promise<void> {
+  if (argv.includes("--help") || argv.includes("-h")) {
+    printBillingStatusHelp();
+    return;
+  }
+
+  const formatIndex = argv.indexOf("--format");
+  const format = formatIndex !== -1 && argv[formatIndex + 1] === "json" ? "json" : "table";
+
+  // Load data
+  const billingConfig = await loadBillingConfig();
+  const quotaData = readAllQuotaData();
+
+  if (quotaData.size === 0) {
+    console.log("No billing data found. Run 'synapse billing init' to set up billing, then use 'synapse connect' to generate quota data.");
+    return;
+  }
+
+  if (format === "json") {
+    outputStatusJson(billingConfig, quotaData);
+  } else {
+    outputStatusTable(billingConfig, quotaData);
+  }
+}
+
+function outputStatusJson(
+  config: BillingConfigFile,
+  quotaData: Map<string, QuotaRecord[]>,
+): void {
+  const providers: Record<string, {
+    quotas: Array<{
+      id: string;
+      type: string;
+      limit: number;
+      used: number;
+      remaining: number;
+      estimatedCost: number;
+      isExceeded: boolean;
+      isNearThreshold: boolean;
+      period: string;
+      resetAt: string;
+    }>;
+    pricingConfigured: boolean;
+  }> = {};
+
+  for (const [providerId, quotas] of quotaData) {
+    const providerConfig = config.providers[providerId];
+    const pricing = providerConfig?.pricing as Record<string, Record<string, unknown>> | undefined;
+    const pricingConfigured = !!pricing && Object.keys(pricing).length > 0;
+
+    const quotaList = quotas.map((q) => {
+      const remaining = Math.max(0, q.limit - q.used);
+      const estimatedCost = estimateCostFromQuota(q, pricing);
+      const isExceeded = q.used >= q.limit;
+      const isNearThreshold = q.threshold !== undefined && q.used >= q.limit * q.threshold;
+      return {
+        id: q.id,
+        type: q.type,
+        limit: q.limit,
+        used: q.used,
+        remaining,
+        estimatedCost: Math.round(estimatedCost * 100) / 100,
+        isExceeded,
+        isNearThreshold,
+        period: q.period,
+        resetAt: q.resetAt ?? formatResetTime(q.period),
+      };
+    });
+
+    providers[providerId] = { quotas: quotaList, pricingConfigured };
+  }
+
+  const output = {
+    generatedAt: new Date().toISOString(),
+    providers,
+  };
+
+  console.log(JSON.stringify(output, null, 2));
+}
+
+function pctStr(used: number, limit: number): string {
+  if (limit <= 0) return "0%";
+  return ((used / limit) * 100).toFixed(0) + "%";
+}
+
+function outputStatusTable(
+  config: BillingConfigFile,
+  quotaData: Map<string, QuotaRecord[]>,
+): void {
+  let grandTotal = 0;
+  let providerIndex = 0;
+
+  for (const [providerId, quotas] of quotaData) {
+    if (providerIndex > 0) console.log(); // blank line between providers
+    providerIndex++;
+
+    const providerConfig = config.providers[providerId];
+    const pricing = providerConfig?.pricing as Record<string, Record<string, unknown>> | undefined;
+    const hasPricing = !!pricing && Object.keys(pricing).length > 0;
+
+    console.log(`Provider: ${providerId}`);
+
+    // Column header per D-04: Feature, Remaining, Limit, Used, Reset, Est. Cost
+    const featureCol    = "Feature".padEnd(25);
+    const remainingCol  = "Remaining".padEnd(12);
+    const limitCol      = "Limit".padEnd(10);
+    const usedCol       = "Used".padEnd(10);
+    const resetCol      = "Reset".padEnd(28);
+    const costCol       = hasPricing ? "  " + "Est. Cost".padEnd(10) : "";
+    console.log(`  ${featureCol} ${remainingCol} ${limitCol} ${usedCol} ${resetCol}${costCol}`);
+
+    for (const q of quotas) {
+      const remaining = q.limit - q.used;
+      const remainingStr = remaining <= 0 ? "EXCEEDED" : remaining.toFixed(2);
+      const limitStr = q.limit.toFixed(2);
+      const usedStr = `${q.used.toFixed(2)} (${pctStr(q.used, q.limit)})`;
+      const resetStr = q.resetAt ?? formatResetTime(q.period);
+      const cost = estimateCostFromQuota(q, pricing);
+
+      const rowId        = q.id.padEnd(25);
+      const rowRemaining = remainingStr.padEnd(12);
+      const rowLimit     = limitStr.padEnd(10);
+      const rowUsed      = usedStr.padEnd(10);
+      const rowReset     = resetStr.padEnd(28);
+      const rowCost      = hasPricing ? "  " + `$${cost.toFixed(2)}`.padStart(10) : "";
+      console.log(`  ${rowId} ${rowRemaining} ${rowLimit} ${rowUsed} ${rowReset}${rowCost}`);
+
+      if (hasPricing) {
+        grandTotal += cost;
+      }
+    }
+
+    // Warning if no pricing configured
+    if (!hasPricing && Object.keys(config.providers ?? {}).length > 0) {
+      console.log(`  (No pricing configured for this provider. Costs shown as N/A.)`);
+    }
+  }
+
+  // Summary
+  if (grandTotal > 0) {
+    console.log(`\nTotal estimated cost: $${grandTotal.toFixed(2)}`);
+  }
+
+  if (!config.providers || Object.keys(config.providers).length === 0) {
+    console.log("\nWarning: No billing configuration file found. Run 'synapse billing init' to configure pricing.");
+  }
+}
+
+function printBillingStatusHelp(): void {
+  console.log(`
+synapse billing status -- View quota status and estimated costs
+
+Usage:
+  synapse billing status               Display quota status in grouped table format
+  synapse billing status --format json  Output machine-readable JSON
+  synapse billing status --help         Show this help message
+
+The status command reads quota data from ~/.synapse/quotas/<provider>.json
+and displays per-provider usage with remaining quota, reset times, and
+estimated costs based on the billing configuration.
+
+Examples:
+  synapse billing status
+  synapse billing status --format json
+
+See also:
+  synapse billing init        Initialize billing configuration
+  synapse billing config      View or modify billing configuration
+`);
 }
 
 // ---------------------------------------------------------------------------
