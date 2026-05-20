@@ -110,12 +110,21 @@ async function resolvePackDir(packId: string): Promise<string> {
 
   // Otherwise, look in the project's packs/ directory
   const packsDir = await findPacksDir();
-  const packDir = join(packsDir, packId);
+  const dirname = packId.includes("/") ? packId.replace("/", "__") : packId;
+  const packDir = join(packsDir, dirname);
   try {
     await readFile(join(packDir, "provider-card.json"), "utf8");
     return packDir;
   } catch {
-    throw new Error(`Pack "${packId}" not found in ${packsDir}. Available packs can be listed with: synapse provider list`);
+    // Fallback: try flat format (backward compat)
+    const flatName = packId.includes("/") ? packId.split("/")[1] : packId;
+    const flatDir = join(packsDir, flatName);
+    try {
+      await readFile(join(flatDir, "provider-card.json"), "utf8");
+      return flatDir;
+    } catch {
+      throw new Error(`Pack "${packId}" not found in ${packsDir}. Available packs can be listed with: synapse provider list`);
+    }
   }
 }
 

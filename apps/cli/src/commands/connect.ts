@@ -691,20 +691,24 @@ export async function handleConnectCommand(argv: string[]): Promise<void> {
 
   // Resolve explicit API endpoint from DSL (takes priority over feature_id derivation)
   let dslEndpoint: string | undefined;
-  const dslFeatureId = lock?.feature_id;
-  if (dslFeatureId && cardDir) {
-    const dslBase = join(packsDir, cardDir, "dsl", dslFeatureId);
-    // Try common DSL filename patterns (.json or installer's .json.json)
-    for (const ext of [".json", ".json.json"]) {
-      try {
-        const dslContent = await readFile(dslBase + ext, "utf8");
-        const dsl = JSON.parse(dslContent);
-        if (dsl?.access_protocol?.endpoint && typeof dsl.access_protocol.endpoint === "string") {
-          dslEndpoint = dsl.access_protocol.endpoint;
-        }
-        break; // Found and parsed successfully
-      } catch { /* try next extension */ }
-    }
+  if (cardDir) {
+    const dslDirName = cardDir.includes("/") ? cardDir.replace("/", "__") : cardDir;
+    const dslDir = join(USER_PACKS_DIR, dslDirName, "dsl");
+    try {
+      const { readdir } = await import("node:fs/promises");
+      const files = await readdir(dslDir);
+      for (const file of files) {
+        try {
+          const c = JSON.parse(await readFile(join(dslDir, file), "utf8"));
+          const ep = c.access_protocol?.endpoint;
+          if (typeof ep === "string") {
+            dslEndpoint = ep;
+            const matches = c.features?.some((f: any) => f.intent === lock?.intent);
+            if (matches) break;
+          }
+        } catch { /* skip */ }
+      }
+    } catch { /* no DSL dir */ }
   }
 
   // Build connect params

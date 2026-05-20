@@ -112,7 +112,8 @@ async function findPacksDir(): Promise<string> {
 }
 
 async function loadProviderCard(packsDir: string, providerId: string): Promise<ProviderCard | null> {
-  const cardPath = join(packsDir, providerId, "provider-card.json");
+  const dirName = providerId.includes("/") ? providerId.replace("/", "__") : providerId;
+  const cardPath = join(packsDir, dirName, "provider-card.json");
   try {
     const content = await readFile(cardPath, "utf8");
     return JSON.parse(content) as ProviderCard;

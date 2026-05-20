@@ -207,12 +207,12 @@ export async function removePack(name: string): Promise<boolean> {
     return false;
   }
 
-  // Determine pack directory: try nested (ns/name), then flat (name) for backward compat
-  const nestedDir = join(PACKS_DIR, ...manifestKey.split("/"));
+  // Determine pack directory: try namespaced format (aliyn__qwen-image), then flat (backward compat)
+  const namespacedDir = join(PACKS_DIR, manifestKey.replace("/", "__"));
   const flatDir = join(PACKS_DIR, name.includes("/") ? name.split("/")[1] : name);
 
   try {
-    await rm(nestedDir, { recursive: true, force: true });
+    await rm(namespacedDir, { recursive: true, force: true });
   } catch {
     try {
       await rm(flatDir, { recursive: true, force: true });

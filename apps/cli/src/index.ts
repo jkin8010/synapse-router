@@ -504,7 +504,8 @@ async function vaultSet(provider: string, key: string, extraArgs: string[]): Pro
   let authType: "Bearer" | "APIKey" | "OAuth2" = "APIKey";
 
   try {
-    const cardPath = join(packsDir, provider, "provider-card.json");
+    const dirName = provider.includes("/") ? provider.replace("/", "__") : provider;
+    const cardPath = join(packsDir, dirName, "provider-card.json");
     const card = JSON.parse(await readFile(cardPath, "utf8"));
     const raw = card.provider?.auth_type ?? card.provider?.authType ?? "APIKey";
     if (raw === "Bearer" || raw === "APIKey" || raw === "OAuth2") {

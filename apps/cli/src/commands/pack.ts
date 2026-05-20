@@ -172,7 +172,7 @@ async function handlePackAdd(args: string[]): Promise<void> {
     console.log(
       `\n${result.ns}/${result.name}@${result.version} installed successfully!`,
     );
-    console.log(`   Location: ${join(PACKS_DIR, result.name)}`);
+    console.log(`   Location: ${join(PACKS_DIR, `${result.ns}__${result.name}`)}`);
   } catch (err: unknown) {
     const message = err instanceof Error ? err.message : "Unknown error";
     console.error(`Error: ${message}`);

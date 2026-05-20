@@ -150,7 +150,8 @@ export async function handleToolCall(
     case "negotiate": {
       const agentSchema = args.agent_schema as { task?: string; goal?: string; constraints?: unknown } | undefined;
       const providerId = args.provider_id as string;
-      const packDir = (args.pack_dir as string) ?? join(homedir(), ".synapse", "packs", providerId);
+      const providerDir = providerId.includes("/") ? providerId.replace("/", "__") : providerId;
+      const packDir = (args.pack_dir as string) ?? join(homedir(), ".synapse", "packs", providerDir);
 
       if (!agentSchema?.task) {
         throw new Error("agent_schema.task is required for negotiate");
