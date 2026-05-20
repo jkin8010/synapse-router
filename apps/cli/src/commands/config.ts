@@ -1,9 +1,15 @@
 // @synapse-router/cli — `synapse config` command
-// Manage ~/.synapse/config.json
+// Manage config with cascading: global (~/.synapse/config.json) + project-local (cwd/.synapse/config.json)
 
 import { readFile, writeFile, mkdir } from "node:fs/promises";
 import { join } from "node:path";
 import { homedir } from "node:os";
+import {
+  loadMergedConfig,
+  saveGlobalConfig,
+  saveLocalConfig,
+  getLocalConfigPath,
+} from "../utils/config.js";
 
 // ---------------------------------------------------------------------------
 // Types
@@ -25,20 +31,28 @@ interface SynapseConfig {
 // ---------------------------------------------------------------------------
 
 const SYNAPSE_DIR = join(homedir(), ".synapse");
-const CONFIG_PATH = join(SYNAPSE_DIR, "config.json");
+const CONFIG_PATH = getLocalConfigPath();
 
 async function loadConfig(): Promise<SynapseConfig> {
+  return loadMergedConfig() as Promise<SynapseConfig>;
+}
+
+async function saveConfig(config: SynapseConfig): Promise<void> {
+  await saveGlobalConfig(config as Record<string, unknown>);
+}
+
+async function saveConfigLocal(config: SynapseConfig): Promise<void> {
+  await saveLocalConfig(config as Record<string, unknown>);
+}
+
+/** Load only the project-local config (for --local writes with merge context). */
+async function loadConfigLocalOnly(): Promise<SynapseConfig> {
   try {
-    const content = await readFile(CONFIG_PATH, "utf8");
+    const content = await readFile(getLocalConfigPath(), "utf8");
     return JSON.parse(content);
   } catch {
     return {};
   }
-}
-
-async function saveConfig(config: SynapseConfig): Promise<void> {
-  await mkdir(SYNAPSE_DIR, { recursive: true });
-  await writeFile(CONFIG_PATH, JSON.stringify(config, null, 2) + "\n", "utf8");
 }
 
 // ---------------------------------------------------------------------------
@@ -192,12 +206,13 @@ export function printConfigHelp(): void {
 synapse config — Manage Synapse Router configuration
 
 Usage:
-  synapse config set <key> <value>
+  synapse config set <key> <value> [--local]
   synapse config get <key>
   synapse config list
 
 Subcommands:
   set <key> <value>   Set a configuration value (dot notation)
+    --local             Write to project-local .synapse/config.json instead of global ~/.synapse/config.json
   get <key>           Get a configuration value
   list                List all configuration
 
@@ -206,9 +221,17 @@ Configuration keys use dot notation:
   Defaults:           format, defaults.format
   Full path:          providers.deepseek.base_url, defaults.format
 
+Cascading config:
+  Global:   ~/.synapse/config.json
+  Project:  .synapse/config.json (in current directory — overrides global)
+  Use --local flag with 'set' to write to project config.
+
 Examples:
-  # Set DeepSeek base URL
+  # Set DeepSeek base URL (global)
   synapse config set deepseek.base_url https://api.deepseek.com/v1
+
+  # Set registry URL for current project only
+  synapse config set registry.url http://localhost:3100/api/v1 --local
 
   # Set DeepSeek pack
   synapse config set deepseek.pack openai
@@ -240,10 +263,10 @@ See also:
 // Config command handlers
 // ---------------------------------------------------------------------------
 
-async function configSet(key: string, value: string): Promise<void> {
+async function configSet(key: string, value: string, local = false): Promise<void> {
   if (!key || value === undefined) {
     console.error("Error: both key and value are required");
-    console.error("Usage: synapse config set <key> <value>");
+    console.error("Usage: synapse config set <key> <value> [--local]");
     process.exit(1);
   }
 
@@ -259,6 +282,23 @@ async function configSet(key: string, value: string): Promise<void> {
     setNestedValue(billingConfig, billingKey, value);
     await saveBillingConfigFile(billingConfig);
     console.log(`✓ ${key} = ${value}`);
+    return;
+  }
+
+  if (local) {
+    // Use simple key assignment for local config (no provider auto-redirection)
+    const config = await loadConfigLocalOnly();
+    const parts = key.split(".");
+    let current: Record<string, unknown> = config;
+    for (let i = 0; i < parts.length - 1; i++) {
+      if (!current[parts[i]] || typeof current[parts[i]] !== "object") {
+        current[parts[i]] = {};
+      }
+      current = current[parts[i]] as Record<string, unknown>;
+    }
+    current[parts[parts.length - 1]] = value;
+    await saveConfigLocal(config);
+    console.log(`✓ ${key} = ${value} (project-local)`);
     return;
   }
 
@@ -347,10 +387,15 @@ export async function handleConfigCommand(argv: string[]): Promise<void> {
 
   const subcommand = argv[0];
 
+  const localFlag = argv.includes("--local");
+
   switch (subcommand) {
-    case "set":
-      await configSet(argv[1], argv[2]);
+    case "set": {
+      // Find key and value, skipping flags
+      const args = argv.slice(1).filter((a) => a !== "--local");
+      await configSet(args[0], args[1], localFlag);
       break;
+    }
     case "get":
       await configGet(argv[1]);
       break;

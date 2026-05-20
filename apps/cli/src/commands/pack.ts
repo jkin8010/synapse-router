@@ -19,6 +19,7 @@ import type {
   SearchResult,
   ManifestEntry,
 } from "@synapse-router/registry-client";
+import { loadMergedConfig } from "../utils/config.js";
 
 // ---------------------------------------------------------------------------
 // Paths (for display only — installer manages filesystem paths internally)
@@ -72,13 +73,7 @@ function parsePackRef(
 // ---------------------------------------------------------------------------
 
 async function loadSynapseConfig(): Promise<Record<string, unknown>> {
-  const configPath = join(homedir(), ".synapse", "config.json");
-  try {
-    const content = await readFile(configPath, "utf8");
-    return JSON.parse(content);
-  } catch {
-    return {};
-  }
+  return loadMergedConfig();
 }
 
 function getRegistryUrlFromConfig(config: Record<string, unknown>): string | undefined {

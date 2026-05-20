@@ -13,6 +13,7 @@ import {
   type RouteResult,
   type CustomStrategyConfig,
 } from "@synapse-router/router";
+import { loadMergedConfig } from "../utils/config.js";
 
 // ---------------------------------------------------------------------------
 // Types
@@ -207,8 +208,8 @@ function toProviderCapability(entry: ProviderEntry): ProviderCapability {
 // Config loading (custom strategies from config)
 // ---------------------------------------------------------------------------
 
-function loadCustomStrategiesFromConfig(): CustomStrategyConfig[] {
-  const config = readJsonSync(SYNAPSE_CONFIG_PATH) as Record<string, unknown> | undefined;
+async function loadCustomStrategiesFromConfig(): Promise<CustomStrategyConfig[]> {
+  const config = await loadMergedConfig();
   const routeConfig = config?.route as Record<string, unknown> | undefined;
   const strategies = routeConfig?.strategies as Record<string, unknown> | undefined;
   if (!strategies) return [];
@@ -312,7 +313,7 @@ export async function handleRouteCommand(rawArgs: string[]): Promise<void> {
 
   // Load custom strategies from config
   try {
-    const customConfigs = loadCustomStrategiesFromConfig();
+    const customConfigs = await loadCustomStrategiesFromConfig();
     if (customConfigs.length > 0) {
       registerCustomStrategies(customConfigs);
     }

@@ -5,6 +5,7 @@ import { readFile, writeFile, mkdir } from "node:fs/promises";
 import { join, dirname } from "node:path";
 import { homedir } from "node:os";
 import { createVault } from "@synapse-router/vault";
+import { loadMergedConfig, saveGlobalConfig } from "../utils/config.js";
 
 // ---------------------------------------------------------------------------
 // Types
@@ -165,17 +166,11 @@ interface SynapseConfig {
 }
 
 async function loadConfig(): Promise<SynapseConfig> {
-  try {
-    const content = await readFile(CONFIG_PATH, "utf8");
-    return JSON.parse(content);
-  } catch {
-    return {};
-  }
+  return loadMergedConfig() as Promise<SynapseConfig>;
 }
 
 async function saveConfig(config: SynapseConfig): Promise<void> {
-  await mkdir(SYNAPSE_DIR, { recursive: true });
-  await writeFile(CONFIG_PATH, JSON.stringify(config, null, 2) + "\n", "utf8");
+  await saveGlobalConfig(config as Record<string, unknown>);
 }
 
 // ---------------------------------------------------------------------------

@@ -22,7 +22,7 @@
 - [x] **Phase 9: SDK Pricing Emission** — SDK Generator emits BillingTracker with --with-billing flag
 - [x] **Phase 10: CLI Billing Commands** — billing init/config/status commands and connect auto-wrap (completed 2026-05-19)
 - [x] **Phase 11: Skill 包创建与内容覆盖** — Create @synapse-router/skill package with multi-platform agent formats and full content coverage (completed 2026-05-19)
-- [ ] **Phase 12: Install CLI + 自动化分发** — One-command install CLI with auto-detection and CI/CD publishing
+- [x] **Phase 12: Install CLI + 自动化分发** — One-command install CLI with auto-detection and CI/CD publishing (completed 2026-05-19)
 
 ## Phase Details
 
@@ -256,7 +256,7 @@ Plans:
 | 9. SDK Pricing Emission | v2.1 | 0/2 | Planned | - |
 | 10. CLI Billing Commands | v2.1 | 3/3 | Complete    | 2026-05-19 |
 | 11. Skill 包创建与内容覆盖 | v3.0 | 4/4 | Complete    | 2026-05-19 |
-| 12. Install CLI + 自动化分发 | v3.0 | 2/2 | Complete   | 2026-05-19 |
+| 12. Install CLI + 自动化分发 | v3.0 | 2/2 | Complete    | 2026-05-19 |
 
 ## Post-Roadmap Enhancement: Router Package Rewrite (2026-05-09)
 

@@ -11,6 +11,7 @@ import { getOrCreateLock, type SchemaLock } from "@synapse-router/lock";
 import type { ConnectParams, ConnectResult, ConnectLock } from "@synapse-router/connector";
 import type { ProviderCard as CoreProviderCard } from "@synapse-router/core";
 import { negotiateAndVerify } from "@synapse-router/negotiator";
+import { loadMergedConfig } from "../utils/config.js";
 
 // ---------------------------------------------------------------------------
 // Types
@@ -50,12 +51,7 @@ const CONFIG_PATH = join(homedir(), ".synapse", "config.json");
 const BILLING_CONFIG_PATH = join(homedir(), ".synapse", "billing-config.json");
 
 async function loadConfig(): Promise<SynapseConfig> {
-  try {
-    const content = await readFile(CONFIG_PATH, "utf8");
-    return JSON.parse(content);
-  } catch {
-    return {};
-  }
+  return loadMergedConfig() as Promise<SynapseConfig>;
 }
 
 // ---------------------------------------------------------------------------

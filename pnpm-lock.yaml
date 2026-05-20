@@ -163,6 +163,12 @@ importers:
 
   packages/core: {}
 
+  packages/install-skill:
+    devDependencies:
+      typescript:
+        specifier: ^5.9.0
+        version: 5.9.3
+
   packages/lock:
     dependencies:
       '@synapse-router/core':
@@ -218,6 +224,12 @@ importers:
       '@synapse-router/core':
         specifier: workspace:*
         version: link:../core
+
+  packages/skill:
+    devDependencies:
+      typescript:
+        specifier: ^5.9.0
+        version: 5.9.3
 
   packages/vault:
     dependencies:

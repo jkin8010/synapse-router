@@ -6,6 +6,7 @@ import { join, dirname } from "node:path";
 import { homedir } from "node:os";
 import { fileURLToPath } from "node:url";
 import { createVault } from "@synapse-router/vault";
+import { loadMergedConfig, saveGlobalConfig } from "./utils/config.js";
 import { handleGenerateCommand } from "./commands/generate.js";
 import { handleConnectCommand, printConnectHelp } from "./commands/connect.js";
 import { handleSmokeCommand, printSmokeHelp } from "./commands/smoke.js";
@@ -485,17 +486,11 @@ interface SynapseConfig {
 }
 
 async function loadConfig(): Promise<SynapseConfig> {
-  try {
-    const content = await readFile(CONFIG_PATH, "utf8");
-    return JSON.parse(content);
-  } catch {
-    return {};
-  }
+  return loadMergedConfig() as Promise<SynapseConfig>;
 }
 
 async function saveConfig(config: SynapseConfig): Promise<void> {
-  await mkdir(SYNAPSE_DIR, { recursive: true });
-  await writeFile(CONFIG_PATH, JSON.stringify(config, null, 2) + "\n", "utf8");
+  await saveGlobalConfig(config as Record<string, unknown>);
 }
 
 async function vaultSet(provider: string, key: string, extraArgs: string[]): Promise<void> {

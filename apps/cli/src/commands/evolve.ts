@@ -8,6 +8,7 @@ import { readdir, readFile, writeFile, mkdir, rm } from "node:fs/promises";
 import { join, resolve, isAbsolute } from "node:path";
 import { homedir } from "node:os";
 import { createInterface } from "node:readline";
+import { loadMergedConfig } from "../utils/config.js";
 import { loadAllProfiles, ProviderProfile } from "./profile.js";
 import {
   tuneStrategies,
@@ -242,15 +243,12 @@ async function getAllPacks(): Promise<PackEntry[]> {
 // ---------------------------------------------------------------------------
 
 async function resolveRegistryUrl(options: EvolveOptions): Promise<string | null> {
-  // Priority: --registry-url flag > config.json > SYNAPSE_REGISTRY_URL env
+  // Priority: --registry-url flag > merged config > SYNAPSE_REGISTRY_URL env
   if (options.registryUrl) return options.registryUrl;
 
-  const configPath = join(homedir(), ".synapse", "config.json");
-  try {
-    const content = await readFile(configPath, "utf8");
-    const config = JSON.parse(content);
-    if (config.registry?.url) return config.registry.url;
-  } catch { /* no config */ }
+  const config = await loadMergedConfig();
+  const registry = config.registry as { url?: string } | undefined;
+  if (registry?.url) return registry.url;
 
   return process.env["SYNAPSE_REGISTRY_URL"] ?? null;
 }
