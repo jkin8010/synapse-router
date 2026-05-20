@@ -116,7 +116,7 @@ export function buildLockFromProviderCard(params: {
   feature: ProviderFeature;
 }): SchemaLock {
   const { intent, provider, card, feature } = params;
-  const packVersion = card.service.version;
+  const packVersion = card.service?.version ?? "0.0.0";
 
   return {
     lock_id: generateLockId(intent, provider, packVersion, feature.id),
@@ -145,8 +145,8 @@ export function buildLockFromProviderCard(params: {
       fallback: fm.fallback,
     })),
     connection: {
-      base_url: card.service.base_url,
-      auth_type: card.service.auth_type,
+      base_url: card.service?.base_url ?? "",
+      auth_type: card.service?.auth_type ?? "",
     },
     locked_at: new Date().toISOString(),
     status: "active",
@@ -206,7 +206,7 @@ export async function getOrCreateLock(
     );
   }
 
-  const packVersion = card.service.version;
+  const packVersion = card.service?.version ?? "0.0.0";
   const cacheKey = computeCacheKey(intent, provider, packVersion);
 
   // 2. Check cache
@@ -261,7 +261,7 @@ export async function detectOutdatedLocks(
       const cardPath = join(packDir, lock.provider, "provider-card.json");
       const content = await readFile(cardPath, "utf8");
       const card = JSON.parse(content) as ProviderCard;
-      currentVersion = card.service.version;
+      currentVersion = card.service?.version ?? lock.pack_version;
     } catch {
       // Pack not found, can't determine current version
     }

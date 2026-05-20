@@ -103,9 +103,11 @@ interface ProviderCard {
 }
 
 async function loadProviderCard(packsDir: string, providerId: string): Promise<ProviderCard | null> {
+  // Strip namespace prefix for directory lookup: "aliyun/qwen-image" → "qwen-image"
+  const packDirName = providerId.includes("/") ? providerId.split("/")[1] : providerId;
   // Search project packs/ first, then ~/.synapse/packs/ (registry-installed)
   for (const dir of [packsDir, USER_PACKS_DIR]) {
-    const cardPath = join(dir, providerId, "provider-card.json");
+    const cardPath = join(dir, packDirName, "provider-card.json");
     try {
       const content = await readFile(cardPath, "utf8");
       return JSON.parse(content);
@@ -137,15 +139,34 @@ interface Manifest {
 async function resolvePackFromManifest(providerId: string): Promise<string | null> {
   // Try to resolve a provider ID to a pack name from the registry manifest.
   // E.g. "aliyun" → finds pack "qwen-image" with ns "aliyun" in manifest.
+  // E.g. "aliyun/qwen-image" → finds pack "qwen-image" with ns "aliyun".
   const manifestPath = join(USER_PACKS_DIR, "registry-manifest.json");
   try {
     const content = await readFile(manifestPath, "utf8");
     const manifest: Manifest = JSON.parse(content);
-    // First: check if providerId matches a pack name directly
+    // Parse namespace prefix if present: "aliyun/qwen-image" → ns="aliyun", name="qwen-image"
+    const hasNs = providerId.includes("/");
+    const ns = hasNs ? providerId.split("/")[0] : null;
+    const name = hasNs ? providerId.split("/")[1] : providerId;
+    // First: check if name matches a manifest key with matching namespace
+    if (manifest.packs[name]) {
+      if (!ns || manifest.packs[name].ns === ns) {
+        return name;
+      }
+    }
+    // Second: check if ns matches a namespace, return first pack in that ns
+    if (ns) {
+      for (const [packName, entry] of Object.entries(manifest.packs)) {
+        if (entry.ns === ns) {
+          return packName;
+        }
+      }
+    }
+    // Third (backward compat): check if providerId matches a pack name directly
     if (manifest.packs[providerId]) {
       return providerId;
     }
-    // Second: check if providerId matches a namespace, return first pack in that ns
+    // Fourth: check if providerId matches a namespace, return first pack in that ns
     for (const [packName, entry] of Object.entries(manifest.packs)) {
       if (entry.ns === providerId) {
         return packName;
@@ -168,7 +189,7 @@ async function listAvailableProviders(packsDir: string): Promise<Array<{ id: str
       for (const entry of entries) {
         if (!entry.isDirectory() || entry.name.startsWith(".")) continue;
         if (seen.has(entry.name)) continue;
-        const card = await loadProviderCard(packsDir, entry.name);
+        const card = await loadProviderCard(dir, entry.name);
         if (card) {
           seen.add(entry.name);
           providers.push({ id: card.provider.id, name: card.provider.name });
