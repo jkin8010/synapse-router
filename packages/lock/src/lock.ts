@@ -219,7 +219,16 @@ export async function getOrCreateLock(
 
   const cached = await storage.findByCacheKey(intent, provider, packVersion);
   if (cached && cached.status === "active") {
-    return { lock: cached, cached: true };
+    // Invalidate cache if provider pack connection config changed
+    // (e.g. registry updated the pack with a new base_url)
+    const cachedConn = cached.connection || {};
+    const currentBaseUrl = card.service?.base_url ?? "";
+    const currentAuthType = card.service?.auth_type ?? "";
+    if (cachedConn.base_url !== currentBaseUrl || cachedConn.auth_type !== currentAuthType) {
+      await storage.remove(cached.lock_id);
+    } else {
+      return { lock: cached, cached: true };
+    }
   }
 
   // 3. Build new lock

@@ -25,6 +25,7 @@ interface ConnectOptions {
   baseUrl?: string;
   apiKey?: string;
   lock?: string;          // path to lock file
+  noCache?: boolean;      // --no-cache: bypass schema lock cache
   raw?: boolean;
   format?: "json" | "table" | "compact";
   withBilling?: boolean;  // --with-billing (true) or --no-billing (false)
@@ -297,6 +298,7 @@ Options:
   --base-url <url>      Override provider base URL
   --api-key <key>       Override API key (prefer vault)
   --lock <path>         Use existing schema lock file
+  --no-cache            Bypass schema lock cache (force re-negotiation)
   --raw                 Output raw provider response
   --format <fmt>        Output format: json | table | compact (default: json)
   --with-billing          Enable billing tracking (skip prompt)
@@ -370,6 +372,8 @@ export function parseConnectArgs(argv: string[]): ConnectOptions {
       options.apiKey = argv[++i];
     } else if (arg === "--lock" && argv[i + 1]) {
       options.lock = argv[++i];
+    } else if (arg === "--no-cache") {
+      options.noCache = true;
     } else if (arg === "--raw") {
       options.raw = true;
     } else if (arg === "--format" && argv[i + 1]) {
@@ -615,42 +619,55 @@ export async function handleConnectCommand(argv: string[]): Promise<void> {
     }
 
     // Check ~/.synapse/schemas/ for cached Schema Lock
-    try {
-      const { lock: schemaLock, cached } = await getOrCreateLock({
-        intent: feature.intent,
-        provider: provider,  // Use actual provider name, not pack name
-        packDir: packsDir,
-        configDir,
-        card: card as unknown as CoreProviderCard,
-      });
-
-      if (cached) {
-        console.log(`Using cached lock: ${schemaLock.lock_id}`);
-      } else {
-        console.log(`Created new lock: ${schemaLock.lock_id}`);
-      }
-
-      // Convert SchemaLock to ConnectLock (compatible structure)
-      lock = {
-        intent: schemaLock.intent,
-        provider: schemaLock.provider,
-        feature_id: schemaLock.feature_id,
-        input_schema: schemaLock.input_schema as ConnectLock["input_schema"],
-        output_schema: schemaLock.output_schema as ConnectLock["output_schema"],
-        field_mappings: schemaLock.field_mappings as ConnectLock["field_mappings"],
-      };
-    } catch (err: any) {
-      console.error(`⚠ Schema Lock failed (fallback to no cache): ${err.message}`);
-      console.error(err.stack);
-      // Fallback: build lock directly from provider card (original behavior)
+    // Use --no-cache to bypass cache and force re-negotiation
+    if (options.noCache) {
       lock = {
         intent: feature.intent,
-        provider: provider,
+        provider,
         feature_id: feature.id,
         input_schema: feature.input as ConnectLock["input_schema"],
         output_schema: feature.output as ConnectLock["output_schema"],
         field_mappings: (feature.field_mappings ?? []) as ConnectLock["field_mappings"],
       };
+      console.log("Built lock (no-cache): " + feature.id);
+    } else {
+      try {
+        const result = await getOrCreateLock({
+          intent: feature.intent,
+          provider: provider,
+          packDir: packsDir,
+          configDir,
+          card: card as unknown as CoreProviderCard,
+        });
+        const schemaLock = result.lock;
+        if (result.cached) {
+          console.log(`Using cached lock: ${schemaLock.lock_id}`);
+        } else {
+          console.log(`Created new lock: ${schemaLock.lock_id}`);
+        }
+
+        // Convert SchemaLock to ConnectLock (compatible structure)
+        lock = {
+          intent: schemaLock.intent,
+          provider: schemaLock.provider,
+          feature_id: schemaLock.feature_id,
+          input_schema: schemaLock.input_schema as ConnectLock["input_schema"],
+          output_schema: schemaLock.output_schema as ConnectLock["output_schema"],
+          field_mappings: schemaLock.field_mappings as ConnectLock["field_mappings"],
+        };
+      } catch (err: any) {
+        console.error(`⚠ Schema Lock failed (fallback to no cache): ${err.message}`);
+        console.error(err.stack);
+        // Fallback: build lock directly from provider card (original behavior)
+        lock = {
+          intent: feature.intent,
+          provider: provider,
+          feature_id: feature.id,
+          input_schema: feature.input as ConnectLock["input_schema"],
+          output_schema: feature.output as ConnectLock["output_schema"],
+          field_mappings: (feature.field_mappings ?? []) as ConnectLock["field_mappings"],
+        };
+      }
     }
   }
 
