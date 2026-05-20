@@ -34,6 +34,9 @@ export interface ConnectParams {
     base_url: string;
     api_key: string;
     auth_type: "Bearer" | "APIKey" | "OAuth2";
+    /** Optional: explicit API endpoint path, e.g. "/api/v1/services/...".
+     *  When provided, takes priority over path derived from lock.feature_id. */
+    endpoint?: string;
   };
 }
 

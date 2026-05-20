@@ -671,6 +671,20 @@ export async function handleConnectCommand(argv: string[]): Promise<void> {
     }
   }
 
+  // Resolve explicit API endpoint from DSL (takes priority over feature_id derivation)
+  let dslEndpoint: string | undefined;
+  const dslFeatureId = lock?.feature_id;
+  if (dslFeatureId && cardDir) {
+    const dslPath = join(packsDir, cardDir, "dsl", `${dslFeatureId}.json`);
+    try {
+      const dslContent = await readFile(dslPath, "utf8");
+      const dsl = JSON.parse(dslContent);
+      if (dsl?.access_protocol?.endpoint && typeof dsl.access_protocol.endpoint === "string") {
+        dslEndpoint = dsl.access_protocol.endpoint;
+      }
+    } catch { /* DSL file not found */ }
+  }
+
   // Build connect params
   const params: ConnectParams = {
     lock,
@@ -679,6 +693,7 @@ export async function handleConnectCommand(argv: string[]): Promise<void> {
       base_url: baseUrl!,
       api_key: apiKey,
       auth_type: authType,
+      endpoint: dslEndpoint,
     },
   };
 

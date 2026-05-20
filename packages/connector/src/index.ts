@@ -31,8 +31,10 @@ export async function connect(params: ConnectParams): Promise<ConnectResult> {
   // 1. canonical → provider 映射
   const providerInput = mapInput(input, lock.field_mappings);
 
-  // 2. 推导 API path
-  const { method, path } = deriveApiPath(lock.feature_id);
+  // 2. 推导 API path (explicit endpoint from DSL overrides feature_id derivation)
+  const { method, path } = connection.endpoint
+    ? { method: "POST" as const, path: connection.endpoint }
+    : deriveApiPath(lock.feature_id);
 
   // 3. 构建 HTTP 请求
   const headers: Record<string, string> = {
