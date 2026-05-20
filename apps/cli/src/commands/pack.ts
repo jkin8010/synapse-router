@@ -396,17 +396,20 @@ async function handlePackUpdate(
 }
 
 async function handlePackRemove(args: string[]): Promise<void> {
-  const name = args[0];
-  if (!name) {
+  const raw = args[0];
+  if (!raw) {
     console.error("Error: pack name required");
     console.error("Usage: synapse pack remove <name>");
     process.exit(1);
   }
 
+  // Strip namespace prefix: "aliyun/qwen-image" → "qwen-image"
+  const name = raw.includes("/") ? raw.split("/")[1] : raw;
+
   try {
     const removed = await removePack(name);
     if (!removed) {
-      console.error(`Error: pack "${name}" is not installed`);
+      console.error(`Error: pack "${raw}" is not installed`);
       process.exit(1);
     }
     console.log(`Removed ${name}`);
