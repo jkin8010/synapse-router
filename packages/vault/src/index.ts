@@ -327,7 +327,11 @@ export function createVault(config?: Partial<VaultConfig>): Vault {
       try {
         await ensureInitialized();
         const data = await loadData();
-        const entry = data.entries[provider];
+        let entry = data.entries[provider];
+        if (!entry && provider.includes("/")) {
+          // Fallback to namespace prefix: "aliyun/qwen-image" → "aliyun"
+          entry = data.entries[provider.split("/")[0]];
+        }
         if (!entry) {
           audit.log({ action: "get_key", provider, success: true });
           return null;

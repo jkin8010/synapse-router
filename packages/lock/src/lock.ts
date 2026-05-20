@@ -67,20 +67,24 @@ export function generateLockId(
     .update(`${intent}:${provider}:${packVersion}:${featureId}`)
     .digest("hex")
     .slice(0, 8);
-  return `${intent}_${provider}_v${packVersion}_${hash}`;
+  // Sanitize provider for use in file paths: "aliyun/qwen-image" → "aliyun_qwen-image"
+  const safeProvider = provider.replace(/\//g, "_");
+  return `${intent}_${safeProvider}_v${packVersion}_${hash}`;
 }
 
 // ─── Cache Key ──────────────────────────────────────────────────────────────
 
 /**
  * 计算缓存 key: {intent}_{provider}_{packVersion}
+ * Provider name is sanitized to avoid path separator issues.
  */
 export function computeCacheKey(
   intent: string,
   provider: string,
   packVersion: string
 ): string {
-  return `${intent}_${provider}_v${packVersion}`;
+  const safeProvider = provider.replace(/\//g, "_");
+  return `${intent}_${safeProvider}_v${packVersion}`;
 }
 
 // ─── Feature Matching ───────────────────────────────────────────────────────
