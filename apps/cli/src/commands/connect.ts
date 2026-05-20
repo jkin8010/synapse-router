@@ -104,11 +104,20 @@ interface ProviderCard {
 }
 
 async function loadProviderCard(packsDir: string, providerId: string): Promise<ProviderCard | null> {
-  // Strip namespace prefix for directory lookup: "aliyun/qwen-image" → "qwen-image"
-  const packDirName = providerId.includes("/") ? providerId.split("/")[1] : providerId;
   // Search project packs/ first, then ~/.synapse/packs/ (registry-installed)
   for (const dir of [packsDir, USER_PACKS_DIR]) {
-    const cardPath = join(dir, packDirName, "provider-card.json");
+    // Try namespaced format: "aliyun/qwen-image" → dir/aliyun__qwen-image/
+    if (providerId.includes("/")) {
+      const nsDirName = providerId.replace("/", "__");
+      const cardPath = join(dir, nsDirName, "provider-card.json");
+      try {
+        const content = await readFile(cardPath, "utf8");
+        return JSON.parse(content);
+      } catch { /* try flat fallback */ }
+    }
+    // Fallback: flat format (built-in packs or pre-namespaced installs)
+    const flatName = providerId.includes("/") ? providerId.split("/")[1] : providerId;
+    const cardPath = join(dir, flatName, "provider-card.json");
     try {
       const content = await readFile(cardPath, "utf8");
       return JSON.parse(content);
@@ -139,38 +148,47 @@ interface Manifest {
 
 async function resolvePackFromManifest(providerId: string): Promise<string | null> {
   // Try to resolve a provider ID to a pack name from the registry manifest.
-  // E.g. "aliyun" → finds pack "qwen-image" with ns "aliyun" in manifest.
-  // E.g. "aliyun/qwen-image" → finds pack "qwen-image" with ns "aliyun".
+  // E.g. "aliyun" → finds first pack with ns "aliyun" in manifest.
+  // E.g. "aliyun/qwen-image" → finds exact match in manifest.
   const manifestPath = join(USER_PACKS_DIR, "registry-manifest.json");
   try {
     const content = await readFile(manifestPath, "utf8");
     const manifest: Manifest = JSON.parse(content);
-    // Parse namespace prefix if present: "aliyun/qwen-image" → ns="aliyun", name="qwen-image"
+    // Parse namespace prefix if present
     const hasNs = providerId.includes("/");
     const ns = hasNs ? providerId.split("/")[0] : null;
     const name = hasNs ? providerId.split("/")[1] : providerId;
-    // First: check if name matches a manifest key with matching namespace
+
+    // First: check if full namespaced key exists (new manifest format)
+    if (hasNs && manifest.packs[providerId]) {
+      return name;
+    }
+
+    // Second: check if flat name matches a manifest key (backward compat)
     if (manifest.packs[name]) {
       if (!ns || manifest.packs[name].ns === ns) {
         return name;
       }
     }
-    // Second: check if ns matches a namespace, return first pack in that ns
+
+    // Third: check if ns matches a namespace, return first pack in that ns
     if (ns) {
-      for (const [packName, entry] of Object.entries(manifest.packs)) {
+      for (const [, entry] of Object.entries(manifest.packs)) {
         if (entry.ns === ns) {
-          return packName;
+          return entry.name;
         }
       }
     }
-    // Third (backward compat): check if providerId matches a pack name directly
+
+    // Fourth (backward compat): check if providerId matches a pack name directly
     if (manifest.packs[providerId]) {
       return providerId;
     }
-    // Fourth: check if providerId matches a namespace, return first pack in that ns
-    for (const [packName, entry] of Object.entries(manifest.packs)) {
+
+    // Fifth: check if providerId matches a namespace
+    for (const [, entry] of Object.entries(manifest.packs)) {
       if (entry.ns === providerId) {
-        return packName;
+        return entry.name;
       }
     }
   } catch {

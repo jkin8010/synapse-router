@@ -403,8 +403,8 @@ async function handlePackRemove(args: string[]): Promise<void> {
     process.exit(1);
   }
 
-  // Strip namespace prefix: "aliyun/qwen-image" → "qwen-image"
-  const name = raw.includes("/") ? raw.split("/")[1] : raw;
+  // Pass full namespaced name to removePack (handles both formats internally)
+  const name = raw;
 
   try {
     const removed = await removePack(name);
@@ -438,7 +438,8 @@ async function handlePackShow(args: string[]): Promise<void> {
     if (localEntry) {
       console.log(`${parsed.ns}/${parsed.name}`);
       console.log(`   Installed: ${localEntry.version}`);
-      console.log(`   Location: ${join(PACKS_DIR, parsed.name)}`);
+      const packLocation = join(PACKS_DIR, `${parsed.ns}__${parsed.name}`);
+      console.log(`   Location: ${packLocation}`);
     }
 
     // Fetch from registry

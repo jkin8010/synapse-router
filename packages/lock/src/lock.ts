@@ -186,12 +186,22 @@ export async function getOrCreateLock(
 
   // Try provider-specific pack first
   if (!card) {
-    const cardPath = join(packDir, provider, "provider-card.json");
+    // Convert namespaced provider to directory name: "aliyun/qwen-image" → "aliyun__qwen-image"
+    const providerDir = provider.includes("/") ? provider.replace("/", "__") : provider;
+    const cardPath = join(packDir, providerDir, "provider-card.json");
     try {
       const content = await readFile(cardPath, "utf8");
       card = JSON.parse(content) as ProviderCard;
     } catch {
-      // Loading from preloaded card is preferred (handles config mapping)
+      // Try flat format fallback (backward compat with old installs)
+      const flatName = provider.includes("/") ? provider.split("/")[1] : provider;
+      const flatPath = join(packDir, flatName, "provider-card.json");
+      try {
+        const content = await readFile(flatPath, "utf8");
+        card = JSON.parse(content) as ProviderCard;
+      } catch {
+        // Loading from preloaded card is preferred (handles config mapping)
+      }
     }
   }
 
@@ -271,7 +281,8 @@ export async function detectOutdatedLocks(
 
     let currentVersion = lock.pack_version;
     try {
-      const cardPath = join(packDir, lock.provider, "provider-card.json");
+      const providerDir = lock.provider.includes("/") ? lock.provider.replace("/", "__") : lock.provider;
+      const cardPath = join(packDir, providerDir, "provider-card.json");
       const content = await readFile(cardPath, "utf8");
       const card = JSON.parse(content) as ProviderCard;
       currentVersion = card.service?.version ?? lock.pack_version;

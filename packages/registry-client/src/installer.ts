@@ -114,7 +114,9 @@ export async function installPack(
     version,
   );
 
-  const packDir = join(PACKS_DIR, name);
+  // Namespaced directory: aliyun/qwen-image → packs/aliyun__qwen-image/
+  const packDirName = `${match.ns}__${name}`;
+  const packDir = join(PACKS_DIR, packDirName);
   await mkdir(packDir, { recursive: true });
 
   try {
@@ -159,9 +161,10 @@ export async function installPack(
     );
   }
 
-  // Record in manifest
+  // Record in manifest (namespaced key: "aliyun/qwen-image")
   const manifest = await loadManifest();
-  manifest.packs[name] = {
+  const manifestKey = `${match.ns}/${name}`;
+  manifest.packs[manifestKey] = {
     id: `${match.ns}/${name}`,
     ns: match.ns,
     name,
@@ -184,13 +187,45 @@ export async function installPack(
 export async function removePack(name: string): Promise<boolean> {
   const manifest = await loadManifest();
 
-  if (!manifest.packs[name]) {
+  // Try namespaced key first (e.g. "aliyun/qwen-image"), then flat name (backward compat)
+  let entry = manifest.packs[name];
+  let manifestKey = name;
+  if (!entry) {
+    // Fallback: try flat name (pre-namespaced installs)
+    const flatKey = name.includes("/") ? name.split("/")[1] : name;
+    entry = manifest.packs[flatKey];
+    manifestKey = flatKey;
+  }
+  if (!entry && name.includes("__")) {
+    // Double-underscore format: "aliyun__qwen-image" → "aliyun/qwen-image"
+    const nsKey = name.replace("__", "/");
+    entry = manifest.packs[nsKey];
+    manifestKey = nsKey;
+  }
+
+  if (!entry) {
     return false;
   }
 
-  const packDir = join(PACKS_DIR, name);
-  await rm(packDir, { recursive: true, force: true });
-  delete manifest.packs[name];
+  // Determine pack directory: try nested (ns/name), then flat (name) for backward compat
+  const nestedDir = join(PACKS_DIR, ...manifestKey.split("/"));
+  const flatDir = join(PACKS_DIR, name.includes("/") ? name.split("/")[1] : name);
+
+  try {
+    await rm(nestedDir, { recursive: true, force: true });
+  } catch {
+    try {
+      await rm(flatDir, { recursive: true, force: true });
+    } catch {
+      // neither format existed on disk — still clean up manifest
+    }
+  }
+
+  delete manifest.packs[manifestKey];
+  // Also clean up any old-format key
+  if (manifestKey.includes("/")) {
+    delete manifest.packs[manifestKey.split("/")[1]];
+  }
   await saveManifest(manifest);
   return true;
 }

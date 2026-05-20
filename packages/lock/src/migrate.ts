@@ -42,7 +42,8 @@ export async function migrateLock(
   configDir: string
 ): Promise<MigrationResult> {
   // 1. Load the new provider card
-  const cardPath = join(newPackDir, oldLock.provider, "provider-card.json");
+  const providerDir = oldLock.provider.includes("/") ? oldLock.provider.replace("/", "__") : oldLock.provider;
+  const cardPath = join(newPackDir, providerDir, "provider-card.json");
   let card: ProviderCard;
   try {
     const content = await readFile(cardPath, "utf8");
