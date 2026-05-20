@@ -675,14 +675,18 @@ export async function handleConnectCommand(argv: string[]): Promise<void> {
   let dslEndpoint: string | undefined;
   const dslFeatureId = lock?.feature_id;
   if (dslFeatureId && cardDir) {
-    const dslPath = join(packsDir, cardDir, "dsl", `${dslFeatureId}.json`);
-    try {
-      const dslContent = await readFile(dslPath, "utf8");
-      const dsl = JSON.parse(dslContent);
-      if (dsl?.access_protocol?.endpoint && typeof dsl.access_protocol.endpoint === "string") {
-        dslEndpoint = dsl.access_protocol.endpoint;
-      }
-    } catch { /* DSL file not found */ }
+    const dslBase = join(packsDir, cardDir, "dsl", dslFeatureId);
+    // Try common DSL filename patterns (.json or installer's .json.json)
+    for (const ext of [".json", ".json.json"]) {
+      try {
+        const dslContent = await readFile(dslBase + ext, "utf8");
+        const dsl = JSON.parse(dslContent);
+        if (dsl?.access_protocol?.endpoint && typeof dsl.access_protocol.endpoint === "string") {
+          dslEndpoint = dsl.access_protocol.endpoint;
+        }
+        break; // Found and parsed successfully
+      } catch { /* try next extension */ }
+    }
   }
 
   // Build connect params
