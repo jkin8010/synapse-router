@@ -31,7 +31,16 @@ const PACKS_DIR = join(homedir(), ".synapse", "packs");
 // Helpers
 // ---------------------------------------------------------------------------
 
-function createClient(): RegistryClient {
+async function createClient(): Promise<RegistryClient> {
+  // Priority: env var > configured registry.url > hardcoded default
+  if (process.env["SYNAPSE_REGISTRY_URL"]) {
+    return createRegistryClient({ registryUrl: process.env["SYNAPSE_REGISTRY_URL"] });
+  }
+  const config = await loadMergedConfig();
+  const registry = config.registry as { url?: string } | undefined;
+  if (registry?.url) {
+    return createRegistryClient({ registryUrl: registry.url });
+  }
   return createRegistryClient();
 }
 
@@ -150,7 +159,7 @@ async function handlePackAdd(args: string[]): Promise<void> {
   try {
     const parsed = parsePackRef(packRef);
     console.log(`Searching for "${parsed.name}" in registry...`);
-    const client = createClient();
+    const client = await createClient();
     const result = await installPack(client, packRef);
 
     if (!result.success) {
@@ -182,7 +191,7 @@ async function handlePackSearch(args: string[]): Promise<void> {
   console.log(`Searching for "${query}"...\n`);
 
   try {
-    const client = createClient();
+    const client = await createClient();
     const result: SearchResult = await client.searchPacks(query);
 
     if (result.results.length === 0) {
@@ -430,7 +439,7 @@ async function handlePackShow(args: string[]): Promise<void> {
     }
 
     // Fetch from registry
-    const client = createClient();
+    const client = await createClient();
     const detail = await client.getPack(parsed.ns, parsed.name);
     console.log(`\nRegistry info:`);
     console.log(`   Name: ${detail.displayName ?? parsed.name}`);
