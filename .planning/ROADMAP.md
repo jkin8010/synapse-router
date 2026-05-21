@@ -160,7 +160,11 @@ Plans:
   3. Each Provider card shows a clear key status indicator ("configured" / "no key")
   4. Hovering over a disabled action button shows a tooltip explaining why it is unavailable
   5. User can use Cmd+Enter to execute a request and Cmd+Shift+Enter to trigger negotiation
-**Plans**: TBD
+**Plans**: 2 plans
+
+Plans:
+- [ ] 15-01-PLAN.md -- Foundation: context.ts types (configured, activePanel), index.css breakpoints + responsive grid CSS, useKeyboardShortcut hook
+- [ ] 15-02-PLAN.md -- Components + Layout: App.tsx responsive grid + sidebar collapse + keyboard shortcuts, ProviderSelector collapsed mode + Add Pack dialog + configured wiring, ActionBar tooltips + kbd hints, StatusBar configured count
 **UI hint**: yes
 
 **Note:** Phases 14 and 15 are independent of each other and can be partially parallelized.
@@ -185,7 +189,7 @@ Plans:
 | 12. Install CLI + 自动化分发 | v3.0 | 2/2 | Complete | 2026-05-21 |
 | 13. Docs Scaffold + Playground Infra | v4.0 | 0/0 | Planned | - |
 | 14. Documentation Site Content | v4.0 | 0/0 | Planned | - |
-| 15. Playground Core UI Upgrade | v4.0 | 0/0 | Planned | - |
+| 15. Playground Core UI Upgrade | v4.0 | 0/2 | Planned | - |
 
 ## Post-Roadmap Enhancement: Router Package Rewrite (2026-05-09)
 

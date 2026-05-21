@@ -12,6 +12,7 @@ export interface ProviderCard {
     auth_type: string;
   };
   features: Array<{ feature_id: string; feature_name?: string; intent: string }>;
+  configured: boolean;
 }
 
 export type AppStatus = "idle" | "loading" | "negotiating" | "executing" | "mock-testing" | "error";
@@ -65,6 +66,7 @@ export interface AppState {
   status: AppStatus;
   timing: { negotiate?: number; execute?: number };
   selectedBaseUrl: string | null;
+  activePanel: "providers" | "schema" | "response";
 }
 
 // ── Actions ────────────────────────────────────────────────────────────────
@@ -81,7 +83,8 @@ export type AppAction =
   | { type: "ADD_LOG"; entry: LogEntry }
   | { type: "ADD_ERROR"; error: AppError }
   | { type: "CLEAR_ERRORS" }
-  | { type: "SET_BASE_URL"; baseUrl: string | null };
+  | { type: "SET_BASE_URL"; baseUrl: string | null }
+  | { type: "SET_ACTIVE_PANEL"; panel: "providers" | "schema" | "response" };
 
 // ── Default Schema ─────────────────────────────────────────────────────────
 
@@ -138,6 +141,7 @@ export const initialState: AppState = {
   status: "idle",
   timing: {},
   selectedBaseUrl: null,
+  activePanel: "providers",
 };
 
 // ── Reducer ────────────────────────────────────────────────────────────────
@@ -176,6 +180,8 @@ export function appReducer(state: AppState, action: AppAction): AppState {
       return { ...state, errors: [] };
     case "SET_BASE_URL":
       return { ...state, selectedBaseUrl: action.baseUrl };
+    case "SET_ACTIVE_PANEL":
+      return { ...state, activePanel: action.panel };
     default:
       return state;
   }
