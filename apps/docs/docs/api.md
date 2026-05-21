@@ -3,7 +3,7 @@ sidebar_position: 10
 title: API Reference
 ---
 
-<!-- This file is derived from docs/API.md in the project root. Edit the source and re-copy for significant changes. -->
+{/* This file is derived from docs/API.md in the project root. Edit the source and re-copy for significant changes. */}
 
 # REST API 参考
 

@@ -3,7 +3,7 @@ sidebar_position: 11
 title: Pack Development Guide
 ---
 
-<!-- This file is derived from docs/PACKS.md in the project root. Edit the source and re-copy for significant changes. -->
+{/* This file is derived from docs/PACKS.md in the project root. Edit the source and re-copy for significant changes. */}
 
 # Provider Pack 开发指南
 
