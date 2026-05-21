@@ -13,7 +13,7 @@ export class ApiError extends Error {
   }
 }
 
-export function createApiClient(config: ApiConfig = { baseUrl: "http://localhost:3000" }) {
+export function createApiClient(config: ApiConfig = { baseUrl: "/api" }) {
   async function getProviders() {
     const res = await fetch(`${config.baseUrl}/providers`);
     if (!res.ok) throw new ApiError("Failed to fetch providers", res.status);
