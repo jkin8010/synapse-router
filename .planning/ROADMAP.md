@@ -2,32 +2,18 @@
 
 ## Milestones
 
-- **v1.0 Negotiator Reliability** — Phase 1 (shipped 2026-05-07)
-- **v1.1 Testing & Playground** — Phases 2-4 (in progress)
-- **v1.2 Router Integration** — Phase 5 (planned)
-- **v2.0 Offline Evolution** — Phases 6-7 (planned)
-- **v2.1 Billing Integration** — Phases 8-10 (planned)
-- **v3.0 AI Agent Skill Distribution** — Phases 11-12 (planned)
-
-## Phases
-
-- [x] **Phase 1: Negotiator Reliability** — Full contract verification loop shipped
-- [x] **Phase 2: E2E End-to-End Testing** — Core workflows covered by automated E2E tests
-- [x] **Phase 3: Playground Web UI** — Visual debugging interface for negotiate requests
-- [x] **Phase 4: Provider Smoke Tests** — Real provider API integrations verified
-- [x] **Phase 5: Router as SDK Generator** — Router evolves from CLI tool to SDK generation engine
-- [x] **Phase 6: Local Evolution Engine** — .synapse/ log system, watchdog, export/import, evolve flow
-- [x] **Phase 7: Registry-Router Collaboration** — Registry change-detector triggers evolve flow
-- [ ] **Phase 8: Connector Wrapper + FileQuotaStorage** — Billing wrapper and file-based quota storage
-- [x] **Phase 9: SDK Pricing Emission** — SDK Generator emits BillingTracker with --with-billing flag
-- [x] **Phase 10: CLI Billing Commands** — billing init/config/status commands and connect auto-wrap (completed 2026-05-19)
-- [x] **Phase 11: Skill 包创建与内容覆盖** — Create @synapse-router/skill package with multi-platform agent formats and full content coverage (completed 2026-05-19)
-- [x] **Phase 12: Install CLI + 自动化分发** — One-command install CLI with auto-detection and CI/CD publishing (completed 2026-05-19)
+- ✅ **v1.0 Negotiator Reliability** — Phase 1 (shipped 2026-05-07)
+- ✅ **v1.1 Testing & Playground** — Phases 2-4 (shipped 2026-05-09)
+- ✅ **v1.2 Router Integration** — Phase 5 (shipped)
+- ✅ **v2.0 Offline Evolution** — Phases 6-7 (shipped)
+- ✅ **v2.1 Billing Integration** — Phases 8-10 (shipped 2026-05-19)
+- ✅ **v3.0 AI Agent Skill Distribution** — Phases 11-12 (shipped 2026-05-21)
+- 📋 **v4.0 Documentation Site** — Phase 13 (planned)
 
 ## Phase Details
 
 <details>
-<summary>v1.0 Negotiator Reliability (Phase 1) — SHIPPED 2026-05-07</summary>
+<summary>✅ v1.0 Negotiator Reliability (Phase 1) — SHIPPED 2026-05-07</summary>
 
 ### Phase 1: Negotiator Reliability
 **Goal**: Full contract verification loop: Schema negotiation -> Manifest matching -> SDK code generation -> Mock test -> Registry async submission
@@ -41,207 +27,111 @@ Plans:
 
 </details>
 
-### v1.1 Testing & Playground (In Progress)
-
-**Milestone Goal:** Establish complete E2E test coverage and a visual debugging interface, ensuring the full pipeline is verifiable and observable.
+<details>
+<summary>✅ v1.1 Testing & Playground (Phases 2-4) — SHIPPED 2026-05-09</summary>
 
 #### Phase 2: E2E End-to-End Testing
 **Goal**: Core workflows are covered by automated E2E tests that validate the full negotiate-and-verify pipeline from multiple entry points
-**Depends on**: Phase 1
-**Requirements**: E2E-01, E2E-02, E2E-03, E2E-04, E2E-05, E2E-06
-**Success Criteria** (what must be TRUE):
-  1. E2E test framework (test runner, fixture management, assertion utilities) is operational and `pnpm test:e2e` invokes all E2E tests with structured output
-  2. Three application entry point tests pass: CLI `synapse connect --task "..."` full flow, API `/negotiate` HTTP request/response, MCP Server negotiate tool
-  3. Full-chain `negotiateAndVerify` pipeline test passes end-to-end (negotiate -> manifest match -> SDK code generation -> mock test with contract-mocker)
-  4. SDK generated code during E2E tests compiles and executes successfully when imported, verifying no broken output
 **Plans**: 7 plans (4 core + 3 gap closure)
-
-Plans:
-- [x] 02-01-PLAN.md -- E2E test framework infrastructure (helpers: helpers.ts, fixtures.ts)
-- [x] 02-02-PLAN.md -- CLI connect and API /negotiate entry point E2E tests (cli-connect.test.ts, api-negotiate.test.ts)
-- [x] 02-03-PLAN.md -- MCP Server negotiate tool and negotiateAndVerify pipeline E2E tests (mcp-negotiate.test.ts, pipeline.test.ts)
-- [x] 02-04-PLAN.md -- SDK generated code compilation and execution validation (sdk-compile.test.ts)
+- [x] 02-01 -- E2E test framework infrastructure
+- [x] 02-02 -- CLI connect and API /negotiate entry point E2E tests
+- [x] 02-03 -- MCP Server negotiate tool and pipeline E2E tests
+- [x] 02-04 -- SDK generated code compilation and execution validation
 
 #### Phase 3: Playground Web UI
-**Goal**: Developers can visually compose, send, and debug negotiate requests through a web interface without needing CLI or API knowledge
-**Depends on**: Phase 1
-**Requirements**: PLAYGROUND-01, PLAYGROUND-02, PLAYGROUND-03, PLAYGROUND-04, PLAYGROUND-05
-**Success Criteria** (what must be TRUE):
-  1. Playground Web UI loads with left-right split layout: left panel contains Schema editor and Provider selector, right panel shows response viewer
-  2. User can write/edit JSON Schema with syntax highlighting and formatting, select a provider from installed packs (with base_url configuration), and send a negotiate request
-  3. User sees the negotiate response with returned Schema and generated SDK code (TypeScript and Python tabs), and can run a mock test against the returned Schema to see pass/fail results
-**Plans**: 7 plans (4 core + 3 gap closure)
-**UI hint**: yes
-
-Plans:
-- [x] 03-01-PLAN.md -- Vite SPA scaffolding, state management, API client, CodeMirror hook, foundational components (ResizablePanel/Dialog/StatusBar)
-- [x] 03-02-PLAN.md -- LEFT panel (ProviderSelector cards) + CENTER panel (SchemaEditor CodeMirror + ActionBar + useNegotiate/useExecute hooks)
-- [x] 03-03-PLAN.md -- RIGHT panel (6-tab ResponseViewer) + MockTestSection + useMockTest hook
-- [x] 03-04-PLAN.md -- App.tsx three-panel layout wiring + integration tests (api.test.ts, App.test.tsx)
-- [x] 03-05-PLAN.md -- Gap closure: Wire Execute button onClick + fix Mock test hardcoded passed:true
-- [x] 03-06-PLAN.md -- Gap closure: Add service.base_url to API GET /providers + extend Playground data layer for base_url support
-- [x] 03-07-PLAN.md -- Gap closure: Display base_url on ProviderCard + inline override input in ProviderSelector + wire through negotiate/execute hooks
+**Goal**: Developers can visually compose, send, and debug negotiate requests through a web interface
+**Plans**: 7 plans
+- [x] 03-01 -- Vite SPA scaffolding, state management, CodeMirror
+- [x] 03-02 -- ProviderSelector + SchemaEditor + ActionBar
+- [x] 03-03 -- ResponseViewer + MockTestSection
+- [x] 03-04 -- App.tsx three-panel layout + integration tests
+- [x] 03-05 through 03-07 -- Gap closures
 
 #### Phase 4: Provider Smoke Tests
-**Goal**: Real provider API integrations (OpenAI, Replicate) are verified working with real API keys through an automated smoke test framework
-**Depends on**: Phase 1
-**Requirements**: SMOKE-01, SMOKE-02, SMOKE-03, SMOKE-04
-**Success Criteria** (what must be TRUE):
-  1. Smoke test framework supports API key injection (env/CLI/config), timeout control, and skip markers for unavailable providers
-  2. OpenAI chat completions and Replicate smoke tests pass against live production APIs
-  3. `synapse smoke --provider <name>` CLI command runs specific provider smoke tests and displays structured pass/fail results per test case
+**Goal**: Real provider API integrations verified with an automated smoke test framework
 **Plans**: 1 plan
+- [x] 04-01 -- Smoke test framework + CLI command
 
-Plans:
-- [x] 04-01-PLAN.md -- Smoke test framework (vault-bridge + OpenAI/Replicate test cases) + `synapse smoke` CLI
+</details>
 
-### v1.2 Router Integration (Planned)
-
-**Milestone Goal:** Router 从"CLI 工具"进化到"SDK 生成引擎"。核心变化：明确 Router 是开发时工具，输出纯代码 SDK，运行时路径无 LLM 无 Router。
+<details>
+<summary>✅ v1.2 Router Integration (Phase 5) — SHIPPED</summary>
 
 #### Phase 5: Router as SDK Generator
-**Goal**: Router 的输出产物从 CLI 命令行的调用转变为 SDK 生成。connect 命令保留作为开发调试用途，核心新路径是 `synapse evolve` → SDK 输出 → 应用集成。
-**Depends on**: Phase 4
-**Requirements**: GEN-01, GEN-02, GEN-03
-**Success Criteria** (what must be TRUE):
-  1. `synapse evolve` 命令读取 provider-card.json + DSL，输出完整 SDK 包（含类型定义、方法、测试桩）
-  2. 生成的 SDK 零运行时依赖，只使用原生 fetch
-  3. 生成的 SDK 可独立 npm install / pip install，不依赖 @synapse-router/*
-  4. 运行时路径无 LLM、无随机、无网络外依赖（纯代码逻辑）
+**Goal**: Router outputs SDK code instead of CLI calls. `synapse evolve` is the new core path.
 **Plans**: 3 plans
+- [x] 05-01 -- `synapse evolve` base command
+- [x] 05-02 -- SDK generation enhancements
+- [x] 05-03 -- Application integration flow
 
-Plans:
-- [x] 05-01-PLAN.md -- `synapse evolve` 基础命令（读取 provider packs → 协商 → 生成 SDK 到指定目录）
-- [x] 05-02-PLAN.md -- SDK 生成增强（含环境配置入口、错误处理、重试逻辑、`.synapse/` 日志钩子）
-- [x] 05-03-PLAN.md -- 应用集成流程（README 示例、`synapse init` 初始化项目 SDK）
+</details>
 
-### v2.0 Offline Evolution (Planned)
-
-**Milestone Goal:** 建立完整的"开发时协商 → 运行时纯 SDK → 产线日志 → Git 同步 → 下一轮迭代"闭环。Watchdog 监控产线异常，自动创建 Issue 推动迭代。
+<details>
+<summary>✅ v2.0 Offline Evolution (Phases 6-7) — SHIPPED</summary>
 
 #### Phase 6: Local Evolution Engine
-**Goal**: 实现 `.synapse/` 日志系统、watchdog 监控、export/import 数据同步、和 `synapse evolve` 完整演化流程。**运行时路径保持极薄**，所有复杂逻辑在独立进程中。
-**Depends on**: Phase 5
-**Requirements**: EVOLVE-01, EVOLVE-02, EVOLVE-03, EVOLVE-04
-**Success Criteria** (what must be TRUE):
-  1. SDK 运行时只做一行 JSON append 到 `.synapse/watchdog/events.ndjson`，零其他开销
-  2. `synapse watchdog` 独立进程读取事件流，按规则匹配，正常时无操作，致命错误自动 `gh issue create`
-  3. `.synapse/` 目录可通过 Git 从产线同步到开发环境（`synapse export`/`synapse import` 辅助）
-  4. `synapse evolve` 读取产线日志 + Registry Provider Pack，生成新 SDK，应用替换后自测 → 提交
+**Goal**: Complete `.synapse/` log system, watchdog, export/import, and evolve flow
 **Plans**: 4 plans
-
-Plans:
-- [x] 06-01-PLAN.md -- `.synapse/` 运行时日志系统 + Provider Profile 聚合
-- [x] 06-02-PLAN.md -- `synapse watchdog` 规则引擎 + 自动 Issue 创建
-- [x] 06-03-PLAN.md -- `synapse export`/`import` + `.synapse/` Git 同步方案
-- [x] 06-04-PLAN.md -- `synapse evolve` 完整演化闭环（读 .synapse/ → 读 Provider Packs → 协商 → 生成 SDK）
+- [x] 06-01 -- `.synapse/` runtime logging system
+- [x] 06-02 -- watchdog rule engine + auto issue creation
+- [x] 06-03 -- export/import + Git sync
+- [x] 06-04 -- Full evolve loop
 
 #### Phase 7: Registry-Router Collaboration
-**Goal**: Registry 的 Provider API change-detector 通过 `synapse evolve` 影响 SDK 生成，形成 Registry ↔ Router ↔ 应用的完整生态闭环。
-**Depends on**: Phase 6 + synapse-registry Phase 3+
-**Requirements**: COEVOLVE-01, COEVOLVE-02, COEVOLVE-03
-**Success Criteria** (what must be TRUE):
-  1. Registry 检测到 Provider API 变更 → 触发 `synapse evolve` 重新协商（开发时，非运行时）
-  2. `synapse evolve` 可接受 registry 推送的变更通知作为输入
-  3. 应用侧可选接收"有新 SDK 可用"的通知
+**Goal**: Registry change-detector triggers evolve flow
 **Plans**: 3 plans
+- [x] 07-01 -- Registry notification → evolve trigger
+- [x] 07-02 -- evolve registry data source integration
+- [x] 07-03 -- SDK version notification
 
-Plans:
-- [x] 07-01-PLAN.md -- Registry 变更通知 → `synapse evolve` 触发链路
-- [x] 07-02-PLAN.md -- `synapse evolve` registry 数据源集成（拉取最新 pack，对比本地版本）
-- [x] 07-03-PLAN.md -- SDK 版本通知（CI/CD 集成：检测新 SDK 可用 → 自动 PR）
+</details>
 
-### v2.1 Billing Integration (Planned)
-
-**Milestone Goal:** Integrate `@synapse-router/billing` v0.1.0 with Connector wrapper, SDK Generator pricing emission, and CLI billing commands. Enable API call metering, quota management, and graceful degradation without violating zero-dependency or wrapper-pattern constraints.
+<details>
+<summary>✅ v2.1 Billing Integration (Phases 8-10) — SHIPPED 2026-05-19</summary>
 
 #### Phase 8: Connector Wrapper + FileQuotaStorage
-**Goal**: Developers can wrap any connector with billing -- pre-call quota checking, post-call usage recording, file-based quota persistence, and graceful billing error handling -- without modifying connector internals
-**Depends on**: Phase 7
-**Requirements**: WRAPPER-01, WRAPPER-02, WRAPPER-03, WRAPPER-04, WRAPPER-05
-**Success Criteria** (what must be TRUE):
-  1. Developer calls `createBillingConnector(connector, config)` and receives a billing-aware connector that checks quota pre-call and records usage post-call
-  2. Quota state persists across CLI invocations via `FileQuotaStorage` writing to `~/.synapse/quotas/<provider>.json` using atomic `.tmp + rename` writes
-  3. Provider pack `provider-card.json` pricing fields (`{input, output, unit}`) are automatically bridged to billing `PricingRule` format via the pricing bridge function, with sensible defaults for missing fields
-  4. Billing errors (config missing, quota exhausted, storage write failure) do not block API calls -- default behavior is `warn`, configurable to `reject`/`downgrade`/`notify` per strategy
-  5. Every connector response includes billing metadata: call count, remaining quota, and estimated cost as a `BillingResult` envelope on the response object
-**Research flags**: Standard mode (skip research-phase) -- wrapper pattern already mature in the codebase
+**Goal**: Billing wrapper and file-based quota storage without modifying connector internals
 **Plans**: 2 plans
+- [x] 08-01 -- Type foundation + FileQuotaStorage + pricing-bridge
+- [x] 08-02 -- BillingConnector Wrapper + index exports
 
-Plans:
-- [x] 08-01-PLAN.md -- Type foundation + FileQuotaStorage (WRAPPER-02) + pricing-bridge (WRAPPER-03)
-- [x] 08-02-PLAN.md -- BillingConnector Wrapper (WRAPPER-01, WRAPPER-04, WRAPPER-05) + index exports
-
-#### Phase 9: SDK Pricing Emission ✅
-**Goal**: SDK Generator emits a standalone, zero-dependency `BillingTracker` class alongside generated SDK code when `--with-billing` flag is active
-**Depends on**: Phase 8 (needs billing types and pricing bridge from Phase 8)
-**Requirements**: SDKBILL-01, SDKBILL-02, SDKBILL-03
-**Success Criteria** (what must be TRUE):
-  1. ✅ `sdk-generator --with-billing` flag causes billing tracking code to be emitted alongside the SDK, without importing any `@synapse-router/*` package
-  2. ✅ Generated `BillingTracker` class is a standalone zero-dependency class with inline pricing constants (no async imports, no external dependencies)
-  3. ✅ SDK generation outputs a companion directory at `.synapse/billing/` containing the billing tracker source file and pricing configuration for the generated SDK
+#### Phase 9: SDK Pricing Emission
+**Goal**: SDK Generator emits BillingTracker with --with-billing flag
 **Plans**: 2 plans
+- [x] 09-01 -- BillingTracker code generator
+- [x] 09-02 -- withBilling pipeline wiring
 
-Plans:
-- [x] 09-01: BillingTracker code generator (billing.ts + billing.test.ts + dependency setup)
-- [x] 09-02: withBilling pipeline wiring (generator.ts + integration tests)
 #### Phase 10: CLI Billing Commands
-**Goal**: Users can initialize, configure, and inspect billing state via CLI commands, and `synapse connect` automatically wraps the connector with billing
-**Depends on**: Phase 8 (requires wrapper), optionally Phase 9
-**Requirements**: CLIBILL-01, CLIBILL-02, CLIBILL-03, CLIBILL-04
-**Success Criteria** (what must be TRUE):
-  1. `synapse billing init` guides the user through pricing strategy selection and quota limit configuration, writing to `.synapse/billing-config.json`
-  2. `synapse billing config` (and `synapse config set billing.*`) allows viewing and modifying billing configuration with immediate validation
-  3. `synapse billing status` displays per-provider remaining quota, reset time, and estimated cost summary in a readable table format
-  4. `synapse connect` automatically detects billing configuration and wraps the connector with `createBillingConnector()`, no manual wrapping required
-**Research flags**: Skipped -- CONTEXT.md provided comprehensive decisions with canonical code references
-**Plans**: 3 plans in 2 waves
+**Goal**: billing init/config/status commands and connect auto-wrap
+**Plans**: 3 plans
+- [x] 10-01 -- billing command module + init wizard
+- [x] 10-02 -- billing config + billing status
+- [x] 10-03 -- connect auto-wrap with billing
 
-Plans:
-- [x] 10-01-PLAN.md -- billing command module + init wizard (CLIBILL-01, D-01/D-02/D-03)
-- [x] 10-02-PLAN.md -- billing config + billing status (CLIBILL-02, CLIBILL-03, D-04/D-05)
-- [x] 10-03-PLAN.md -- connect auto-wrap with billing (CLIBILL-04, D-06)
+</details>
 
-### v3.0 AI Agent Skill Distribution (Planned)
-
-**Milestone Goal:** 为 Synapse Router 创建可分发的 AI Agent Skill，支持多通道安装（npm/skills add/GitHub URL），兼容主流 AI Agent 平台（Claude Code, Codex, Cursor, OpenClaw, Hermes 等）
+<details>
+<summary>✅ v3.0 AI Agent Skill Distribution (Phases 11-12) — SHIPPED 2026-05-21</summary>
 
 #### Phase 11: Skill 包创建与内容覆盖
-**Goal**: AI Agent 开发者可以通过 npm / GitHub URL 获取 Synapse Router Skill，项目根目录提供 skill.md 入口文件，主流 AI Agent 平台有对应配置格式
-**Depends on**: Phase 10
-**Requirements**: SKILLPKG-01, SKILLPKG-02, SKILLPKG-03, SKILLPKG-04, SKILLPKG-05, SKILLCOVER-01, SKILLCOVER-02, SKILLCOVER-03, SKILLCOVER-04, SKILLCOVER-05, SKILLGIT-01, SKILLGIT-02
-**Success Criteria** (what must be TRUE):
-  1. `@synapse-router/skill` npm 包发布到 npm registry，`skills/` 目录包含 claude-code/、cursor/、codex/、openclaw/、hermes/ 子目录，每个子目录有对应平台格式的配置文件
-  2. 项目根目录提供 skill.md 入口文件，内容完整覆盖 CLI 命令文档、Schema 协商模式、Provider 路由、Billing 集成和架构原则五大板块
-  3. 用户通过 GitHub raw URL 安装 skill 时，`skills add https://raw.githubusercontent.com/qise-tech/synapse-router/main/skill.md` 安装后 skill 内容完整可用
-  4. Claude Code 用户获取 skill.md 后可通过 "Skill" 子命令使用 CLI 补全、API 使用指南和架构上下文
-  5. Cursor 用户通过 .cursorrules 获得项目上下文和 AI 编码指导
-**Plans**: 4 plans in 2 waves
-
-Plans:
-- [x] 11-01-PLAN.md — Package scaffolding: package.json, tsconfig.json, skills/ directory structure (SKILLPKG-01, SKILLPKG-02)
-- [x] 11-02-PLAN.md — Enhanced CLAUDE.md with full content + root skill.md entry file (SKILLCOVER-01—05, SKILLGIT-02)
-- [x] 11-03-PLAN.md — Claude Code skill.md + Cursor .cursorrules platform files (SKILLPKG-03, SKILLPKG-04)
-- [x] 11-04-PLAN.md — Codex agent.yaml + OpenClaw/Hermes agent.md platform files (SKILLPKG-05, SKILLGIT-01)
+**Goal**: AI Agent 开发者可以通过 npm / GitHub URL 获取 Synapse Router Skill
+**Plans**: 4 plans
+- [x] 11-01 -- Package scaffolding + skills/ directory structure
+- [x] 11-02 -- Enhanced CLAUDE.md + root skill.md entry
+- [x] 11-03 -- Claude Code skill.md + Cursor .cursorrules
+- [x] 11-04 -- Codex/OpenClaw/Hermes agent config files
 
 #### Phase 12: Install CLI + 自动化分发
-**Goal**: 用户运行一条 npx 命令即可安装 Synapse Router Skill 到任何 AI Agent 平台，CI/CD 自动将新版本发布到 npm
-**Depends on**: Phase 11 (need skill package + content to install)
-**Requirements**: SKILLINSTALL-01, SKILLINSTALL-02, SKILLINSTALL-03, SKILLINSTALL-04, SKILLGIT-03
-**Success Criteria** (what must be TRUE):
-  1. 用户运行 `npx @synapse-router/install-skill` 后自动检测当前 AI Agent 环境（Claude Code / Cursor / Codex / OpenClaw / Hermes），安装 skill 到对应平台正确位置
-  2. 用户通过 `--platform` 标志跳过自动检测手动指定目标平台，通过 `--dir` 标志指定自定义安装路径
-  3. `--dry-run` 显示安装计划和目标位置但不执行写入，`--uninstall` 移除所有已安装的 skill 文件并清理已写入的目录
-  4. GitHub Actions CI/CD 在 tag 推送时自动构建并发布 `@synapse-router/skill` 和 `@synapse-router/install-skill` 包到 npm registry
+**Goal**: One-command install CLI with auto-detection and CI/CD publishing
 **Plans**: 2 plans
+- [x] 12-01 -- install-skill CLI package (platform detection, install/uninstall, backup/manifest)
+- [x] 12-02 -- CI/CD publish workflow (tag trigger, dual-package, GitHub Release)
 
-Plans:
-- [x] 12-01-PLAN.md — install-skill CLI 包：平台检测、安装/卸载、备份/清单管理 (SKILLINSTALL-01~04)
-- [x] 12-02-PLAN.md — CI/CD 发布工作流：tag 触发、双包发布、GitHub Release 自动生成 (SKILLGIT-03)
+</details>
 
 ## Progress
 
-**Execution Order:** Phase 2 -> Phase 3 -> Phase 4 -> Phase 5 -> Phase 6 -> Phase 7 -> Phase 8 -> Phase 9 -> Phase 10 -> Phase 11 -> Phase 12
+**Execution Order:** Phase 1 -> Phase 2 -> Phase 3 -> Phase 4 -> Phase 5 -> Phase 6 -> Phase 7 -> Phase 8 -> Phase 9 -> Phase 10 -> Phase 11 -> Phase 12
 
 | Phase | Milestone | Plans Complete | Status | Completed |
 |-------|-----------|----------------|--------|-----------|
@@ -252,11 +142,12 @@ Plans:
 | 5. Router as SDK Generator | v1.2 | 3/3 | Complete | 2026-05-09 |
 | 6. Local Evolution Engine | v2.0 | 4/4 | Complete | 2026-05-09 |
 | 7. Collaborative Evolution | v2.0 | 3/3 | Complete | 2026-05-09 |
-| 8. Connector Wrapper + FileQuotaStorage | v2.1 | 1/2 | In Progress|  |
-| 9. SDK Pricing Emission | v2.1 | 0/2 | Planned | - |
-| 10. CLI Billing Commands | v2.1 | 3/3 | Complete    | 2026-05-19 |
-| 11. Skill 包创建与内容覆盖 | v3.0 | 4/4 | Complete    | 2026-05-19 |
-| 12. Install CLI + 自动化分发 | v3.0 | 2/2 | Complete    | 2026-05-19 |
+| 8. Connector Wrapper + FileQuotaStorage | v2.1 | 2/2 | Complete | 2026-05-19 |
+| 9. SDK Pricing Emission | v2.1 | 2/2 | Complete | 2026-05-19 |
+| 10. CLI Billing Commands | v2.1 | 3/3 | Complete | 2026-05-19 |
+| 11. Skill 包创建与内容覆盖 | v3.0 | 4/4 | Complete | 2026-05-19 |
+| 12. Install CLI + 自动化分发 | v3.0 | 2/2 | Complete | 2026-05-21 |
+| 13. Documentation Site | v4.0 | 0/0 | Planned | - |
 
 ## Post-Roadmap Enhancement: Router Package Rewrite (2026-05-09)
 
@@ -270,12 +161,3 @@ After all 7 phases shipped, `packages/router/` was rewritten from a 45-line stub
 | Strategies | 3 (cheap/fast/quality) | 5 + custom |
 | CLI command | None | `synapse route <intent>` |
 | Evolve integration | None | `synapse evolve --tune` |
-
-### New CLI Commands
-- `synapse route <intent>` — Multi-dimensional routing with scoring transparency
-- `synapse evolve --tune` — Offline strategy weight tuning from production profiles
-
-### New router capabilities
-- `excludeProviders`, `region` (geographic match bonus), `minVersion` (model version filter)
-- `registerCustomStrategy()` API + config persistence via `synapse config set route.strategies.*`
-- Decision explanation (score breakdown, failover chain) in every route result

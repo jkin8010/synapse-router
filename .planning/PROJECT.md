@@ -14,16 +14,14 @@
 
 **"开发时协商，运行时无感"** — 协商阶段可以复杂、可以调用 LLM、可以探索，因为它是离线的、一次性的。运行时只有纯代码逻辑的 SDK，确定性、零 Token 成本、零 LLM 意外。
 
-## Current Milestone: v3.0 AI Agent Skill Distribution
+## Current Milestone: v4.0 Documentation & Playground
 
-**Goal:** 为 Synapse Router 创建可分发的 AI Agent Skill，支持多通道安装（npm/skills add/GitHub URL），兼容主流 AI Agent 平台
+**Goal:** 为开发者提供完整的文档站点和用户测试验证站点，提升开发者体验和项目可发现性。
 
 **Target features:**
-- `@synapse-router/skill` npm 包 — 标准的 Skill 包（含多平台格式）
-- `npx @synapse-router/install-skill` — 一键安装 CLI 工具
-- GitHub raw URL 安装支持
-- 兼容多 AI Agent 平台格式（Claude Code Skill, Cursor Rules, Codex Agent 等）
-- 自动检测当前 AI Agent 环境并安装到正确位置
+- `apps/docs/` — VitePress/Docusaurus 文档站点，覆盖 CLI 参考、Schema 协商、Provider 路由、Billing 集成
+- `apps/playground/` 增强 — 从基础调试界面升级为用户测试验证站点
+- 文档与代码版本绑定，CI/CD 自动构建发布
 
 ## Requirements
 
@@ -50,26 +48,18 @@
 - ✅ Claude Code skill.md + Cursor .cursorrules 平台配置 — v3.0 (Phase 11)
 - ✅ Codex agent.yaml + OpenClaw/Hermes agent.md 平台配置 — v3.0 (Phase 11)
 - ✅ skill.md GitHub raw URL 安装入口 — v3.0 (Phase 11)
+- ✅ `@synapse-router/install-skill` npm CLI (platform detection, install/uninstall, backup/manifest) — v3.0 (Phase 12)
+- ✅ GitHub Actions CI/CD 发布工作流 (tag 触发, 双包发布, GitHub Release auto-generation) — v3.0 (Phase 12)
 
 ### Active
 
-- [ ] 真实 Provider 冒烟测试 — v1.1 (Phase 4)
-- [ ] Web UI/Playground 可视化界面 — v1.1 (Phase 3)
-- [ ] E2E 端到端测试框架和关键路径 — v1.1 (Phase 2)
 - [ ] API 认证中间件
 - [ ] SDK 缓存优化
 - [ ] Registry `contract_verifications` 表和 API
-- [ ] `synapse evolve` 命令 — v1.2
-- [ ] 统一 Provider Pack 加载 — v1.2
-- [ ] `.synapse/` 运行时日志系统 — v2.0
-- [ ] `synapse watchdog` — v2.0
-- [ ] `synapse export` / `synapse import` — v2.0
-- [ ] Provider Profile 数据聚合 — v2.0
-- [ ] 协商记忆 (markdown) 系统 — v2.0
-- [ ] `synapse evolve` 规则更新 — v2.0
-- [ ] Registry Intelligence API 集成 — v2.0
-- [ ] 匿名遥测 (opt-in) — v2.0
-- [ ] Change-detector协作 — v2.0
+- [ ] 协商记忆 (markdown) 系统
+- [ ] 匿名遥测 (opt-in)
+- [ ] **文档站点 (apps/docs/)** — v4.0 (Phase 13)
+- [ ] **Playground 增强** — 升级为测试验证站点 — v4.0
 
 ### Out of Scope
 
@@ -79,11 +69,12 @@
 
 ## Context
 
-Shipped v1.0 with ~25,750 LOC TypeScript across 14 packages + 4 apps.
+Shipped v3.0 with 57,320 LOC TypeScript across 15 packages + 4 apps + 1 skill package.
 Tech stack: TypeScript 5.9+ strict, Node.js 22+, pnpm 10+ monorepo.
-14 packages: core, negotiator, providers, router, connector, lock, vault, pack-generator, sdk-generator, sdk, billing, observability, contract-mocker, registry-client.
+15 packages: core, negotiator, providers, router, connector, lock, vault, pack-generator, sdk-generator, sdk, billing, observability, contract-mocker, registry-client, install-skill.
 4 apps: cli, api, mcp-server, playground, comfy-node.
 ~430 tests passing across all packages.
+6 milestones shipped across 12 phases.
 
 ## Key Decisions
 
@@ -123,4 +114,4 @@ This document evolves at phase transitions and milestone boundaries.
 4. Update Context with current state
 
 ---
-*Last updated: 2026-05-19 — v2.1 Billing complete, v3.0 AI Agent Skill Distribution (Phase 11: content coverage complete)*
+*Last updated: 2026-05-21 — v3.0 AI Agent Skill Distribution completed and archived*
