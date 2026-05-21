@@ -67,6 +67,7 @@ const config: Config = {
       logo: {
         alt: 'Synapse Router',
         src: 'img/logo.svg',
+        srcDark: 'img/logo-dark.svg',
       },
       items: [
         {
