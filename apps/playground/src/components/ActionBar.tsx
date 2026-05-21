@@ -1,11 +1,12 @@
 import { useAppState } from "../context";
-import useNegotiate from "../hooks/useNegotiate";
-import useExecute from "../hooks/useExecute";
 
-export default function ActionBar() {
-  const { schema, schemaValid, selectedProviderId, status, negotiationResult, timing } = useAppState();
-  const { negotiate } = useNegotiate();
-  const { execute } = useExecute();
+interface ActionBarProps {
+  onNegotiate: () => void;
+  onExecute: () => void;
+}
+
+export default function ActionBar({ onNegotiate, onExecute }: ActionBarProps) {
+  const { schemaValid, selectedProviderId, status, negotiationResult, timing } = useAppState();
 
   const isNegotiating = status === "negotiating";
   const isExecuting = status === "executing";
@@ -14,22 +15,37 @@ export default function ActionBar() {
   const executeDisabled = !negotiationResult || isExecuting || isNegotiating;
   const mockTestDisabled = !schemaValid;
 
-  const handleNegotiate = () => {
-    if (negotiateDisabled) return;
-    negotiate(schema, selectedProviderId!);
-  };
+  // Disabled reason strings for tooltip display (D-15-09)
+  const negotiateDisabledReason = !schemaValid
+    ? "Schema is invalid -- fix JSON errors first"
+    : !selectedProviderId
+      ? "No provider selected -- choose a provider from the left panel"
+      : isNegotiating
+        ? "Negotiation already in progress"
+        : isExecuting
+          ? "Cannot negotiate while executing"
+          : "";
 
-  const handleExecute = () => {
-    if (executeDisabled) return;
-    execute(selectedProviderId!);
-  };
+  const executeDisabledReason = !negotiationResult
+    ? "No negotiation result -- negotiate first"
+    : isExecuting
+      ? "Execution already in progress"
+      : isNegotiating
+        ? "Cannot execute while negotiating"
+        : "";
+
+  const mockTestDisabledReason = !schemaValid
+    ? "Schema is invalid -- fix JSON errors first"
+    : "";
 
   return (
     <div className="flex items-center gap-2 px-3 py-2 border-t border-gray-700/50">
       {/* Negotiate button */}
       <button
         disabled={negotiateDisabled}
-        onClick={handleNegotiate}
+        onClick={onNegotiate}
+        title={negotiateDisabled ? negotiateDisabledReason : "Negotiate schema with selected provider"}
+        aria-label={negotiateDisabled ? negotiateDisabledReason : "Negotiate schema with selected provider"}
         className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md text-sm font-medium transition-colors duration-150 ${
           !negotiateDisabled
             ? "bg-blue-600 text-white hover:bg-blue-500"
@@ -59,12 +75,15 @@ export default function ActionBar() {
           </svg>
         )}
         {isNegotiating ? "Negotiating..." : "Negotiate"}
+        {!isNegotiating && <kbd className="ml-1">{"⌘↩"}</kbd>}
       </button>
 
       {/* Execute button */}
       <button
         disabled={executeDisabled}
-        onClick={handleExecute}
+        onClick={onExecute}
+        title={executeDisabled ? executeDisabledReason : "Execute the negotiated request"}
+        aria-label={executeDisabled ? executeDisabledReason : "Execute the negotiated request"}
         className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md text-sm font-medium transition-colors duration-150 ${
           !executeDisabled
             ? "bg-gray-800 text-gray-300 hover:bg-gray-700 hover:text-gray-100"
@@ -94,11 +113,14 @@ export default function ActionBar() {
           </svg>
         )}
         {isExecuting ? "Executing..." : "Execute"}
+        {!isExecuting && <kbd className="ml-1">{"⌘⇧⏎"}</kbd>}
       </button>
 
       {/* Mock Test button */}
       <button
         disabled={mockTestDisabled}
+        title={mockTestDisabled ? mockTestDisabledReason : "Run mock test against the schema"}
+        aria-label={mockTestDisabled ? mockTestDisabledReason : "Run mock test against the schema"}
         className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md text-sm font-medium transition-colors duration-150 ${
           !mockTestDisabled
             ? "bg-gray-800 text-gray-300 hover:bg-gray-700 hover:text-gray-100"
