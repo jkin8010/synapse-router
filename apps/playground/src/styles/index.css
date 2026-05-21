@@ -2,10 +2,83 @@
 
 @theme {
   --color-gray-850: #1a1d24;
+  --breakpoint-xl: 1440px;
 }
 
 @custom-variant dark (&:where(.dark, .dark *));
 
 body {
   margin: 0;
+}
+
+/* ── Playground Responsive Grid ─────────────────────────────────── */
+
+/*
+ * >1440px: 3-column + draggable dividers (JS-controlled inline style)
+ * No CSS override needed — the default gridTemplateColumns from JS applies.
+ */
+
+/*
+ * 1024-1440px: left collapsed to 48px bar, right fixed 280px, dividers hidden.
+ * Override JS inline gridTemplateColumns via CSS custom properties set by this query.
+ */
+@media (width < 1440px) {
+  .playground-grid {
+    /* Override inline gridTemplateColumns via !important at this breakpoint */
+    grid-template-columns: 48px 0px 1fr 0px 280px !important;
+  }
+  .playground-grid .playground-divider {
+    display: none;
+  }
+  /* Collapsed sidebar: 48px wide, flex-col, no overflow-x */
+  .playground-sidebar-collapsed {
+    width: 48px;
+    min-width: 48px;
+    overflow-x: hidden;
+  }
+}
+
+/*
+ * <1024px: single column stack with tab panel switching.
+ * Panels shown/hidden via React state (activePanel), not CSS.
+ */
+@media (width < 1024px) {
+  .playground-grid {
+    grid-template-columns: 1fr !important;
+  }
+  .playground-grid .playground-divider {
+    display: none;
+  }
+  /* Mobile tab bar: show at top of screen */
+  .playground-mobile-tabs {
+    display: flex;
+  }
+  .playground-panel-hidden {
+    display: none;
+  }
+}
+
+/* ── Keyboard shortcut hints ─────────────────────────────────────── */
+
+kbd {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0 0.25rem;
+  min-width: 1.25rem;
+  height: 1.125rem;
+  font-size: 0.625rem;
+  font-family: inherit;
+  color: rgb(156 163 175); /* text-gray-400 */
+  background: rgb(55 65 81); /* bg-gray-700 */
+  border: 1px solid rgb(75 85 99); /* border-gray-600 */
+  border-radius: 0.25rem;
+  line-height: 1;
+}
+
+/* Slightly lighter kbd inside active (non-disabled) buttons */
+button:not([disabled]) kbd {
+  color: rgb(209 213 219); /* text-gray-300 */
+  background: rgba(255 255 255 / 0.1);
+  border-color: rgba(255 255 255 / 0.15);
 }
