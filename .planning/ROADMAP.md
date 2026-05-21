@@ -8,7 +8,7 @@
 - ✅ **v2.0 Offline Evolution** — Phases 6-7 (shipped)
 - ✅ **v2.1 Billing Integration** — Phases 8-10 (shipped 2026-05-19)
 - ✅ **v3.0 AI Agent Skill Distribution** — Phases 11-12 (shipped 2026-05-21)
-- 📋 **v4.0 Documentation Site** — Phase 13 (planned)
+- 📋 **v4.0 Documentation & Playground** — Phases 13-15 (planned)
 
 ## Phase Details
 
@@ -129,9 +129,45 @@ Plans:
 
 </details>
 
+### Phase 13: Docs Scaffold + Playground Infra
+**Goal**: Docusaurus docs site skeleton is operational and playground API calls no longer hardcode localhost
+**Depends on**: Nothing (first phase of v4.0)
+**Requirements**: INFRA-01, INFRA-02, INFRA-03
+**Success Criteria** (what must be TRUE):
+  1. Developer can run `pnpm build:docs` and see a functioning Docusaurus v3 site at `apps/docs/` with default homepage and sidebar
+  2. Running `pnpm build` does not trigger Docusaurus build (no webpack/Vite conflict with main pipeline)
+  3. Playground API calls use relative `/api` prefix and work through Vite proxy in both dev and production
+  4. Docs site is registered in pnpm workspace as `@synapse-router/docs` (private) and imports resolve correctly
+**Plans**: TBD
+
+### Phase 14: Documentation Site Content
+**Goal**: Developers can read Getting Started guide and complete CLI command reference on the docs site
+**Depends on**: Phase 13 (Docusaurus scaffold required before adding content)
+**Requirements**: DCOC-01, DCOC-02
+**Success Criteria** (what must be TRUE):
+  1. Visitor can read a "Getting Started" page covering installation, first configuration, and first `synapse connect` call
+  2. Visitor can browse a complete CLI command reference with all commands, parameter tables, and examples
+  3. All pages are navigable via Docusaurus sidebar and render correctly on mobile viewports
+**Plans**: TBD
+
+### Phase 15: Playground Core UI Upgrade
+**Goal**: Playground is usable on any screen size, with key status visibility and workflow-enhancing interactions
+**Depends on**: Phase 13 (Vite proxy fix required before UI enhancements)
+**Requirements**: PLAY-01, PLAY-02, PLAY-03, PLAY-04, PLAY-05
+**Success Criteria** (what must be TRUE):
+  1. User sees responsive layout adapting correctly at >1440px (3-column), 1024-1440px (collapsible sidebar), and <1024px (stacked tabs)
+  2. User can open Add Pack dialog, search for Provider Packs, and select one to install
+  3. Each Provider card shows a clear key status indicator ("configured" / "no key")
+  4. Hovering over a disabled action button shows a tooltip explaining why it is unavailable
+  5. User can use Cmd+Enter to execute a request and Cmd+Shift+Enter to trigger negotiation
+**Plans**: TBD
+**UI hint**: yes
+
+**Note:** Phases 14 and 15 are independent of each other and can be partially parallelized.
+
 ## Progress
 
-**Execution Order:** Phase 1 -> Phase 2 -> Phase 3 -> Phase 4 -> Phase 5 -> Phase 6 -> Phase 7 -> Phase 8 -> Phase 9 -> Phase 10 -> Phase 11 -> Phase 12
+**Execution Order:** Phase 1 -> Phase 2 -> Phase 3 -> Phase 4 -> Phase 5 -> Phase 6 -> Phase 7 -> Phase 8 -> Phase 9 -> Phase 10 -> Phase 11 -> Phase 12 -> Phase 13 -> Phase 14 -> Phase 15
 
 | Phase | Milestone | Plans Complete | Status | Completed |
 |-------|-----------|----------------|--------|-----------|
@@ -147,7 +183,9 @@ Plans:
 | 10. CLI Billing Commands | v2.1 | 3/3 | Complete | 2026-05-19 |
 | 11. Skill 包创建与内容覆盖 | v3.0 | 4/4 | Complete | 2026-05-19 |
 | 12. Install CLI + 自动化分发 | v3.0 | 2/2 | Complete | 2026-05-21 |
-| 13. Documentation Site | v4.0 | 0/0 | Planned | - |
+| 13. Docs Scaffold + Playground Infra | v4.0 | 0/0 | Planned | - |
+| 14. Documentation Site Content | v4.0 | 0/0 | Planned | - |
+| 15. Playground Core UI Upgrade | v4.0 | 0/0 | Planned | - |
 
 ## Post-Roadmap Enhancement: Router Package Rewrite (2026-05-09)
 
