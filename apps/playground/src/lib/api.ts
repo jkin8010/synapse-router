@@ -59,5 +59,21 @@ export function createApiClient(config: ApiConfig = { baseUrl: "/api" }) {
     return res.json();
   }
 
-  return { getProviders, negotiate, execute };
+  async function searchPacks(query: string) {
+    const res = await fetch(`${config.baseUrl}/packs?q=${encodeURIComponent(query)}`);
+    if (!res.ok) throw new ApiError("Failed to search packs", res.status);
+    return res.json();
+  }
+
+  async function installPack(packId: string) {
+    const res = await fetch(`${config.baseUrl}/packs/install`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ pack_id: packId }),
+    });
+    if (!res.ok) throw new ApiError("Failed to install pack", res.status, await res.json());
+    return res.json();
+  }
+
+  return { getProviders, negotiate, execute, searchPacks, installPack };
 }
