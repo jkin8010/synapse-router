@@ -98,6 +98,8 @@ export interface InstallOptions {
   force?: boolean;
   version?: string;
   registryUrl?: string;
+  /** Custom install directory — defaults to ~/.synapse/packs/ */
+  installDir?: string;
 }
 
 export interface InstallResult {
@@ -105,9 +107,11 @@ export interface InstallResult {
   ns: string;
   name: string;
   version: string;
-  source: "registry" | "builtin";
+  source: "registry" | "builtin" | "local";
   features?: Array<{ id: string; intent: string; name: string }>;
   error?: string;
+  /** Set when source is "local" — where the pack was installed */
+  installDir?: string;
 }
 
 export interface ListPackItem {

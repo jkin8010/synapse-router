@@ -340,7 +340,7 @@ async function loadAllProviders(): Promise<Map<string, ProviderEntry>> {
 
   const builtinDir = await findPacksDir().catch(() => join(process.cwd(), "packs"));
   const registryDir = join(homedir(), ".synapse", "packs");
-  const localDir = join(process.cwd(), "synapse-packs");
+  const localDir = join(process.cwd(), ".synapse", "packs");
 
   // Priority low to high: builtin < registry < local
   for (const entry of await loadProvidersFromDir(builtinDir)) {

@@ -1,6 +1,6 @@
 # Synapse Router — Codex Agent Configuration
 # This file provides CLI command templates and project context for Codex.
-# Reference: https://github.com/qise-tech/synapse-router
+# Reference: https://github.com/useeclaw/synapse-router
 
 name: synapse-router
 description: >
@@ -9,7 +9,7 @@ description: >
   execution. Core philosophy: "negotiate at dev time, zero-overhead at runtime."
 
 version: "0.1.0"
-repository: https://github.com/qise-tech/synapse-router
+repository: https://github.com/useeclaw/synapse-router
 
 commands:
   connect:

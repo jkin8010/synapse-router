@@ -117,7 +117,7 @@ export async function handlePackCommand(
 
   switch (subcommand) {
     case "add":
-      await handlePackAdd(args.slice(1));
+      await handlePackAdd(args.slice(1), flags);
       break;
     case "search":
       await handlePackSearch(args.slice(1));
@@ -144,13 +144,16 @@ export async function handlePackCommand(
   }
 }
 
-async function handlePackAdd(args: string[]): Promise<void> {
+async function handlePackAdd(args: string[], flags?: Set<string>): Promise<void> {
   const packRef = args[0];
+  const isLocal = flags?.has("local") ?? false;
+
   if (!packRef) {
     console.error("Error: pack name required");
-    console.error("Usage: synapse pack add <pack>");
+    console.error("Usage: synapse pack add <pack> [--local]");
     console.error("Examples:");
     console.error("  synapse pack add openai");
+    console.error("  synapse pack add openai --local");
     console.error("  synapse pack add @official/openai");
     console.error("  synapse pack add @official/openai@2.0.0");
     process.exit(1);
@@ -160,7 +163,8 @@ async function handlePackAdd(args: string[]): Promise<void> {
     const parsed = parsePackRef(packRef);
     console.log(`Searching for "${parsed.name}" in registry...`);
     const client = await createClient();
-    const result = await installPack(client, packRef);
+    const localDir = isLocal ? join(process.cwd(), ".synapse", "packs") : undefined;
+    const result = await installPack(client, packRef, localDir ? { installDir: localDir } : undefined);
 
     if (!result.success) {
       console.error(`Error: ${result.error ?? "Installation failed"}`);
@@ -169,10 +173,14 @@ async function handlePackAdd(args: string[]): Promise<void> {
 
     console.log(`Found: ${result.ns}/${result.name}@${result.version}`);
     console.log(`Downloading pack...`);
+    const dest = result.installDir ?? PACKS_DIR;
     console.log(
       `\n${result.ns}/${result.name}@${result.version} installed successfully!`,
     );
-    console.log(`   Location: ${join(PACKS_DIR, `${result.ns}__${result.name}`)}`);
+    console.log(`   Location: ${join(dest, `${result.ns}__${result.name}`)}`);
+    if (isLocal) {
+      console.log(`   Type:     local (.synapse/packs/)`);
+    }
   } catch (err: unknown) {
     const message = err instanceof Error ? err.message : "Unknown error";
     console.error(`Error: ${message}`);
@@ -490,6 +498,7 @@ Arguments:
 
 Options:
   --yes                    Skip confirmation prompts (non-interactive)
+  --local                  Install to current project (.synapse/packs/) instead of ~/.synapse/packs/
 
 Examples:
   synapse pack add openai

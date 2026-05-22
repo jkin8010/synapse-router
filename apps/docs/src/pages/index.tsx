@@ -1,11 +1,11 @@
-import type {ReactNode} from 'react';
+import type { ReactNode } from 'react';
 import Link from '@docusaurus/Link';
 import useDocusaurusContext from '@docusaurus/useDocusaurusContext';
 import Translate from '@docusaurus/Translate';
 import Layout from '@theme/Layout';
 
 export default function Home(): ReactNode {
-  const {siteConfig} = useDocusaurusContext();
+  const { siteConfig } = useDocusaurusContext();
   return (
     <Layout
       title={siteConfig.title}
@@ -52,7 +52,7 @@ export default function Home(): ReactNode {
             </Link>
             <Link
               className="synapse-button"
-              to="https://github.com/qise-tech/synapse-router">
+              to="https://github.com/useeclaw/synapse-router">
               <Translate>View on GitHub</Translate>
             </Link>
           </div>

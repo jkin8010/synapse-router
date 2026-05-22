@@ -6,6 +6,7 @@
 import { readFile, writeFile, mkdir, stat, rm } from "node:fs/promises";
 import { join } from "node:path";
 import { homedir } from "node:os";
+import { tmpdir } from "node:os";
 import { execSync } from "node:child_process";
 
 import type { RegistryClient } from "./client.js";
@@ -85,7 +86,7 @@ function parsePackRef(
 export async function installPack(
   client: RegistryClient,
   packRef: string,
-  _opts?: InstallOptions,
+  opts?: InstallOptions,
 ): Promise<InstallResult> {
   const { ns, name, version } = parsePackRef(packRef);
 
@@ -114,16 +115,16 @@ export async function installPack(
     version,
   );
 
-  // Namespaced directory: aliyun/qwen-image → packs/aliyun__qwen-image/
+  // Namespaced directory: aliyun/qwen-image → installDir/aliyun__qwen-image/
+  const baseDir = opts?.installDir ?? PACKS_DIR;
   const packDirName = `${match.ns}__${name}`;
-  const packDir = join(PACKS_DIR, packDirName);
+  const packDir = join(baseDir, packDirName);
   await mkdir(packDir, { recursive: true });
 
+  const isLocal = opts?.installDir !== undefined;
   try {
-    const tmpFile = join(
-      SYNAPSE_DIR,
-      `pack-${name}-${resolvedVersion}.tgz`,
-    );
+    const tmpDir = isLocal ? tmpdir() : SYNAPSE_DIR;
+    const tmpFile = join(tmpDir, `pack-${name}-${resolvedVersion}.tgz`);
     await writeFile(tmpFile, buffer);
 
     execSync(
@@ -161,26 +162,29 @@ export async function installPack(
     );
   }
 
-  // Record in manifest (namespaced key: "aliyun/qwen-image")
-  const manifest = await loadManifest();
-  const manifestKey = `${match.ns}/${name}`;
-  manifest.packs[manifestKey] = {
-    id: `${match.ns}/${name}`,
-    ns: match.ns,
-    name,
-    version: resolvedVersion,
-    installed_at: new Date().toISOString(),
-    source: "registry",
-    checksum,
-  };
-  await saveManifest(manifest);
+  // Record in manifest (skip for local installs — no global manifest)
+  if (!isLocal) {
+    const manifest = await loadManifest();
+    const manifestKey = `${match.ns}/${name}`;
+    manifest.packs[manifestKey] = {
+      id: `${match.ns}/${name}`,
+      ns: match.ns,
+      name,
+      version: resolvedVersion,
+      installed_at: new Date().toISOString(),
+      source: "registry",
+      checksum,
+    };
+    await saveManifest(manifest);
+  }
 
   return {
     success: true,
     ns: match.ns,
     name,
     version: resolvedVersion,
-    source: "registry",
+    source: isLocal ? "local" : "registry",
+    installDir: isLocal ? baseDir : undefined,
   };
 }
 

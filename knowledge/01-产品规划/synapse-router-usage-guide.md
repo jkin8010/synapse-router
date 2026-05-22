@@ -176,7 +176,7 @@ synapse sdk generate --pack openai --lang typescript \
 ## 9. 开发者本地调试
 
 ```bash
-cd ~/workspace/qise-tech/synapse-router
+cd ~/workspace/useeclaw/synapse-router
 pnpm install && pnpm build
 pnpm test
 

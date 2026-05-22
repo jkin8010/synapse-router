@@ -60,6 +60,7 @@ async function loadConfig(): Promise<SynapseConfig> {
 // ---------------------------------------------------------------------------
 
 const USER_PACKS_DIR = join(homedir(), ".synapse", "packs");
+const LOCAL_PACKS_DIR = () => join(process.cwd(), ".synapse", "packs");
 
 async function findPacksDir(): Promise<string> {
   // Same logic as the main index.ts findPacksDir — resolve relative to script location
@@ -104,8 +105,8 @@ interface ProviderCard {
 }
 
 async function loadProviderCard(packsDir: string, providerId: string): Promise<ProviderCard | null> {
-  // Search project packs/ first, then ~/.synapse/packs/ (registry-installed)
-  for (const dir of [packsDir, USER_PACKS_DIR]) {
+  // Search priority: built-in packs/ > local ./synapse-packs/ > ~/.synapse/packs/
+  for (const dir of [packsDir, LOCAL_PACKS_DIR(), USER_PACKS_DIR]) {
     // Try namespaced format: "aliyun/qwen-image" → dir/aliyun__qwen-image/
     if (providerId.includes("/")) {
       const nsDirName = providerId.replace("/", "__");
@@ -201,8 +202,8 @@ async function listAvailableProviders(packsDir: string): Promise<Array<{ id: str
   const { readdir } = await import("node:fs/promises");
   const providers: Array<{ id: string; name: string }> = [];
   const seen = new Set<string>();
-  // Scan both project packs/ and ~/.synapse/packs/ (registry-installed)
-  for (const dir of [packsDir, USER_PACKS_DIR]) {
+  // Scan built-in packs/, local ./synapse-packs/, and ~/.synapse/packs/ (registry-installed)
+  for (const dir of [packsDir, LOCAL_PACKS_DIR(), USER_PACKS_DIR]) {
     try {
       const entries = await readdir(dir, { withFileTypes: true });
       for (const entry of entries) {
@@ -693,22 +694,26 @@ export async function handleConnectCommand(argv: string[]): Promise<void> {
   let dslEndpoint: string | undefined;
   if (cardDir) {
     const dslDirName = cardDir.includes("/") ? cardDir.replace("/", "__") : cardDir;
-    const dslDir = join(USER_PACKS_DIR, dslDirName, "dsl");
-    try {
-      const { readdir } = await import("node:fs/promises");
-      const files = await readdir(dslDir);
-      for (const file of files) {
-        try {
-          const c = JSON.parse(await readFile(join(dslDir, file), "utf8"));
-          const ep = c.access_protocol?.endpoint;
-          if (typeof ep === "string") {
-            dslEndpoint = ep;
-            const matches = c.features?.some((f: any) => f.intent === lock?.intent);
-            if (matches) break;
-          }
-        } catch { /* skip */ }
-      }
-    } catch { /* no DSL dir */ }
+    // Search both local and user packs directories for DSL files
+    for (const baseDir of [LOCAL_PACKS_DIR(), USER_PACKS_DIR]) {
+      const dslDir = join(baseDir, dslDirName, "dsl");
+      try {
+        const { readdir } = await import("node:fs/promises");
+        const files = await readdir(dslDir);
+        for (const file of files) {
+          try {
+            const c = JSON.parse(await readFile(join(dslDir, file), "utf8"));
+            const ep = c.access_protocol?.endpoint;
+            if (typeof ep === "string") {
+              dslEndpoint = ep;
+              const matches = c.features?.some((f: any) => f.intent === lock?.intent);
+              if (matches) break;
+            }
+          } catch { /* skip */ }
+        }
+        if (dslEndpoint) break; // found it
+      } catch { /* no DSL dir in this location */ }
+    }
   }
 
   // Build connect params

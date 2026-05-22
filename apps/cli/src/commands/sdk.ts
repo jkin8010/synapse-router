@@ -4,7 +4,11 @@
 import { generateSdk } from "@synapse-router/sdk-generator";
 import { readFile } from "node:fs/promises";
 import { join, dirname, resolve, isAbsolute } from "node:path";
+import { homedir } from "node:os";
 import { fileURLToPath } from "node:url";
+
+const USER_PACKS_DIR = join(homedir(), ".synapse", "packs");
+const LOCAL_PACKS_DIR = () => join(process.cwd(), ".synapse", "packs");
 
 // ---------------------------------------------------------------------------
 // Types
@@ -108,24 +112,30 @@ async function resolvePackDir(packId: string): Promise<string> {
     }
   }
 
-  // Otherwise, look in the project's packs/ directory
+  // Search priority: built-in packs/ > local ./synapse-packs/ > ~/.synapse/packs/
   const packsDir = await findPacksDir();
-  const dirname = packId.includes("/") ? packId.replace("/", "__") : packId;
-  const packDir = join(packsDir, dirname);
-  try {
-    await readFile(join(packDir, "provider-card.json"), "utf8");
-    return packDir;
-  } catch {
+  for (const baseDir of [packsDir, LOCAL_PACKS_DIR(), USER_PACKS_DIR]) {
+    // Try namespaced format: "aliyun/qwen-image-edit" → dir/aliyun__qwen-image-edit/
+    const dirname = packId.includes("/") ? packId.replace("/", "__") : packId;
+    const packDir = join(baseDir, dirname);
+    try {
+      await readFile(join(packDir, "provider-card.json"), "utf8");
+      return packDir;
+    } catch { /* try flat fallback */ }
+
     // Fallback: try flat format (backward compat)
     const flatName = packId.includes("/") ? packId.split("/")[1] : packId;
-    const flatDir = join(packsDir, flatName);
+    const flatDir = join(baseDir, flatName);
     try {
       await readFile(join(flatDir, "provider-card.json"), "utf8");
       return flatDir;
-    } catch {
-      throw new Error(`Pack "${packId}" not found in ${packsDir}. Available packs can be listed with: synapse provider list`);
-    }
+    } catch { /* try next dir */ }
   }
+
+  throw new Error(
+    `Pack "${packId}" not found in ${packsDir} or ${USER_PACKS_DIR}. ` +
+    `Install it first with: synapse pack add ${packId}`
+  );
 }
 
 // ---------------------------------------------------------------------------
