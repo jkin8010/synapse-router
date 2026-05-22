@@ -67,7 +67,7 @@ export default function ResponseViewer() {
             onClick={() => handleTabClick(tab.id)}
             className={
               activeTab === tab.id
-                ? "text-blue-400 border-b-2 border-blue-400 px-3 py-2 text-xs font-medium cursor-pointer"
+                ? "text-emerald-400 border-b-2 border-emerald-400 px-3 py-2 text-xs font-medium cursor-pointer"
                 : "text-zinc-400 hover:text-zinc-200 px-3 py-2 text-xs font-medium cursor-pointer"
             }
           >

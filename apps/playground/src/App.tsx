@@ -89,7 +89,7 @@ function AppContent() {
             onClick={() => dispatch({ type: "SET_ACTIVE_PANEL", panel })}
             className={`flex-1 py-2 text-xs font-medium transition-colors duration-150 ${
               activePanel === panel
-                ? "text-blue-400 border-b-2 border-blue-400"
+                ? "text-emerald-400 border-b-2 border-emerald-400"
                 : "text-zinc-500 hover:text-zinc-300"
             }`}
           >
@@ -114,7 +114,7 @@ function AppContent() {
 
         {/* LEFT DIVIDER */}
         <div
-          className="cursor-col-resize bg-zinc-800 hover:bg-blue-500/30 transition-colors duration-150 playground-divider"
+          className="cursor-col-resize bg-zinc-800 hover:bg-emerald-500/20 transition-colors duration-150 playground-divider"
           onMouseDown={handleDividerMouseDown("left")}
         />
 
@@ -129,7 +129,7 @@ function AppContent() {
 
         {/* RIGHT DIVIDER */}
         <div
-          className="cursor-col-resize bg-zinc-800 hover:bg-blue-500/30 transition-colors duration-150 playground-divider"
+          className="cursor-col-resize bg-zinc-800 hover:bg-emerald-500/20 transition-colors duration-150 playground-divider"
           onMouseDown={handleDividerMouseDown("right")}
         />
 

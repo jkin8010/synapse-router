@@ -19,7 +19,7 @@ export default function TabLogs() {
   const levelClass = (level: string) => {
     switch (level) {
       case "info":
-        return "text-blue-400";
+        return "text-emerald-400";
       case "warn":
         return "text-yellow-400";
       case "error":

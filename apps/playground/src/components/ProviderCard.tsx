@@ -11,7 +11,7 @@ export default function ProviderCard({ card, isSelected, isConfigured, onSelect 
   const isClickable = isConfigured;
 
   const containerClass = isSelected
-    ? "bg-zinc-900 border border-blue-500 ring-1 ring-blue-500/30 rounded-lg p-3 cursor-pointer transition-colors duration-150"
+    ? "bg-zinc-900 border border-emerald-400 ring-1 ring-emerald-400/30 rounded-lg p-3 cursor-pointer transition-colors duration-150"
     : isClickable
       ? "bg-zinc-900 border border-zinc-700 rounded-lg p-3 cursor-pointer transition-colors duration-150"
       : "bg-zinc-900 border border-zinc-700 rounded-lg p-3 opacity-60 cursor-not-allowed";
@@ -27,7 +27,7 @@ export default function ProviderCard({ card, isSelected, isConfigured, onSelect 
       {/* Title row */}
       <div className="flex items-center gap-2 mb-1">
         <span
-          className={`w-2 h-2 rounded-full inline-block ${isSelected ? "bg-blue-500" : "bg-zinc-500"}`}
+          className={`w-2 h-2 rounded-full inline-block ${isSelected ? "bg-emerald-400" : "bg-zinc-500"}`}
         />
         <span className="text-sm font-medium text-zinc-100">{card.provider.name}</span>
       </div>

@@ -14,7 +14,7 @@ export default function StatusBar() {
       case "negotiating":
       case "executing":
       case "mock-testing":
-        return { color: "bg-blue-400 text-blue-400", label: status.charAt(0).toUpperCase() + status.slice(1) };
+        return { color: "bg-emerald-400 text-emerald-400", label: status.charAt(0).toUpperCase() + status.slice(1) };
       case "error":
         return { color: "bg-red-400 text-red-400", label: "Error" };
       default:

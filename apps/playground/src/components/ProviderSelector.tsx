@@ -110,7 +110,7 @@ export default function ProviderSelector({ collapsed = false, onToggleCollapse }
             </svg>
           </button>
 
-          {/* Provider dot indicators (D-15-04: bg-blue-500 selected, bg-zinc-500 others) */}
+          {/* Provider dot indicators (D-15-04: bg-emerald-400 selected, bg-zinc-500 others) */}
           <div className="flex flex-col items-center gap-2 flex-1 overflow-y-auto py-1">
             {providers.map((p) => (
               <button
@@ -122,7 +122,7 @@ export default function ProviderSelector({ collapsed = false, onToggleCollapse }
                 }}
                 title={p.provider.name}
                 className={`w-2.5 h-2.5 rounded-full shrink-0 transition-colors duration-150 ${
-                  selectedProviderId === p.provider.id ? "bg-blue-500" : "bg-zinc-500"
+                  selectedProviderId === p.provider.id ? "bg-emerald-400" : "bg-zinc-500"
                 }`}
               />
             ))}
@@ -131,7 +131,7 @@ export default function ProviderSelector({ collapsed = false, onToggleCollapse }
           {/* Add button at the bottom of collapsed bar */}
           <button
             onClick={() => setPackDialogOpen(true)}
-            className="text-zinc-400 hover:text-blue-400 p-1"
+            className="text-zinc-400 hover:text-emerald-400 p-1"
             title="Add Provider Pack"
           >
             <svg className="w-4 h-4" viewBox="0 0 20 20" fill="currentColor">
@@ -149,7 +149,7 @@ export default function ProviderSelector({ collapsed = false, onToggleCollapse }
             <div className="flex items-center gap-2">
               <button
                 onClick={() => setPackDialogOpen(true)}
-                className="text-xs text-blue-400 hover:text-blue-300"
+                className="text-xs text-emerald-400 hover:text-emerald-300"
               >
                 + Add
               </button>
@@ -191,7 +191,7 @@ export default function ProviderSelector({ collapsed = false, onToggleCollapse }
                     "https://api.example.com/v1"
                   }
                   className="flex-1 bg-zinc-800 border border-zinc-700 rounded px-2 py-1 text-xs text-zinc-300
-                             focus:border-blue-500 focus:outline-none placeholder-zinc-600"
+                             focus:border-emerald-400 focus:outline-none placeholder-zinc-600"
                 />
                 {selectedBaseUrl && (
                   <button
@@ -226,7 +226,7 @@ export default function ProviderSelector({ collapsed = false, onToggleCollapse }
                 Error: {error}
                 <button
                   onClick={fetchProviders}
-                  className="block mt-2 text-blue-400 hover:text-blue-300"
+                  className="block mt-2 text-emerald-400 hover:text-emerald-300"
                 >
                   Retry
                 </button>
@@ -234,7 +234,7 @@ export default function ProviderSelector({ collapsed = false, onToggleCollapse }
             ) : providers.length === 0 ? (
               <div className="text-sm text-zinc-400 p-2">
                 No providers found.{" "}
-                <a href="#" className="text-blue-400 hover:text-blue-300">
+                <a href="#" className="text-emerald-400 hover:text-emerald-300">
                   How to add a pack
                 </a>
               </div>
@@ -265,7 +265,7 @@ export default function ProviderSelector({ collapsed = false, onToggleCollapse }
             placeholder="Search packs..."
             autoFocus
             className="w-full bg-zinc-800 border border-zinc-700 rounded px-3 py-2 text-sm text-zinc-200
-                       focus:border-blue-500 focus:outline-none placeholder-zinc-500 mb-3"
+                       focus:border-emerald-400 focus:outline-none placeholder-zinc-500 mb-3"
           />
 
           <div className="max-h-64 overflow-y-auto space-y-2">
@@ -296,7 +296,7 @@ export default function ProviderSelector({ collapsed = false, onToggleCollapse }
                           ? "bg-green-800 text-green-300 cursor-default"
                           : status === "error"
                             ? "bg-red-800 text-red-300 hover:bg-red-700"
-                            : "bg-blue-600 text-white hover:bg-blue-500 disabled:opacity-50"
+                            : "bg-emerald-500 text-white hover:bg-emerald-400 disabled:opacity-50"
                       }`}
                     >
                       {status === "installing" ? "Installing..." : status === "installed" ? "Installed" : status === "error" ? "Retry" : "Install"}

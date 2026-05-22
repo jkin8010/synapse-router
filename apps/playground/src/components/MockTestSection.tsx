@@ -72,7 +72,7 @@ export default function MockTestSection() {
             onClick={handleRunMockTest}
             className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md text-sm font-medium transition-colors duration-150 ${
               !mockDisabled
-                ? "bg-blue-600 text-white hover:bg-blue-500"
+                ? "bg-emerald-500 text-white hover:bg-emerald-400"
                 : "bg-zinc-700 text-zinc-500"
             }`}
           >

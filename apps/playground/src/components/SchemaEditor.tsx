@@ -67,19 +67,19 @@ export default function SchemaEditor() {
         <div className="flex items-center gap-3">
           <button
             onClick={handleLoad}
-            className="text-xs text-blue-400 hover:text-blue-300"
+            className="text-xs text-emerald-400 hover:text-emerald-300"
           >
             [Load]
           </button>
           <button
             onClick={handleSave}
-            className="text-xs text-blue-400 hover:text-blue-300"
+            className="text-xs text-emerald-400 hover:text-emerald-300"
           >
             [Save]
           </button>
           <button
             onClick={handleClear}
-            className="text-xs text-blue-400 hover:text-blue-300"
+            className="text-xs text-emerald-400 hover:text-emerald-300"
           >
             [Clear]
           </button>
