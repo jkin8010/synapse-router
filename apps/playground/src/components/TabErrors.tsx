@@ -18,11 +18,11 @@ export default function TabErrors() {
           <div className="text-xs font-mono text-red-400 mb-1">
             {err.code}
           </div>
-          <div className="text-sm text-gray-200 mb-1">
+          <div className="text-sm text-zinc-200 mb-1">
             {err.message}
           </div>
           {err.details != null && (
-            <pre className="text-xs text-gray-400 mt-1 overflow-auto max-h-[100px]">
+            <pre className="text-xs text-zinc-400 mt-1 overflow-auto max-h-[100px]">
               {typeof err.details === "string"
                 ? err.details
                 : JSON.stringify(err.details, null, 2)}

@@ -5,7 +5,7 @@ export default function TabFormatted() {
 
   if (!negotiationResult) {
     return (
-      <div className="flex items-center justify-center h-full text-gray-500 text-sm">
+      <div className="flex items-center justify-center h-full text-zinc-500 text-sm">
         No response yet. Run Negotiate or Execute to see results.
       </div>
     );
@@ -28,22 +28,22 @@ export default function TabFormatted() {
               return (
                 <div
                   key={idx}
-                  className="bg-gray-850 border border-green-800/50 rounded-lg p-3"
+                  className="bg-zinc-900 border border-green-800/50 rounded-lg p-3"
                 >
                   <div className="flex gap-2">
-                    <span className="text-gray-400 text-sm min-w-[120px]">Feature</span>
-                    <span className="text-gray-100 text-sm">
+                    <span className="text-zinc-400 text-sm min-w-[120px]">Feature</span>
+                    <span className="text-zinc-100 text-sm">
                       {String(m.feature_name ?? m.feature_id ?? "-")}
                     </span>
                   </div>
                   <div className="flex gap-2">
-                    <span className="text-gray-400 text-sm min-w-[120px]">Intent</span>
-                    <span className="text-gray-100 text-sm">
+                    <span className="text-zinc-400 text-sm min-w-[120px]">Intent</span>
+                    <span className="text-zinc-100 text-sm">
                       {String(m.intent ?? "-")}
                     </span>
                   </div>
                   <div className="flex gap-2">
-                    <span className="text-gray-400 text-sm min-w-[120px]">Status</span>
+                    <span className="text-zinc-400 text-sm min-w-[120px]">Status</span>
                     <span className="text-green-400 text-sm">accepted</span>
                   </div>
                 </div>
@@ -65,22 +65,22 @@ export default function TabFormatted() {
               return (
                 <div
                   key={idx}
-                  className="bg-gray-850 border border-red-800/50 rounded-lg p-3"
+                  className="bg-zinc-900 border border-red-800/50 rounded-lg p-3"
                 >
                   <div className="flex gap-2">
-                    <span className="text-gray-400 text-sm min-w-[120px]">Feature</span>
-                    <span className="text-gray-100 text-sm">
+                    <span className="text-zinc-400 text-sm min-w-[120px]">Feature</span>
+                    <span className="text-zinc-100 text-sm">
                       {String(m.feature_name ?? m.feature_id ?? "-")}
                     </span>
                   </div>
                   <div className="flex gap-2">
-                    <span className="text-gray-400 text-sm min-w-[120px]">Intent</span>
-                    <span className="text-gray-100 text-sm">
+                    <span className="text-zinc-400 text-sm min-w-[120px]">Intent</span>
+                    <span className="text-zinc-100 text-sm">
                       {String(m.intent ?? "-")}
                     </span>
                   </div>
                   <div className="flex gap-2">
-                    <span className="text-gray-400 text-sm min-w-[120px]">Reason</span>
+                    <span className="text-zinc-400 text-sm min-w-[120px]">Reason</span>
                     <span className="text-red-400 text-sm">
                       {String(m.reason ?? m.error ?? "-")}
                     </span>
@@ -93,7 +93,7 @@ export default function TabFormatted() {
       )}
 
       {accepted.length === 0 && rejected.length === 0 && (
-        <div className="text-gray-500 text-sm">
+        <div className="text-zinc-500 text-sm">
           No matches found in negotiation result.
         </div>
       )}

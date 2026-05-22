@@ -39,7 +39,7 @@ export default function ActionBar({ onNegotiate, onExecute }: ActionBarProps) {
     : "";
 
   return (
-    <div className="flex items-center gap-2 px-3 py-2 border-t border-gray-700/50">
+    <div className="flex items-center gap-2 px-3 py-2 border-t border-zinc-700/50">
       {/* Negotiate button */}
       <button
         disabled={negotiateDisabled}
@@ -49,7 +49,7 @@ export default function ActionBar({ onNegotiate, onExecute }: ActionBarProps) {
         className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md text-sm font-medium transition-colors duration-150 ${
           !negotiateDisabled
             ? "bg-blue-600 text-white hover:bg-blue-500"
-            : "bg-gray-700 text-gray-500"
+            : "bg-zinc-700 text-zinc-500"
         }`}
       >
         {isNegotiating && (
@@ -86,7 +86,7 @@ export default function ActionBar({ onNegotiate, onExecute }: ActionBarProps) {
         aria-label={executeDisabled ? executeDisabledReason : "Execute the negotiated request"}
         className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md text-sm font-medium transition-colors duration-150 ${
           !executeDisabled
-            ? "bg-gray-800 text-gray-300 hover:bg-gray-700 hover:text-gray-100"
+            ? "bg-zinc-800 text-zinc-300 hover:bg-zinc-700 hover:text-zinc-100"
             : "opacity-50"
         }`}
       >
@@ -123,7 +123,7 @@ export default function ActionBar({ onNegotiate, onExecute }: ActionBarProps) {
         aria-label={mockTestDisabled ? mockTestDisabledReason : "Run mock test against the schema"}
         className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md text-sm font-medium transition-colors duration-150 ${
           !mockTestDisabled
-            ? "bg-gray-800 text-gray-300 hover:bg-gray-700 hover:text-gray-100"
+            ? "bg-zinc-800 text-zinc-300 hover:bg-zinc-700 hover:text-zinc-100"
             : "opacity-50"
         }`}
       >
@@ -132,7 +132,7 @@ export default function ActionBar({ onNegotiate, onExecute }: ActionBarProps) {
 
       {/* Timing display */}
       {timing.negotiate !== undefined && (
-        <span className="text-xs text-gray-500 ml-auto">
+        <span className="text-xs text-zinc-500 ml-auto">
           {`Negotiate: ${(timing.negotiate / 1000).toFixed(2)}s`}
         </span>
       )}

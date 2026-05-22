@@ -5,7 +5,7 @@ export default function TabLogs() {
 
   if (!logs || logs.length === 0) {
     return (
-      <div className="flex items-center justify-center h-full text-gray-500 text-sm">
+      <div className="flex items-center justify-center h-full text-zinc-500 text-sm">
         No logs generated yet.
       </div>
     );
@@ -25,7 +25,7 @@ export default function TabLogs() {
       case "error":
         return "text-red-400";
       default:
-        return "text-gray-400";
+        return "text-zinc-400";
     }
   };
 
@@ -33,13 +33,13 @@ export default function TabLogs() {
     <div className="space-y-1 font-mono text-sm">
       {logs.map((entry, idx) => (
         <div key={idx} className="flex gap-2">
-          <span className="text-xs text-gray-500 shrink-0">
+          <span className="text-xs text-zinc-500 shrink-0">
             {formatTime(entry.timestamp)}
           </span>
           <span className={`${levelClass(entry.level)} shrink-0`}>
             [{entry.level.toUpperCase()}]
           </span>
-          <span className="text-gray-300 break-words">
+          <span className="text-zinc-300 break-words">
             {entry.message}
           </span>
         </div>

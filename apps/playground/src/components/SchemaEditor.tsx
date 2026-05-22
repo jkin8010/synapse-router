@@ -61,7 +61,7 @@ export default function SchemaEditor() {
     <div className="h-full flex flex-col">
       {/* Header */}
       <div className="flex items-center justify-between mb-3">
-        <span className="text-xs font-semibold text-gray-400 uppercase tracking-wider">
+        <span className="text-xs font-semibold text-zinc-400 uppercase tracking-wider">
           SCHEMA EDITOR
         </span>
         <div className="flex items-center gap-3">
@@ -92,10 +92,10 @@ export default function SchemaEditor() {
 
         {/* Loading overlay */}
         {status === "negotiating" && (
-          <div className="absolute inset-0 bg-gray-950/60 flex items-center justify-center z-10">
-            <div className="flex items-center gap-2 text-sm text-gray-400">
+          <div className="absolute inset-0 bg-zinc-950/60 flex items-center justify-center z-10">
+            <div className="flex items-center gap-2 text-sm text-zinc-400">
               <svg
-                className="animate-spin h-4 w-4 text-gray-400"
+                className="animate-spin h-4 w-4 text-zinc-400"
                 xmlns="http://www.w3.org/2000/svg"
                 fill="none"
                 viewBox="0 0 24 24"

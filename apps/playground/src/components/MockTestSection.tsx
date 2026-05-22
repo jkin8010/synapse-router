@@ -43,16 +43,16 @@ export default function MockTestSection() {
   const result = mockTestResult;
 
   return (
-    <div className="border-t border-gray-700/50">
+    <div className="border-t border-zinc-700/50">
       {/* Header row - clickable to toggle */}
       <div
-        className="flex items-center justify-between px-3 py-2 cursor-pointer hover:bg-gray-800/50 transition-colors duration-150"
+        className="flex items-center justify-between px-3 py-2 cursor-pointer hover:bg-zinc-800/50 transition-colors duration-150"
         onClick={() => setIsExpanded(!isExpanded)}
       >
-        <span className="text-xs font-semibold text-gray-400 uppercase tracking-wider">
+        <span className="text-xs font-semibold text-zinc-400 uppercase tracking-wider">
           Mock Test
         </span>
-        <span className="text-xs text-gray-500 select-none">
+        <span className="text-xs text-zinc-500 select-none">
           {isExpanded ? "[-]" : "[+]"}
         </span>
       </div>
@@ -63,7 +63,7 @@ export default function MockTestSection() {
           {/* Mock Response Editor */}
           <div
             ref={editorRef}
-            className="min-h-[150px] border border-gray-700 rounded-lg overflow-hidden"
+            className="min-h-[150px] border border-zinc-700 rounded-lg overflow-hidden"
           />
 
           {/* Run Mock Test button */}
@@ -73,7 +73,7 @@ export default function MockTestSection() {
             className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md text-sm font-medium transition-colors duration-150 ${
               !mockDisabled
                 ? "bg-blue-600 text-white hover:bg-blue-500"
-                : "bg-gray-700 text-gray-500"
+                : "bg-zinc-700 text-zinc-500"
             }`}
           >
             {isTesting && (
@@ -103,7 +103,7 @@ export default function MockTestSection() {
 
           {/* Results area */}
           {result && (
-            <div className="bg-gray-850 border border-gray-700 rounded-lg p-3 space-y-1">
+            <div className="bg-zinc-900 border border-zinc-700 rounded-lg p-3 space-y-1">
               {/* Pass/Fail */}
               {result.passed ? (
                 <div className="flex items-center gap-2 text-green-400 text-sm">
@@ -142,21 +142,21 @@ export default function MockTestSection() {
               )}
 
               {/* Expected fields */}
-              <div className="text-gray-400 text-xs">
+              <div className="text-zinc-400 text-xs">
                 Expected: {result.expected.length > 0
                   ? result.expected.join(", ")
                   : "-"}
               </div>
 
               {/* Got fields */}
-              <div className="text-gray-300 text-xs">
+              <div className="text-zinc-300 text-xs">
                 Got: {result.got.length > 0
                   ? result.got.join(", ")
                   : "-"}
               </div>
 
               {/* Field coverage */}
-              <div className="text-gray-400 text-xs">
+              <div className="text-zinc-400 text-xs">
                 Fields mapped: {result.fieldCoverage}
               </div>
 

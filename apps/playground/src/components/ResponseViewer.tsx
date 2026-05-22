@@ -55,12 +55,12 @@ export default function ResponseViewer() {
   return (
     <div className="h-full flex flex-col">
       {/* Header */}
-      <div className="text-xs font-semibold text-gray-400 uppercase tracking-wider p-4 pb-0">
+      <div className="text-xs font-semibold text-zinc-400 uppercase tracking-wider p-4 pb-0">
         RESPONSE
       </div>
 
       {/* Tab bar */}
-      <div className="flex gap-0 border-b border-gray-700 px-4 mt-2">
+      <div className="flex gap-0 border-b border-zinc-700 px-4 mt-2">
         {visibleTabs.map((tab) => (
           <button
             key={tab.id}
@@ -68,7 +68,7 @@ export default function ResponseViewer() {
             className={
               activeTab === tab.id
                 ? "text-blue-400 border-b-2 border-blue-400 px-3 py-2 text-xs font-medium cursor-pointer"
-                : "text-gray-400 hover:text-gray-200 px-3 py-2 text-xs font-medium cursor-pointer"
+                : "text-zinc-400 hover:text-zinc-200 px-3 py-2 text-xs font-medium cursor-pointer"
             }
           >
             {tab.label}
@@ -82,7 +82,7 @@ export default function ResponseViewer() {
       </div>
 
       {/* Bottom info bar */}
-      <div className="text-xs text-gray-400 border-t border-gray-700 p-2 flex gap-4">
+      <div className="text-xs text-zinc-400 border-t border-zinc-700 p-2 flex gap-4">
         <span>Provider: {selectedProviderId || "-"}</span>
         <span>Status: {negotiationResult ? "200" : "-"}</span>
         <span>Duration: {timing.negotiate ? `${timing.negotiate}ms` : "-"}</span>

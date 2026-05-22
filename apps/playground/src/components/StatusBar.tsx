@@ -9,7 +9,7 @@ export default function StatusBar() {
   const statusDot = () => {
     switch (status) {
       case "idle":
-        return { color: "bg-gray-400 text-gray-400", label: "Idle" };
+        return { color: "bg-zinc-400 text-zinc-400", label: "Idle" };
       case "loading":
       case "negotiating":
       case "executing":
@@ -18,7 +18,7 @@ export default function StatusBar() {
       case "error":
         return { color: "bg-red-400 text-red-400", label: "Error" };
       default:
-        return { color: "bg-gray-400 text-gray-400", label: "Idle" };
+        return { color: "bg-zinc-400 text-zinc-400", label: "Idle" };
     }
   };
 
@@ -26,7 +26,7 @@ export default function StatusBar() {
   const isActive = ["negotiating", "executing", "mock-testing", "loading"].includes(status);
 
   return (
-    <div className="h-8 bg-gray-900 border-t border-gray-700/50 flex items-center justify-between px-4 text-xs text-gray-400">
+    <div className="h-8 bg-zinc-900 border-t border-zinc-700/50 flex items-center justify-between px-4 text-xs text-zinc-400">
       <div className="flex items-center gap-2">
         <span
           className={`w-2 h-2 rounded-full inline-block ${dot.color} ${isActive ? "animate-pulse" : ""}`}
@@ -36,7 +36,7 @@ export default function StatusBar() {
       <div className="flex items-center gap-2">
         <span>Provider: {selectedProviderId || "-"}</span>
         {totalCount > 0 && (
-          <span className="text-gray-500">
+          <span className="text-zinc-500">
             ({configuredCount}/{totalCount} configured)
           </span>
         )}

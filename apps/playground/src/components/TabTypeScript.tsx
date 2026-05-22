@@ -18,7 +18,7 @@ export default function TabTypeScript() {
 
   if (!negotiationResult) {
     return (
-      <div className="flex items-center justify-center h-full text-gray-500 text-sm">
+      <div className="flex items-center justify-center h-full text-zinc-500 text-sm">
         No schema lock available. Run Negotiate first to generate SDK code.
       </div>
     );

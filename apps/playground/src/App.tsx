@@ -82,7 +82,7 @@ function AppContent() {
   return (
     <div className="h-screen flex flex-col">
       {/* Mobile Tab Bar -- visible only at <1024px via .playground-mobile-tabs */}
-      <div className="hidden playground-mobile-tabs bg-gray-900 border-b border-gray-700/50">
+      <div className="hidden playground-mobile-tabs bg-zinc-900 border-b border-zinc-700/50">
         {(["providers", "schema", "response"] as const).map((panel) => (
           <button
             key={panel}
@@ -90,7 +90,7 @@ function AppContent() {
             className={`flex-1 py-2 text-xs font-medium transition-colors duration-150 ${
               activePanel === panel
                 ? "text-blue-400 border-b-2 border-blue-400"
-                : "text-gray-500 hover:text-gray-300"
+                : "text-zinc-500 hover:text-zinc-300"
             }`}
           >
             {panel === "providers" ? "Providers" : panel === "schema" ? "Schema" : "Response"}
@@ -105,7 +105,7 @@ function AppContent() {
         }}
       >
         {/* LEFT PANEL: Provider Selector */}
-        <div className={`bg-gray-950 overflow-hidden ${activePanel !== "providers" ? "playground-panel-hidden" : ""}`}>
+        <div className={`bg-zinc-950 overflow-hidden ${activePanel !== "providers" ? "playground-panel-hidden" : ""}`}>
           <ProviderSelector
             collapsed={sidebarCollapsed}
             onToggleCollapse={() => setSidebarCollapsed((c) => !c)}
@@ -114,12 +114,12 @@ function AppContent() {
 
         {/* LEFT DIVIDER */}
         <div
-          className="cursor-col-resize bg-gray-800 hover:bg-blue-500/30 transition-colors duration-150 playground-divider"
+          className="cursor-col-resize bg-zinc-800 hover:bg-blue-500/30 transition-colors duration-150 playground-divider"
           onMouseDown={handleDividerMouseDown("left")}
         />
 
         {/* CENTER PANEL: Schema Editor + Action Bar + Mock Test */}
-        <div className={`bg-gray-950 overflow-hidden flex flex-col ${activePanel !== "schema" ? "playground-panel-hidden" : ""}`}>
+        <div className={`bg-zinc-950 overflow-hidden flex flex-col ${activePanel !== "schema" ? "playground-panel-hidden" : ""}`}>
           <div className="flex-1 overflow-auto">
             <SchemaEditor />
           </div>
@@ -129,12 +129,12 @@ function AppContent() {
 
         {/* RIGHT DIVIDER */}
         <div
-          className="cursor-col-resize bg-gray-800 hover:bg-blue-500/30 transition-colors duration-150 playground-divider"
+          className="cursor-col-resize bg-zinc-800 hover:bg-blue-500/30 transition-colors duration-150 playground-divider"
           onMouseDown={handleDividerMouseDown("right")}
         />
 
         {/* RIGHT PANEL: Response Viewer */}
-        <div className={`bg-gray-950 overflow-hidden ${activePanel !== "response" ? "playground-panel-hidden" : ""}`}>
+        <div className={`bg-zinc-950 overflow-hidden ${activePanel !== "response" ? "playground-panel-hidden" : ""}`}>
           <ResponseViewer />
         </div>
       </div>

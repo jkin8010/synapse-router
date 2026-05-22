@@ -102,7 +102,7 @@ export default function ProviderSelector({ collapsed = false, onToggleCollapse }
           {/* Expand toggle */}
           <button
             onClick={onToggleCollapse}
-            className="text-gray-400 hover:text-gray-200 p-1"
+            className="text-zinc-400 hover:text-zinc-200 p-1"
             title="Expand sidebar"
           >
             <svg className="w-4 h-4" viewBox="0 0 20 20" fill="currentColor">
@@ -110,7 +110,7 @@ export default function ProviderSelector({ collapsed = false, onToggleCollapse }
             </svg>
           </button>
 
-          {/* Provider dot indicators (D-15-04: bg-blue-500 selected, bg-gray-500 others) */}
+          {/* Provider dot indicators (D-15-04: bg-blue-500 selected, bg-zinc-500 others) */}
           <div className="flex flex-col items-center gap-2 flex-1 overflow-y-auto py-1">
             {providers.map((p) => (
               <button
@@ -122,7 +122,7 @@ export default function ProviderSelector({ collapsed = false, onToggleCollapse }
                 }}
                 title={p.provider.name}
                 className={`w-2.5 h-2.5 rounded-full shrink-0 transition-colors duration-150 ${
-                  selectedProviderId === p.provider.id ? "bg-blue-500" : "bg-gray-500"
+                  selectedProviderId === p.provider.id ? "bg-blue-500" : "bg-zinc-500"
                 }`}
               />
             ))}
@@ -131,7 +131,7 @@ export default function ProviderSelector({ collapsed = false, onToggleCollapse }
           {/* Add button at the bottom of collapsed bar */}
           <button
             onClick={() => setPackDialogOpen(true)}
-            className="text-gray-400 hover:text-blue-400 p-1"
+            className="text-zinc-400 hover:text-blue-400 p-1"
             title="Add Provider Pack"
           >
             <svg className="w-4 h-4" viewBox="0 0 20 20" fill="currentColor">
@@ -143,7 +143,7 @@ export default function ProviderSelector({ collapsed = false, onToggleCollapse }
         <>
           {/* Header */}
           <div className="flex items-center justify-between mb-3">
-            <span className="text-xs font-semibold text-gray-400 uppercase tracking-wider">
+            <span className="text-xs font-semibold text-zinc-400 uppercase tracking-wider">
               PROVIDERS
             </span>
             <div className="flex items-center gap-2">
@@ -155,7 +155,7 @@ export default function ProviderSelector({ collapsed = false, onToggleCollapse }
               </button>
               <button
                 onClick={fetchProviders}
-                className="text-gray-400 hover:text-gray-100"
+                className="text-zinc-400 hover:text-zinc-100"
                 title="Refresh providers"
               >
                 <svg
@@ -178,7 +178,7 @@ export default function ProviderSelector({ collapsed = false, onToggleCollapse }
           {selectedProviderId && (
             <div className="px-0 pb-2">
               <div className="flex items-center gap-1.5">
-                <label className="text-xs text-gray-500 shrink-0">URL:</label>
+                <label className="text-xs text-zinc-500 shrink-0">URL:</label>
                 <input
                   type="text"
                   value={selectedBaseUrl ?? ""}
@@ -190,13 +190,13 @@ export default function ProviderSelector({ collapsed = false, onToggleCollapse }
                     providers.find((p) => p.provider.id === selectedProviderId)?.service?.base_url ??
                     "https://api.example.com/v1"
                   }
-                  className="flex-1 bg-gray-800 border border-gray-700 rounded px-2 py-1 text-xs text-gray-300
-                             focus:border-blue-500 focus:outline-none placeholder-gray-600"
+                  className="flex-1 bg-zinc-800 border border-zinc-700 rounded px-2 py-1 text-xs text-zinc-300
+                             focus:border-blue-500 focus:outline-none placeholder-zinc-600"
                 />
                 {selectedBaseUrl && (
                   <button
                     onClick={() => dispatch({ type: "SET_BASE_URL", baseUrl: null })}
-                    className="text-gray-500 hover:text-gray-300 shrink-0"
+                    className="text-zinc-500 hover:text-zinc-300 shrink-0"
                     title="Reset to default"
                   >
                     <svg className="w-3.5 h-3.5" viewBox="0 0 20 20" fill="currentColor">
@@ -209,7 +209,7 @@ export default function ProviderSelector({ collapsed = false, onToggleCollapse }
                   </button>
                 )}
               </div>
-              <p className="text-xs text-gray-600 mt-1">
+              <p className="text-xs text-zinc-600 mt-1">
                 Override the default base URL for this provider
               </p>
             </div>
@@ -219,7 +219,7 @@ export default function ProviderSelector({ collapsed = false, onToggleCollapse }
           <div className="overflow-y-auto flex-1 space-y-2">
             {loading ? (
               Array.from({ length: 3 }).map((_, i) => (
-                <div key={i} className="animate-pulse bg-gray-800 rounded-lg h-16" />
+                <div key={i} className="animate-pulse bg-zinc-800 rounded-lg h-16" />
               ))
             ) : error ? (
               <div className="text-sm text-red-400 p-2">
@@ -232,7 +232,7 @@ export default function ProviderSelector({ collapsed = false, onToggleCollapse }
                 </button>
               </div>
             ) : providers.length === 0 ? (
-              <div className="text-sm text-gray-400 p-2">
+              <div className="text-sm text-zinc-400 p-2">
                 No providers found.{" "}
                 <a href="#" className="text-blue-400 hover:text-blue-300">
                   How to add a pack
@@ -256,7 +256,7 @@ export default function ProviderSelector({ collapsed = false, onToggleCollapse }
       {/* Add Pack Dialog (rendered regardless of collapsed state) */}
       <Dialog isOpen={packDialogOpen} onClose={() => { setPackDialogOpen(false); setPackSearch(""); setPackResults([]); }}>
         <div className="p-4">
-          <h2 className="text-sm font-semibold text-gray-100 mb-3">Add Provider Pack</h2>
+          <h2 className="text-sm font-semibold text-zinc-100 mb-3">Add Provider Pack</h2>
 
           <input
             type="text"
@@ -264,28 +264,28 @@ export default function ProviderSelector({ collapsed = false, onToggleCollapse }
             onChange={(e) => setPackSearch(e.target.value)}
             placeholder="Search packs..."
             autoFocus
-            className="w-full bg-gray-800 border border-gray-700 rounded px-3 py-2 text-sm text-gray-200
-                       focus:border-blue-500 focus:outline-none placeholder-gray-500 mb-3"
+            className="w-full bg-zinc-800 border border-zinc-700 rounded px-3 py-2 text-sm text-zinc-200
+                       focus:border-blue-500 focus:outline-none placeholder-zinc-500 mb-3"
           />
 
           <div className="max-h-64 overflow-y-auto space-y-2">
             {packSearchLoading ? (
-              <p className="text-xs text-gray-500 py-4 text-center">Searching...</p>
+              <p className="text-xs text-zinc-500 py-4 text-center">Searching...</p>
             ) : packResults.length === 0 ? (
               packSearch.trim() ? (
-                <p className="text-xs text-gray-500 py-4 text-center">No packs found</p>
+                <p className="text-xs text-zinc-500 py-4 text-center">No packs found</p>
               ) : (
-                <p className="text-xs text-gray-500 py-4 text-center">Type to search for packs</p>
+                <p className="text-xs text-zinc-500 py-4 text-center">Type to search for packs</p>
               )
             ) : (
               packResults.map((pack) => {
                 const status = packInstallStatus[pack.id] || "idle";
                 return (
-                  <div key={pack.id} className="flex items-center justify-between bg-gray-800 rounded-lg p-3">
+                  <div key={pack.id} className="flex items-center justify-between bg-zinc-800 rounded-lg p-3">
                     <div className="min-w-0 flex-1">
-                      <p className="text-sm text-gray-200 truncate">{pack.name}</p>
+                      <p className="text-sm text-zinc-200 truncate">{pack.name}</p>
                       {pack.description && (
-                        <p className="text-xs text-gray-500 truncate">{pack.description}</p>
+                        <p className="text-xs text-zinc-500 truncate">{pack.description}</p>
                       )}
                     </div>
                     <button

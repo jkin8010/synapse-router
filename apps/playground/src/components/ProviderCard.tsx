@@ -11,10 +11,10 @@ export default function ProviderCard({ card, isSelected, isConfigured, onSelect 
   const isClickable = isConfigured;
 
   const containerClass = isSelected
-    ? "bg-gray-850 border border-blue-500 ring-1 ring-blue-500/30 rounded-lg p-3 cursor-pointer transition-colors duration-150"
+    ? "bg-zinc-900 border border-blue-500 ring-1 ring-blue-500/30 rounded-lg p-3 cursor-pointer transition-colors duration-150"
     : isClickable
-      ? "bg-gray-850 border border-gray-700 rounded-lg p-3 cursor-pointer transition-colors duration-150"
-      : "bg-gray-850 border border-gray-700 rounded-lg p-3 opacity-60 cursor-not-allowed";
+      ? "bg-zinc-900 border border-zinc-700 rounded-lg p-3 cursor-pointer transition-colors duration-150"
+      : "bg-zinc-900 border border-zinc-700 rounded-lg p-3 opacity-60 cursor-not-allowed";
 
   const handleClick = () => {
     if (isClickable) onSelect();
@@ -27,14 +27,14 @@ export default function ProviderCard({ card, isSelected, isConfigured, onSelect 
       {/* Title row */}
       <div className="flex items-center gap-2 mb-1">
         <span
-          className={`w-2 h-2 rounded-full inline-block ${isSelected ? "bg-blue-500" : "bg-gray-500"}`}
+          className={`w-2 h-2 rounded-full inline-block ${isSelected ? "bg-blue-500" : "bg-zinc-500"}`}
         />
-        <span className="text-sm font-medium text-gray-100">{card.provider.name}</span>
+        <span className="text-sm font-medium text-zinc-100">{card.provider.name}</span>
       </div>
 
       {/* Description */}
       {card.provider.description && (
-        <p className="text-xs text-gray-400 mb-2 truncate">{card.provider.description}</p>
+        <p className="text-xs text-zinc-400 mb-2 truncate">{card.provider.description}</p>
       )}
 
       {/* Feature badges */}
@@ -43,7 +43,7 @@ export default function ProviderCard({ card, isSelected, isConfigured, onSelect 
           {visibleFeatures.map((feature) => (
             <span
               key={feature.feature_id}
-              className="bg-gray-800 text-gray-300 text-xs rounded-md px-2 py-0.5"
+              className="bg-zinc-800 text-zinc-300 text-xs rounded-md px-2 py-0.5"
             >
               {feature.feature_name || feature.feature_id}
             </span>
@@ -52,12 +52,12 @@ export default function ProviderCard({ card, isSelected, isConfigured, onSelect 
       )}
 
       {/* Feature count */}
-      <p className="text-xs text-gray-500">{card.features.length} features</p>
+      <p className="text-xs text-zinc-500">{card.features.length} features</p>
 
       {/* base_url display */}
       {card.service?.base_url && (
-        <p className="text-xs text-gray-500 mt-0.5 truncate">
-          <span className="text-gray-600">URL: </span>
+        <p className="text-xs text-zinc-500 mt-0.5 truncate">
+          <span className="text-zinc-600">URL: </span>
           {card.service.base_url}
         </p>
       )}

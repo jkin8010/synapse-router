@@ -39,7 +39,7 @@ export default function ResizablePanel({ side, onResize }: ResizablePanelProps) 
 
   return (
     <div
-      className="cursor-col-resize bg-gray-800 hover:bg-blue-500/30 transition-colors duration-150"
+      className="cursor-col-resize bg-zinc-800 hover:bg-blue-500/30 transition-colors duration-150"
       style={{ width: "4px", height: "100%" }}
       onMouseDown={handleMouseDown}
     />
