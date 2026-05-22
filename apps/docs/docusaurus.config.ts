@@ -4,25 +4,24 @@ import type * as Preset from '@docusaurus/preset-classic';
 
 // This runs in Node.js - Don't use client-side code here (browser APIs, JSX...)
 
+// Synapse Registry URL — set REGISTRY_URL env var for production deployment
+// Dev default: http://localhost:3012, Prod: https://synrc.io
+const registryUrl = process.env.REGISTRY_URL || 'http://localhost:3012';
+
 const config: Config = {
   title: 'Synapse Router',
-  tagline: 'AI Agent 的受控 Schema 协商与多 Provider 路由层',
+  tagline: 'Controlled Schema Negotiation & Multi-Provider Routing for AI Agents',
   favicon: 'img/favicon.ico',
 
   // Future flags, see https://docusaurus.io/docs/api/docusaurus-config#future
-  future: {
-    v4: true,
-  },
 
   // Set the production url of your site here
-  url: 'https://qise-tech.github.io',
-  // Set the /<baseUrl>/ pathname under which your site is served
-  // For GitHub pages deployment, it is often '/<projectName>/'
-  baseUrl: '/synapse-router/',
+  url: 'https://synapse-router.com',
+  baseUrl: '/',
 
   // GitHub pages deployment config.
   // If you aren't using GitHub pages, you don't need these.
-  organizationName: 'qise-tech', // Usually your GitHub org/user name.
+  organizationName: 'useeclaw', // Usually your GitHub org/user name.
   projectName: 'synapse-router', // Usually your repo name.
 
   onBrokenLinks: 'warn',
@@ -32,7 +31,15 @@ const config: Config = {
   // may want to replace "en" with "zh-Hans".
   i18n: {
     defaultLocale: 'en',
-    locales: ['en'],
+    locales: ['en', 'zh-Hans'],
+    localeConfigs: {
+      en: {
+        label: 'English',
+      },
+      'zh-Hans': {
+        label: '简体中文',
+      },
+    },
   },
 
   presets: [
@@ -45,7 +52,7 @@ const config: Config = {
           // Please change this to your repo.
           // Remove this to remove the "edit this page" links.
           editUrl:
-            'https://github.com/qise-tech/synapse-router/edit/main/apps/docs/',
+            'https://github.com/useeclaw/synapse-router/edit/main/apps/docs/',
         },
         blog: false,
         theme: {
@@ -57,17 +64,17 @@ const config: Config = {
 
   themeConfig: {
     // Replace with your project's social card
-    image: 'img/docusaurus-social-card.jpg',
+    image: 'img/og-image.png',
     colorMode: {
       defaultMode: 'dark',
-      respectPrefersColorScheme: true,
+      disableSwitch: true,
+      respectPrefersColorScheme: false,
     },
     navbar: {
       title: 'Synapse Router',
       logo: {
         alt: 'Synapse Router',
-        src: 'img/logo.svg',
-        srcDark: 'img/logo-dark.svg',
+        src: 'img/logo-dark.png',
       },
       items: [
         {
@@ -86,7 +93,16 @@ const config: Config = {
           position: 'left',
         },
         {
-          href: 'https://github.com/qise-tech/synapse-router',
+          type: 'localeDropdown',
+          position: 'right',
+        },
+        {
+          href: registryUrl,
+          label: 'Registry',
+          position: 'right',
+        },
+        {
+          href: 'https://github.com/useeclaw/synapse-router',
           label: 'GitHub',
           position: 'right',
         },
@@ -116,13 +132,17 @@ const config: Config = {
           title: 'More',
           items: [
             {
+              label: 'Registry',
+              href: registryUrl,
+            },
+            {
               label: 'GitHub',
-              href: 'https://github.com/qise-tech/synapse-router',
+              href: 'https://github.com/useeclaw/synapse-router',
             },
           ],
         },
       ],
-      copyright: `Copyright © ${new Date().getFullYear()} Qise Tech. Built with Docusaurus.`,
+      copyright: `Copyright © ${new Date().getFullYear()} Synapse Router. Built with Docusaurus.`,
     },
     prism: {
       theme: prismThemes.github,

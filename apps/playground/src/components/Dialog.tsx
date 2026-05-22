@@ -28,7 +28,7 @@ export default function Dialog({ isOpen, onClose, children }: DialogProps) {
       ref={ref}
       onClose={onClose}
       onClick={handleBackdropClick}
-      className="fixed inset-0 z-50 m-auto bg-zinc-900 border border-zinc-700 rounded-lg text-zinc-100 open:flex flex-col backdrop:bg-black/60 min-w-[400px] max-w-[600px] p-0"
+      className="fixed inset-0 z-50 m-auto bg-zinc-900 border border-zinc-700 rounded-xl text-zinc-100 open:flex flex-col backdrop:bg-black/60 min-w-[400px] max-w-[600px] p-0"
     >
       {children}
     </dialog>

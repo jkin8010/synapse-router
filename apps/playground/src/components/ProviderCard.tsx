@@ -1,4 +1,5 @@
 import type { ProviderCard as ProviderCardType } from "../context";
+import { useI18n } from "../i18n/context";
 
 interface ProviderCardProps {
   card: ProviderCardType;
@@ -8,13 +9,14 @@ interface ProviderCardProps {
 }
 
 export default function ProviderCard({ card, isSelected, isConfigured, onSelect }: ProviderCardProps) {
+  const { t } = useI18n();
   const isClickable = isConfigured;
 
   const containerClass = isSelected
-    ? "bg-zinc-900 border border-emerald-400 ring-1 ring-emerald-400/30 rounded-lg p-3 cursor-pointer transition-colors duration-150"
+    ? "bg-zinc-900/50 border border-emerald-400 ring-1 ring-emerald-400/30 rounded-xl p-3 cursor-pointer transition-colors duration-150"
     : isClickable
-      ? "bg-zinc-900 border border-zinc-700 rounded-lg p-3 cursor-pointer transition-colors duration-150"
-      : "bg-zinc-900 border border-zinc-700 rounded-lg p-3 opacity-60 cursor-not-allowed";
+      ? "bg-zinc-900/50 border border-zinc-700 rounded-xl p-3 cursor-pointer transition-colors duration-150 hover:border-zinc-600"
+      : "bg-zinc-900/50 border border-zinc-700 rounded-xl p-3 opacity-60 cursor-not-allowed";
 
   const handleClick = () => {
     if (isClickable) onSelect();
@@ -52,7 +54,7 @@ export default function ProviderCard({ card, isSelected, isConfigured, onSelect 
       )}
 
       {/* Feature count */}
-      <p className="text-xs text-zinc-500">{card.features.length} features</p>
+      <p className="text-xs text-zinc-500">{card.features.length} {t("pack.features")}</p>
 
       {/* base_url display */}
       {card.service?.base_url && (
@@ -64,7 +66,7 @@ export default function ProviderCard({ card, isSelected, isConfigured, onSelect 
 
       {/* Not configured warning */}
       {!isConfigured && (
-        <p className="text-xs text-yellow-400 mt-1">(no key configured)</p>
+        <p className="text-xs text-yellow-400 mt-1">{t("pack.noKey")}</p>
       )}
     </div>
   );

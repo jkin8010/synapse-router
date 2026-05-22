@@ -1,6 +1,7 @@
 import { useRef, useCallback } from "react";
 import { useAppState, useDispatch } from "../context";
 import { useCodeMirror } from "../hooks/useCodeMirror";
+import { useI18n } from "../i18n/context";
 
 function tryParseJSON(str: string): boolean {
   try {
@@ -12,6 +13,7 @@ function tryParseJSON(str: string): boolean {
 }
 
 export default function SchemaEditor() {
+  const { t } = useI18n();
   const { schema, status } = useAppState();
   const dispatch = useDispatch();
   const divRef = useRef<HTMLDivElement>(null);
@@ -62,26 +64,26 @@ export default function SchemaEditor() {
       {/* Header */}
       <div className="flex items-center justify-between mb-3">
         <span className="text-xs font-semibold text-zinc-400 uppercase tracking-wider">
-          SCHEMA EDITOR
+          {t("schema.title")}
         </span>
         <div className="flex items-center gap-3">
           <button
             onClick={handleLoad}
             className="text-xs text-emerald-400 hover:text-emerald-300"
           >
-            [Load]
+            {t("schema.load")}
           </button>
           <button
             onClick={handleSave}
             className="text-xs text-emerald-400 hover:text-emerald-300"
           >
-            [Save]
+            {t("schema.save")}
           </button>
           <button
             onClick={handleClear}
             className="text-xs text-emerald-400 hover:text-emerald-300"
           >
-            [Clear]
+            {t("schema.clear")}
           </button>
         </div>
       </div>
@@ -114,7 +116,7 @@ export default function SchemaEditor() {
                   d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
                 />
               </svg>
-              Loading...
+              {t("schema.loading")}
             </div>
           </div>
         )}

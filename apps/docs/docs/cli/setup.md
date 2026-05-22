@@ -3,32 +3,32 @@ sidebar_position: 9
 title: synapse setup
 ---
 
-# synapse setup — 交互式初始化向导
+# synapse setup — Interactive Setup Wizard
 
-setup 命令启动交互式初始化向导（Interactive Setup Wizard），引导首次使用者完成 Provider 选择、API Key 配置和基础参数设置。适合新用户快速上手，无需记忆命令参数。
+The setup command launches an interactive setup wizard that guides first-time users through Provider selection, API Key configuration, and basic parameter setup. It is designed for new users to get started quickly without needing to memorize command arguments.
 
-## 使用方法 (Usage)
+## Usage
 
 ```bash
 synapse setup
 ```
 
-## 向导流程 (Wizard Flow)
+## Wizard Flow
 
 The interactive wizard guides through:
 
-1. **选择 Provider** — 从已安装的 Pack 列表中选择目标 Provider（如 `deepseek`, `openai`）
-2. **配置 API Key** — 输入 API Key，自动加密存储到 Vault（AES-256-GCM）
-3. **设置基础参数** — 配置默认 model、base URL、billing 策略等
-4. **确认配置** — 显示配置摘要并确认
+1. **Select Provider** — Choose a target Provider from the installed Packs list (e.g., `deepseek`, `openai`)
+2. **Configure API Key** — Enter an API Key, automatically encrypted and stored in the Vault (AES-256-GCM)
+3. **Set Basic Parameters** — Configure default model, base URL, billing strategy, etc.
+4. **Confirm Configuration** — Review and confirm the configuration summary
 
-## 示例 (Examples)
+## Examples
 
 Example 1 — Start setup wizard:
 
 ```bash
 synapse setup
-# 交互式提示:
+# Interactive prompts:
 # ? Select a provider: deepseek
 # ? Enter API Key: [hidden input]
 # ? Default model: deepseek-chat
@@ -42,7 +42,7 @@ Example 2 — After setup, verify with connect:
 synapse connect deepseek chat --input '{"messages":[{"role":"user","content":"Hello"}]}'
 ```
 
-## 相关命令 (Related Commands)
+## Related Commands
 
-- [synapse vault set](/docs/cli/vault) — 手动配置 API Key
-- [synapse config](/docs/cli/config) — 手动管理配置
+- [synapse vault set](/docs/cli/vault) — Manually configure API Keys
+- [synapse config](/docs/cli/config) — Manually manage configuration

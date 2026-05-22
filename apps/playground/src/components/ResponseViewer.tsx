@@ -1,4 +1,5 @@
 import { useAppState, useDispatch } from "../context";
+import { useI18n } from "../i18n/context";
 import TabFormatted from "./TabFormatted";
 import TabRawJson from "./TabRawJson";
 import TabLogs from "./TabLogs";
@@ -8,25 +9,26 @@ import TabPython from "./TabPython";
 
 interface TabDef {
   id: "formatted" | "raw" | "logs" | "errors" | "typescript" | "python";
-  label: string;
+  labelKey: string;
 }
 
 const ALL_TABS: TabDef[] = [
-  { id: "formatted", label: "Formatted" },
-  { id: "raw", label: "Raw JSON" },
-  { id: "logs", label: "Logs" },
-  { id: "errors", label: "Errors" },
-  { id: "typescript", label: "TypeScript SDK" },
-  { id: "python", label: "Python SDK" },
+  { id: "formatted", labelKey: "tab.formatted" },
+  { id: "raw", labelKey: "tab.raw" },
+  { id: "logs", labelKey: "tab.logs" },
+  { id: "errors", labelKey: "tab.errors" },
+  { id: "typescript", labelKey: "tab.typescript" },
+  { id: "python", labelKey: "tab.python" },
 ];
 
 export default function ResponseViewer() {
+  const { t } = useI18n();
   const { activeTab, negotiationResult, errors, selectedProviderId, timing } = useAppState();
   const dispatch = useDispatch();
 
   // Conditionally include errors tab only when errors exist
   const visibleTabs = errors.length === 0
-    ? ALL_TABS.filter((t) => t.id !== "errors")
+    ? ALL_TABS.filter((tab) => tab.id !== "errors")
     : ALL_TABS;
 
   const handleTabClick = (tabId: TabDef["id"]) => {
@@ -56,7 +58,7 @@ export default function ResponseViewer() {
     <div className="h-full flex flex-col">
       {/* Header */}
       <div className="text-xs font-semibold text-zinc-400 uppercase tracking-wider p-4 pb-0">
-        RESPONSE
+        {t("response.title")}
       </div>
 
       {/* Tab bar */}
@@ -71,7 +73,7 @@ export default function ResponseViewer() {
                 : "text-zinc-400 hover:text-zinc-200 px-3 py-2 text-xs font-medium cursor-pointer"
             }
           >
-            {tab.label}
+            {t(tab.labelKey)}
           </button>
         ))}
       </div>
@@ -83,9 +85,9 @@ export default function ResponseViewer() {
 
       {/* Bottom info bar */}
       <div className="text-xs text-zinc-400 border-t border-zinc-700 p-2 flex gap-4">
-        <span>Provider: {selectedProviderId || "-"}</span>
-        <span>Status: {negotiationResult ? "200" : "-"}</span>
-        <span>Duration: {timing.negotiate ? `${timing.negotiate}ms` : "-"}</span>
+        <span>{t("response.provider")}: {selectedProviderId || "-"}</span>
+        <span>{t("response.status")}: {negotiationResult ? "200" : "-"}</span>
+        <span>{t("response.duration")}: {timing.negotiate ? `${timing.negotiate}ms` : "-"}</span>
       </div>
     </div>
   );

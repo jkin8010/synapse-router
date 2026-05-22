@@ -13,7 +13,7 @@ import type {
   RegistryHealth,
 } from "./types.js";
 
-const DEFAULT_REGISTRY_URL = "https://registry.synapse-router.com";
+const DEFAULT_REGISTRY_URL = "https://registry.synrc.io";
 const DEFAULT_TIMEOUT = 10000;
 
 // ---------------------------------------------------------------------------

@@ -1,5 +1,6 @@
 import { useEffect, useState, useCallback } from "react";
 import { useAppState, useDispatch } from "../context";
+import { useI18n } from "../i18n/context";
 import ProviderCard from "./ProviderCard";
 import Dialog from "./Dialog";
 import { createApiClient } from "../lib/api";
@@ -10,6 +11,7 @@ interface ProviderSelectorProps {
 }
 
 export default function ProviderSelector({ collapsed = false, onToggleCollapse }: ProviderSelectorProps) {
+  const { t } = useI18n();
   const { providers, selectedProviderId, selectedBaseUrl } = useAppState();
   const dispatch = useDispatch();
   const [loading, setLoading] = useState(true);
@@ -103,7 +105,7 @@ export default function ProviderSelector({ collapsed = false, onToggleCollapse }
           <button
             onClick={onToggleCollapse}
             className="text-zinc-400 hover:text-zinc-200 p-1"
-            title="Expand sidebar"
+            title={t("sidebar.expand")}
           >
             <svg className="w-4 h-4" viewBox="0 0 20 20" fill="currentColor">
               <path fillRule="evenodd" d="M7.293 14.707a1 1 0 010-1.414L10.586 10 7.293 6.707a1 1 0 011.414-1.414l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414 0z" clipRule="evenodd" />
@@ -132,7 +134,7 @@ export default function ProviderSelector({ collapsed = false, onToggleCollapse }
           <button
             onClick={() => setPackDialogOpen(true)}
             className="text-zinc-400 hover:text-emerald-400 p-1"
-            title="Add Provider Pack"
+            title={t("dialog.addPack")}
           >
             <svg className="w-4 h-4" viewBox="0 0 20 20" fill="currentColor">
               <path fillRule="evenodd" d="M10 3a1 1 0 011 1v5h5a1 1 0 110 2h-5v5a1 1 0 11-2 0v-5H4a1 1 0 110-2h5V4a1 1 0 011-1z" clipRule="evenodd" />
@@ -144,19 +146,19 @@ export default function ProviderSelector({ collapsed = false, onToggleCollapse }
           {/* Header */}
           <div className="flex items-center justify-between mb-3">
             <span className="text-xs font-semibold text-zinc-400 uppercase tracking-wider">
-              PROVIDERS
+              {t("providers.title")}
             </span>
             <div className="flex items-center gap-2">
               <button
                 onClick={() => setPackDialogOpen(true)}
                 className="text-xs text-emerald-400 hover:text-emerald-300"
               >
-                + Add
+                {t("providers.add")}
               </button>
               <button
                 onClick={fetchProviders}
                 className="text-zinc-400 hover:text-zinc-100"
-                title="Refresh providers"
+                title={t("providers.refresh")}
               >
                 <svg
                   xmlns="http://www.w3.org/2000/svg"
@@ -188,7 +190,7 @@ export default function ProviderSelector({ collapsed = false, onToggleCollapse }
                   }}
                   placeholder={
                     providers.find((p) => p.provider.id === selectedProviderId)?.service?.base_url ??
-                    "https://api.example.com/v1"
+                    t("providers.url.placeholder")
                   }
                   className="flex-1 bg-zinc-800 border border-zinc-700 rounded px-2 py-1 text-xs text-zinc-300
                              focus:border-emerald-400 focus:outline-none placeholder-zinc-600"
@@ -197,7 +199,7 @@ export default function ProviderSelector({ collapsed = false, onToggleCollapse }
                   <button
                     onClick={() => dispatch({ type: "SET_BASE_URL", baseUrl: null })}
                     className="text-zinc-500 hover:text-zinc-300 shrink-0"
-                    title="Reset to default"
+                    title={t("providers.url.reset")}
                   >
                     <svg className="w-3.5 h-3.5" viewBox="0 0 20 20" fill="currentColor">
                       <path
@@ -210,7 +212,7 @@ export default function ProviderSelector({ collapsed = false, onToggleCollapse }
                 )}
               </div>
               <p className="text-xs text-zinc-600 mt-1">
-                Override the default base URL for this provider
+                {t("providers.url.override")}
               </p>
             </div>
           )}
@@ -233,9 +235,9 @@ export default function ProviderSelector({ collapsed = false, onToggleCollapse }
               </div>
             ) : providers.length === 0 ? (
               <div className="text-sm text-zinc-400 p-2">
-                No providers found.{" "}
+                {t("providers.noProviders")}{" "}
                 <a href="#" className="text-emerald-400 hover:text-emerald-300">
-                  How to add a pack
+                  {t("providers.howToAdd")}
                 </a>
               </div>
             ) : (
@@ -256,13 +258,13 @@ export default function ProviderSelector({ collapsed = false, onToggleCollapse }
       {/* Add Pack Dialog (rendered regardless of collapsed state) */}
       <Dialog isOpen={packDialogOpen} onClose={() => { setPackDialogOpen(false); setPackSearch(""); setPackResults([]); }}>
         <div className="p-4">
-          <h2 className="text-sm font-semibold text-zinc-100 mb-3">Add Provider Pack</h2>
+          <h2 className="text-sm font-semibold text-zinc-100 mb-3">{t("dialog.addPack")}</h2>
 
           <input
             type="text"
             value={packSearch}
             onChange={(e) => setPackSearch(e.target.value)}
-            placeholder="Search packs..."
+            placeholder={t("dialog.search")}
             autoFocus
             className="w-full bg-zinc-800 border border-zinc-700 rounded px-3 py-2 text-sm text-zinc-200
                        focus:border-emerald-400 focus:outline-none placeholder-zinc-500 mb-3"
@@ -270,12 +272,12 @@ export default function ProviderSelector({ collapsed = false, onToggleCollapse }
 
           <div className="max-h-64 overflow-y-auto space-y-2">
             {packSearchLoading ? (
-              <p className="text-xs text-zinc-500 py-4 text-center">Searching...</p>
+              <p className="text-xs text-zinc-500 py-4 text-center">{t("dialog.searching")}</p>
             ) : packResults.length === 0 ? (
               packSearch.trim() ? (
-                <p className="text-xs text-zinc-500 py-4 text-center">No packs found</p>
+                <p className="text-xs text-zinc-500 py-4 text-center">{t("dialog.noPacks")}</p>
               ) : (
-                <p className="text-xs text-zinc-500 py-4 text-center">Type to search for packs</p>
+                <p className="text-xs text-zinc-500 py-4 text-center">{t("dialog.typeToSearch")}</p>
               )
             ) : (
               packResults.map((pack) => {
@@ -299,7 +301,7 @@ export default function ProviderSelector({ collapsed = false, onToggleCollapse }
                             : "bg-emerald-500 text-white hover:bg-emerald-400 disabled:opacity-50"
                       }`}
                     >
-                      {status === "installing" ? "Installing..." : status === "installed" ? "Installed" : status === "error" ? "Retry" : "Install"}
+                      {status === "installing" ? t("dialog.installing") : status === "installed" ? t("dialog.installed") : status === "error" ? t("dialog.retry") : t("dialog.install")}
                     </button>
                   </div>
                 );

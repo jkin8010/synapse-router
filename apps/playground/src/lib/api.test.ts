@@ -4,7 +4,7 @@ import { createApiClient, ApiError } from "./api";
 
 describe("createApiClient", () => {
   it("should return object with getProviders, negotiate, execute", () => {
-    const api = createApiClient({ baseUrl: "http://localhost:3000" });
+    const api = createApiClient({ baseUrl: "http://localhost:3011" });
     assert.equal(typeof api.getProviders, "function");
     assert.equal(typeof api.negotiate, "function");
     assert.equal(typeof api.execute, "function");
@@ -38,7 +38,7 @@ describe("getProviders", () => {
       } as Response;
     };
 
-    const api = createApiClient({ baseUrl: "http://localhost:3000" });
+    const api = createApiClient({ baseUrl: "http://localhost:3011" });
     const result = await api.getProviders();
     assert.equal(result[0].provider.id, "openai");
     assert.equal(result[0].provider.name, "OpenAI");
@@ -81,7 +81,7 @@ describe("negotiate", () => {
       } as Response;
     };
 
-    const api = createApiClient({ baseUrl: "http://localhost:3000" });
+    const api = createApiClient({ baseUrl: "http://localhost:3011" });
     const result = await api.negotiate(sampleSchema, "openai");
     assert.equal(result.accepted.length, 1);
     assert.equal(result.accepted[0].feature_id, "chat");
@@ -96,7 +96,7 @@ describe("negotiate", () => {
       } as Response;
     };
 
-    const api = createApiClient({ baseUrl: "http://localhost:3000" });
+    const api = createApiClient({ baseUrl: "http://localhost:3011" });
 
     await assert.rejects(
       async () => {

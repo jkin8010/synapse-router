@@ -503,6 +503,6 @@ Examples:
   synapse pack show openai
 
 Environment:
-  SYNAPSE_REGISTRY_URL       Override registry URL (default: https://registry.synapse-router.com)
+  SYNAPSE_REGISTRY_URL       Override registry URL (default: https://registry.synrc.io)
 `);
 }

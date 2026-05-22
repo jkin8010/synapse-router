@@ -5,53 +5,53 @@ title: API Reference
 
 {/* This file is derived from docs/API.md in the project root. Edit the source and re-copy for significant changes. */}
 
-# REST API 参考
+# REST API Reference
 
-Synapse Router HTTP API Server 提供 RESTful 接口，用于 Schema 协商、连接调用、Provider 管理和 API Key 管理。
+The Synapse Router HTTP API Server provides RESTful endpoints for Schema Negotiation, connection calls, Provider management, and API Key management.
 
-**默认地址**：`http://localhost:3000`
+**Default address:** `http://localhost:3011`
 
-## 启动 API Server
+## Starting the API Server
 
 ```bash
 synapse serve
 # Listening on http://0.0.0.0:3000
 ```
 
-## 认证
+## Authentication
 
-当前版本（Phase 1）开发模式下未强制认证，生产部署前需启用。
+In the current version (Phase 1), authentication is not enforced in development mode. It must be enabled before production deployment.
 
-## 健康检查
+## Health Check
 
 ### GET /health
 
 ```bash
-curl http://localhost:3000/health
+curl http://localhost:3011/health
 # {"status":"ok","version":"0.1.0"}
 ```
 
 ---
 
-## Provider 管理
+## Provider Management
 
 ### GET /providers
 
-列出所有可用的 Provider Pack。
+List all available Provider Packs.
 
 ### GET /providers/:id
 
-查看指定 Provider 的完整 Provider Card。
+View the full Provider Card for a specific Provider.
 
 ---
 
-## Schema 协商
+## Schema Negotiation
 
 ### POST /negotiate
 
-根据 Agent Schema 匹配可用 Provider，生成协商结果并自动缓存为 Schema Lock。
+Match available Providers against an Agent Schema, generate negotiation results, and automatically cache them as a Schema Lock.
 
-**请求体**:
+**Request Body:**
 
 ```json
 {
@@ -70,7 +70,7 @@ curl http://localhost:3000/health
 }
 ```
 
-**响应** `200 OK`:
+**Response** `200 OK`:
 
 ```json
 {
@@ -84,22 +84,22 @@ curl http://localhost:3000/health
 }
 ```
 
-> 相同 `intent + provider` 的后续协商会自动复用已缓存的 Schema Lock。
+> Subsequent negotiations for the same `intent + provider` automatically reuse the cached Schema Lock.
 
 ---
 
-## 连接调用
+## Connection Calls
 
 ### POST /execute
 
-连接指定 Provider 并调用其 Feature。支持两种模式。
+Connect to a specified Provider and call its Feature. Two modes are supported.
 
-#### 模式一：直接指定 Provider + Intent
+#### Mode 1: Direct Provider + Intent
 
-**请求**:
+**Request:**
 
 ```bash
-curl -X POST http://localhost:3000/execute \
+curl -X POST http://localhost:3011/execute \
   -H "Content-Type: application/json" \
   -d '{
     "provider": "deepseek",
@@ -111,15 +111,15 @@ curl -X POST http://localhost:3000/execute \
   }'
 ```
 
-**请求体**:
+**Request Body:**
 
-| 参数 | 类型 | 必需 | 说明 |
+| Parameter | Type | Required | Description |
 |------|------|------|------|
-| `provider` | string | ✅ | Provider ID（如 `openai`, `deepseek`） |
-| `intent` | string | ✅ | Intent ID（如 `chat`, `embeddings`） |
-| `input` | object | ✅ | 输入参数（Provider 原生格式或 canonical 格式） |
+| `provider` | string | ✅ | Provider ID (e.g., `openai`, `deepseek`) |
+| `intent` | string | ✅ | Intent ID (e.g., `chat`, `embeddings`) |
+| `input` | object | ✅ | Input parameters (Provider native format or canonical format) |
 
-**响应** `200 OK`:
+**Response** `200 OK`:
 
 ```json
 {
@@ -138,10 +138,10 @@ curl -X POST http://localhost:3000/execute \
 }
 ```
 
-#### 模式二：通过 negotiation_id 执行
+#### Mode 2: Via negotiation_id
 
 ```bash
-curl -X POST http://localhost:3000/execute \
+curl -X POST http://localhost:3011/execute \
   -H "Content-Type: application/json" \
   -d '{
     "negotiation_id": "uuid-xxx",
@@ -149,50 +149,50 @@ curl -X POST http://localhost:3000/execute \
   }'
 ```
 
-**错误**:
+**Errors:**
 
-| 状态码 | code | 说明 |
+| Status Code | code | Description |
 |--------|------|------|
-| 400 | `INVALID_REQUEST` | 缺少必填参数 |
-| 404 | `PROVIDER_NOT_FOUND` | Provider 不存在 |
-| 401 | `AUTH_FAILED` | API Key 无效或缺失 |
+| 400 | `INVALID_REQUEST` | Missing required parameters |
+| 404 | `PROVIDER_NOT_FOUND` | Provider does not exist |
+| 401 | `AUTH_FAILED` | API Key is invalid or missing |
 
 ---
 
-## Vault 管理
+## Vault Management
 
 ### POST /vault/keys
 
-存储 API Key。
+Store an API Key.
 
 ```bash
-curl -X POST http://localhost:3000/vault/keys \
+curl -X POST http://localhost:3011/vault/keys \
   -H "Content-Type: application/json" \
   -d '{"provider":"openai","key":"sk-proj-xxxx"}'
 ```
 
 ### GET /vault/keys
 
-列出已存储的 Provider（不返回 Key 值）。
+List stored Providers (does not return Key values).
 
 ### DELETE /vault/keys/:provider
 
-删除指定 Provider 的 API Key。
+Delete a specific Provider's API Key.
 
 ### POST /vault/verify/:provider
 
-验证指定 Provider 的 API Key 是否有效。
+Verify whether a specific Provider's API Key is valid.
 
 ```bash
-curl -X POST http://localhost:3000/vault/verify/openai
+curl -X POST http://localhost:3011/vault/verify/openai
 # {"provider":"openai","valid":true}
 ```
 
 ---
 
-## 错误响应格式
+## Error Response Format
 
-所有错误响应统一格式：
+All error responses use a unified format:
 
 ```json
 {
@@ -203,7 +203,7 @@ curl -X POST http://localhost:3000/vault/verify/openai
 }
 ```
 
-## 编程使用
+## Programmatic Usage
 
 ```typescript
 import { startServer } from "@synapse-router/api";

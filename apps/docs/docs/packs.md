@@ -5,72 +5,72 @@ title: Pack Development Guide
 
 {/* This file is derived from docs/PACKS.md in the project root. Edit the source and re-copy for significant changes. */}
 
-# Provider Pack 开发指南
+# Provider Pack Development Guide
 
-Provider Pack 是 Synapse Router 的核心抽象——每个 Provider 一个 Pack，声明其能力、字段映射、定价和限速信息。Pack 让 Router 能自动匹配 Agent 需求与 Provider 能力。
+Provider Pack is the core abstraction of Synapse Router — one Pack per Provider, declaring its capabilities, field mappings, pricing, and rate limit information. The Pack enables the Router to automatically match Agent requirements with Provider capabilities.
 
-## Pack 目录结构
+## Pack Directory Structure
 
 ```
 packs/<provider-id>/
-├── provider-card.json    # Provider 核心卡片（身份 + 服务配置 + 功能声明）
-└── dsl/                  # Agent Schema DSL 文件（每个 Feature 一个）
+├── provider-card.json    # Provider core card (identity + service configuration + feature declaration)
+└── dsl/                  # Agent Schema DSL files (one per Feature)
     ├── feature_id_1.json
     ├── feature_id_2.json
     └── ...
 ```
 
-### 文件职责
+### File Responsibilities
 
-| 文件 | 职责 | 必需 |
+| File | Responsibility | Required |
 |------|------|------|
-| `provider-card.json` | 定义 Provider 身份、Service 配置、Feature 列表、Field Mappings、定价、限速 | ✅ |
-| `dsl/<feature-id>.json` | 单个 Feature 的 Agent Schema，供协商引擎匹配 | ✅ |
+| `provider-card.json` | Defines Provider identity, Service configuration, Feature list, Field Mappings, pricing, rate limits | ✅ |
+| `dsl/<feature-id>.json` | Agent Schema for a single Feature, used by the negotiation engine for matching | ✅ |
 
-## provider-card.json 完整字段说明
+## provider-card.json Complete Field Reference
 
-`provider-card.json` 由三个顶级对象组成：`provider`、`service`、`features`。
+`provider-card.json` consists of three top-level objects: `provider`, `service`, and `features`.
 
-### provider（身份标识）
+### provider (Identity)
 
-定义 Provider 的唯一身份和基础信息。
+Defines the Provider's unique identity and basic information.
 
-| 字段 | 类型 | 必需 | 说明 | 示例 |
+| Field | Type | Required | Description | Example |
 |------|------|------|------|------|
-| `id` | string | ✅ | Provider 唯一标识（小写字母+数字+连字符） | `"openai"` |
-| `name` | string | ✅ | Provider 显示名称 | `"OpenAI"` |
-| `docs_url` | string | ✅ | 官方 API 文档链接 | `"https://platform.openai.com/docs/api-reference"` |
+| `id` | string | ✅ | Provider unique identifier (lowercase letters, digits, and hyphens) | `"openai"` |
+| `name` | string | ✅ | Provider display name | `"OpenAI"` |
+| `docs_url` | string | ✅ | Official API documentation URL | `"https://platform.openai.com/docs/api-reference"` |
 
-### service（服务配置）
+### service (Service Configuration)
 
-定义 Provider 服务的运行参数。
+Defines the Provider service's operational parameters.
 
-| 字段 | 类型 | 必需 | 说明 | 示例 |
+| Field | Type | Required | Description | Example |
 |------|------|------|------|------|
-| `id` | string | ✅ | Service 标识，通常与 `provider.id` 一致 | `"openai"` |
-| `name` | string | ✅ | Service 显示名称 | `"OpenAI"` |
-| `version` | string | ✅ | Pack 版本号（SemVer） | `"1.0.0"` |
-| `api_version` | string | ✅ | Provider API 版本 | `"2024-01-01"` |
-| `base_url` | string | ✅ | API 基础地址 | `"https://api.openai.com/v1"` |
-| `auth_type` | string | ✅ | 认证方式：`Bearer` / `APIKey` / `OAuth2` | `"Bearer"` |
+| `id` | string | ✅ | Service identifier, typically matches `provider.id` | `"openai"` |
+| `name` | string | ✅ | Service display name | `"OpenAI"` |
+| `version` | string | ✅ | Pack version number (SemVer) | `"1.0.0"` |
+| `api_version` | string | ✅ | Provider API version | `"2024-01-01"` |
+| `base_url` | string | ✅ | API base URL | `"https://api.openai.com/v1"` |
+| `auth_type` | string | ✅ | Authentication type: `Bearer` / `APIKey` / `OAuth2` | `"Bearer"` |
 
-### features（功能声明）
+### features (Feature Declaration)
 
-声明该 Provider 提供的每个功能。
+Declares each feature provided by the Provider.
 
-| 字段 | 类型 | 必需 | 说明 |
+| Field | Type | Required | Description |
 |------|------|------|------|
-| `id` | string | ✅ | Feature 唯一标识，通常与 API 操作对应 |
-| `intent` | string | ✅ | 意图类型，用于协商匹配（如 `chat`、`text-to-image`） |
-| `name` | string | ✅ | Feature 显示名称 |
-| `description` | string | ✅ | Feature 描述 |
-| `input` | object | ✅ | 输入参数定义（见下方 input 结构） |
-| `output` | object | ✅ | 输出参数定义（见下方 output 结构） |
-| `field_mappings` | array | ✅ | 规范字段到 Provider 字段的映射（见下方映射结构） |
-| `pricing` | object | ❌ | 定价信息 |
-| `limits` | object | ❌ | 限速信息 |
+| `id` | string | ✅ | Feature unique identifier, typically corresponds to the API operation |
+| `intent` | string | ✅ | Intent type, used for negotiation matching (e.g., `chat`, `text-to-image`) |
+| `name` | string | ✅ | Feature display name |
+| `description` | string | ✅ | Feature description |
+| `input` | object | ✅ | Input parameter definition (see input structure below) |
+| `output` | object | ✅ | Output parameter definition (see output structure below) |
+| `field_mappings` | array | ✅ | Mapping from canonical fields to Provider fields (see mapping structure below) |
+| `pricing` | object | ❌ | Pricing information |
+| `limits` | object | ❌ | Rate limit information |
 
-#### input / output 结构
+#### input / output structure
 
 ```json
 {
@@ -98,19 +98,19 @@ packs/<provider-id>/
 }
 ```
 
-**字段类型**：`string` | `number` | `boolean` | `array` | `object`
+**Field types:** `string` | `number` | `boolean` | `array` | `object`
 
-可选属性：
+Optional attributes:
 
-| 属性 | 类型 | 说明 |
+| Attribute | Type | Description |
 |------|------|------|
-| `required` | boolean | 是否必填 |
-| `description` | string | 字段描述 |
-| `enum` | string[] | 枚举值列表 |
+| `required` | boolean | Whether the field is required |
+| `description` | string | Field description |
+| `enum` | string[] | List of enum values |
 
-#### field_mappings 结构
+#### field_mappings structure
 
-将 Agent Schema 的规范字段映射到 Provider 的实际字段。
+Maps canonical fields from the Agent Schema to the Provider's actual fields.
 
 ```json
 {
@@ -130,15 +130,15 @@ packs/<provider-id>/
 }
 ```
 
-| 属性 | 类型 | 必需 | 说明 |
+| Field | Type | Required | Description |
 |------|------|------|------|
-| `canonical_field` | string | ✅ | 规范字段名（Router 内部标准） |
-| `provider_field` | string | ✅ | Provider API 的实际字段名 |
-| `required` | boolean | ✅ | 该映射是否必需 |
-| `fallback` | any | ❌ | 默认值（当 Agent 未提供时使用） |
-| `transform` | string | ❌ | 数据转换方式（如 `base64_decode`、`passthrough`） |
+| `canonical_field` | string | ✅ | Canonical field name (Router internal standard) |
+| `provider_field` | string | ✅ | Actual field name in the Provider API |
+| `required` | boolean | ✅ | Whether this mapping is required |
+| `fallback` | any | ❌ | Default value (used when the Agent does not provide a value) |
+| `transform` | string | ❌ | Data transformation method (e.g., `base64_decode`, `passthrough`) |
 
-#### pricing 结构
+#### pricing structure
 
 ```json
 {
@@ -150,7 +150,7 @@ packs/<provider-id>/
 }
 ```
 
-#### limits 结构
+#### limits structure
 
 ```json
 {
@@ -161,12 +161,12 @@ packs/<provider-id>/
 }
 ```
 
-| 字段 | 类型 | 说明 |
+| Field | Type | Description |
 |------|------|------|
-| `rpm` | number | 每分钟请求数限制 |
-| `tpm` | number | 每分钟 token 数限制（可选） |
+| `rpm` | number | Requests per minute limit |
+| `tpm` | number | Tokens per minute limit (optional) |
 
-### 完整示例
+### Complete Example
 
 ```json
 {
@@ -218,9 +218,9 @@ packs/<provider-id>/
 }
 ```
 
-## DSL 文件格式
+## DSL File Format
 
-每个 Feature 对应一个 Agent Schema DSL 文件，存放在 `dsl/<feature-id>.json`。
+Each Feature has a corresponding Agent Schema DSL file stored at `dsl/<feature-id>.json`.
 
 ```json
 {
@@ -264,31 +264,31 @@ packs/<provider-id>/
 }
 ```
 
-### DSL 关键字段
+### DSL Key Fields
 
-| 字段 | 说明 |
+| Field | Description |
 |------|------|
-| `agent_id` | Agent 唯一标识 |
-| `agent_name` | Agent 显示名称 |
-| `version` | Agent 版本 |
-| `access_protocol.kind` | 接入协议类型（`api`/`mcp`） |
-| `access_protocol.auth_type` | 认证方式 |
-| `features[].feature_id` | Feature 唯一标识，需与 provider-card.json 中的 `id` 一致 |
-| `features[].intent` | 意图类型，协商时用于匹配 |
-| `features[].input_schema` | 输入参数 Schema |
-| `features[].output_schema` | 输出参数 Schema |
-| `features[].field_mappings` | 字段映射 |
-| `features[].capabilities` | 能力声明 |
+| `agent_id` | Agent unique identifier |
+| `agent_name` | Agent display name |
+| `version` | Agent version |
+| `access_protocol.kind` | Access protocol type (`api`/`mcp`) |
+| `access_protocol.auth_type` | Authentication type |
+| `features[].feature_id` | Feature unique identifier, must match the `id` in provider-card.json |
+| `features[].intent` | Intent type, used for matching during negotiation |
+| `features[].input_schema` | Input parameter Schema |
+| `features[].output_schema` | Output parameter Schema |
+| `features[].field_mappings` | Field mappings |
+| `features[].capabilities` | Capability declaration |
 
-## 如何手动创建 Pack
+## How to Manually Create a Pack
 
-### 步骤 1：创建目录
+### Step 1: Create the Directory
 
 ```bash
 mkdir -p packs/my-provider/dsl
 ```
 
-### 步骤 2：编写 provider-card.json
+### Step 2: Write provider-card.json
 
 ```bash
 cat > packs/my-provider/provider-card.json << 'EOF'
@@ -339,7 +339,7 @@ cat > packs/my-provider/provider-card.json << 'EOF'
 EOF
 ```
 
-### 步骤 3：编写 DSL 文件
+### Step 3: Write the DSL File
 
 ```bash
 cat > packs/my-provider/dsl/generate_image.json << 'EOF'
@@ -379,17 +379,17 @@ cat > packs/my-provider/dsl/generate_image.json << 'EOF'
 EOF
 ```
 
-## 如何使用 synapse generate 自动生成
+## How to Auto-Generate with synapse generate
 
-Pack Generator 从 OpenAPI 3.0 Spec 自动生成 Provider Pack，省去手动编写。
+The Pack Generator automatically creates a Provider Pack from an OpenAPI 3.0 Spec, eliminating the need for manual authoring.
 
-### CLI 方式
+### CLI Method
 
 ```bash
 npx @synapse-router/pack-generator --from-url https://api.example.com/openapi.json
 ```
 
-### 编程方式
+### Programmatic Method
 
 ```typescript
 import { generatePackFromURL, writePack } from "@synapse-router/pack-generator";
@@ -406,21 +406,21 @@ const { providerCard, dslFiles } = await generatePackFromURL(
 await writePack("./packs/my-provider", providerCard, dslFiles);
 ```
 
-### 生成流程
+### Generation Pipeline
 
 ```
 OpenAPI Spec
     │
     ▼
-1. 解析 paths + methods
-2. JSON Schema → Field[]（处理 $ref、allOf 等）
-3. 推断 Intent + Capability（基于 URL 和 operationId）
-4. 生成 Field Mappings（别名匹配 canonical 字段）
-5. 检测 Auth Type（从 securitySchemes）
-6. 输出 provider-card.json + dsl/*.json
+1. Parse paths + methods
+2. JSON Schema → Field[] (handle $ref, allOf, etc.)
+3. Infer Intent + Capability (based on URL and operationId)
+4. Generate Field Mappings (alias matching against canonical fields)
+5. Detect Auth Type (from securitySchemes)
+6. Output provider-card.json + dsl/*.json
 ```
 
-### Intent 推断规则
+### Intent Inference Rules
 
 | URL Pattern | Intent | Capability |
 |-------------|--------|------------|
@@ -429,11 +429,11 @@ OpenAPI Spec
 | `/embeddings` | `embeddings` | `tool-calling` |
 | `/audio/transcriptions` | `speech-to-text` | `vision-input` |
 
-### Field Alias 体系
+### Field Alias System
 
-生成 Field Mapping 时自动匹配：
+Automatic matching when generating Field Mappings:
 
-| Canonical Field | 匹配的别名 |
+| Canonical Field | Matching Aliases |
 |-----------------|-----------|
 | `prompt` | prompt, input, text, message, content |
 | `model` | model, engine, model_id, modelName |
@@ -441,9 +441,9 @@ OpenAPI Spec
 | `height` | height, image_height |
 | `image_url` | image_url, imageUrl, image, url |
 
-## Pack 验证流程
+## Pack Validation Process
 
-### 编程验证
+### Programmatic Validation
 
 ```typescript
 import { validateProviderCard } from "@synapse-router/providers";
@@ -456,42 +456,42 @@ const card = JSON.parse(
 const result = validateProviderCard(card);
 
 if (!result.valid) {
-  console.error("Pack 验证失败:", result.errors);
+  console.error("Pack validation failed:", result.errors);
   process.exit(1);
 } else {
-  console.log("✓ Pack 格式正确");
+  console.log("✓ Pack format is valid");
 }
 ```
 
-### 验证要求
+### Validation Requirements
 
-#### provider 对象
-- `id`: 非空字符串，小写字母+数字+连字符
-- `name`: 非空字符串
-- `docs_url`: 有效 URL
+#### provider object
+- `id`: Non-empty string, lowercase letters + digits + hyphens
+- `name`: Non-empty string
+- `docs_url`: Valid URL
 
-#### service 对象
-- `id`: 非空字符串
-- `name`: 非空字符串
-- `version`: 有效 SemVer 格式
-- `api_version`: 非空字符串
-- `base_url`: 有效 URL
-- `auth_type`: 必须为 `Bearer`、`APIKey` 或 `OAuth2`
+#### service object
+- `id`: Non-empty string
+- `name`: Non-empty string
+- `version`: Valid SemVer format
+- `api_version`: Non-empty string
+- `base_url`: Valid URL
+- `auth_type`: Must be `Bearer`, `APIKey`, or `OAuth2`
 
-#### features 数组
-- 至少包含一个 Feature
-- 每个 Feature 必须有 `id`、`intent`、`name`、`description`
-- `input.fields` 和 `output.fields` 为非空数组
-- `field_mappings` 为非空数组
+#### features array
+- Must contain at least one Feature
+- Each Feature must have `id`, `intent`, `name`, `description`
+- `input.fields` and `output.fields` must be non-empty arrays
+- `field_mappings` must be a non-empty array
 
-#### DSL 文件
-- 文件名需与对应 Feature 的 `id` 一致
-- `feature_id` 必须与 provider-card.json 中的 Feature `id` 匹配
-- `intent` 必须一致
+#### DSL Files
+- Filename must match the corresponding Feature's `id`
+- `feature_id` must match the Feature `id` in provider-card.json
+- `intent` must match
 
-### 运行完整测试
+### Running the Full Test Suite
 
 ```bash
 pnpm test
-# 确保所有 Pack（预置 + 自定义）通过验证
+# Ensures all Packs (built-in + custom) pass validation
 ```

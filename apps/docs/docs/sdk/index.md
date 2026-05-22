@@ -3,54 +3,54 @@ sidebar_position: 3
 title: SDK Guide
 ---
 
-# SDK 使用指南 (SDK Guide)
+# SDK Guide
 
-Synapse Router 通过 `synapse evolve` 命令将 Schema 协商（Schema Negotiation）结果转换为零依赖（Zero-Dependency）的纯函数 SDK 代码。生成的 SDK 不依赖任何 `@synapse-router/*` 包，只使用内置 `fetch`，可在任何 JavaScript/TypeScript 环境中运行。
+Synapse Router uses the `synapse evolve` command to convert Schema Negotiation results into zero-dependency, pure-function SDK code. The generated SDK does not depend on any `@synapse-router/*` packages and only uses the built-in `fetch`, making it runnable in any JavaScript/TypeScript environment.
 
-## evolve 工作流程 (Evolve Workflow)
+## Evolve Workflow
 
-evolve 命令的处理流程包含四个步骤：
+The evolve command processes through four steps:
 
-1. **读取 Provider Pack（Load Provider Pack）** — 从 `packs/`、Registry 和本地目录加载所有 Provider Pack
-2. **协商 Schema Lock（Negotiate Schema Lock）** — 对每个 Provider 的 Feature 执行协商，创建冻结的 Schema Lock（类似 `package-lock.json`）
-3. **生成代码（Generate Code）** — 根据 Lock 中的字段映射（Field Mappings）生成 TypeScript / Python SDK 代码
-4. **输出（Output）** — 写入 `--output` 目录（默认 `./synapse-sdk`），零外部依赖
+1. **Load Provider Pack** — Loads all Provider Packs from `packs/`, Registry, and local directories
+2. **Negotiate Schema Lock** — Performs negotiation on each Provider's Feature, creating a frozen Schema Lock (similar to `package-lock.json`)
+3. **Generate Code** — Generates TypeScript / Python SDK code based on the Field Mappings in the Lock
+4. **Output** — Writes to the `--output` directory (default `./synapse-sdk`), zero external dependencies
 
-## 命令参数 (Command Parameters)
+## Command Parameters
 
-| 参数 | 类型 | 必需 | 默认值 | 说明 |
+| Parameter | Type | Required | Default | Description |
 |------|------|------|--------|------|
-| `--output <dir>` | string | 否 | `./synapse-sdk` | SDK 输出目录 |
-| `--tune` | flag | 否 | false | 重新协商所有 Schema Lock（Re-negotiate all locks） |
-| `--with-billing` | flag | 否 | false | 在生成的 SDK 中包含 BillingTracker 用量追踪类 |
+| `--output <dir>` | string | no | `./synapse-sdk` | SDK output directory |
+| `--tune` | flag | no | false | Re-negotiate all Schema Locks |
+| `--with-billing` | flag | no | false | Include BillingTracker usage tracking class in the generated SDK |
 
-## 使用示例 (Usage Examples)
+## Usage Examples
 
-### Example 1 — 基础生成 (Basic Generation)
+### Example 1 — Basic Generation
 
 ```bash
 synapse evolve
 ```
 
-执行后会在当前目录下生成 `./synapse-sdk/` 目录，包含 TypeScript SDK 代码，可直接在项目中引用。
+Running this creates a `./synapse-sdk/` directory in the current folder containing TypeScript SDK code that can be directly imported into your project.
 
-### Example 2 — 包含 Billing 追踪 (With Billing Tracking)
+### Example 2 — With Billing Tracking
 
 ```bash
 synapse evolve --with-billing
 ```
 
-生成的 SDK 中包含 `BillingTracker` 类，自动追踪每次 API 调用的用量。适用于需要计费和配额管理的生产环境。
+The generated SDK includes a `BillingTracker` class that automatically tracks usage for each API call. Suitable for production environments requiring billing and quota management.
 
-### Example 3 — 自定义输出目录并重新协商 (Custom Output + Re-negotiate)
+### Example 3 — Custom Output + Re-negotiate
 
 ```bash
 synapse evolve --output ./my-sdk --tune
 ```
 
-输出到自定义目录 `./my-sdk`，并强制重新协商所有 Schema Lock。此功能在更新 Provider Pack 后特别有用，确保 SDK 反映最新的 Provider 能力。
+Outputs to a custom directory `./my-sdk` and forces re-negotiation of all Schema Locks. This is particularly useful after updating Provider Packs, ensuring the SDK reflects the latest Provider capabilities.
 
-## 生成的 SDK 结构 (Generated SDK Structure)
+## Generated SDK Structure
 
 ```text
 synapse-sdk/
@@ -62,20 +62,24 @@ synapse-sdk/
 └── billing.ts        # BillingTracker (only with --with-billing)
 ```
 
-- **index.ts** — 主入口文件，导出所有 SDK 函数
-- **types.ts** — TypeScript 类型定义，包含输入输出参数的完整类型声明
-- **providers/** — 每个 Provider 一个独立文件，封装对应的 API 调用逻辑
-- **billing.ts** — 仅在使用 `--with-billing` 时生成，包含 BillingTracker 类
+- **index.ts** — Main entry point, exports all SDK functions
+- **types.ts** — TypeScript type definitions, including full type declarations for input and output parameters
+- **providers/** — One file per Provider, encapsulating the corresponding API call logic
+- **billing.ts** — Only generated when `--with-billing` is used, contains the BillingTracker class
 
-## SDK 特性 (SDK Features)
+## SDK Features
 
-- **零依赖（Zero Dependency）** — 不依赖 `@synapse-router/*`，仅使用内置 `fetch`
-- **TypeScript & Python** — 支持两种语言输出，包含完整的类型定义
-- **确定性（Deterministic）** — 相同输入始终生成相同输出，消除运行时意外
-- **Billing 集成（Billing Integration）** — `--with-billing` 标志添加 BillingTracker，自动追踪每次调用
-- **Schema Lock 管理** — Lock 类似 `package-lock.json`，冻结后不随 Pack 自动变化，提供确定性契约
+- **Zero Dependency** — Does not depend on `@synapse-router/*`, only uses built-in `fetch`
+- **TypeScript & Python** — Supports output in both languages with complete type definitions
+- **Deterministic** — Same input always produces the same output, eliminating runtime surprises
+- **Billing Integration** — The `--with-billing` flag adds BillingTracker to automatically track each call
+- **Schema Lock Management** — Lock works like `package-lock.json`; once frozen, it does not change automatically with Packs, providing a deterministic contract
 
-## 相关命令 (Related Commands)
+## Related Commands
+
+- [/docs/cli/lock](/docs/cli/lock) — Manage Schema Locks (list, migrate, detect expiration)
+- [/docs/cli/pack](/docs/cli/pack) — Manage Provider Packs (install, update, search)
+- [/docs/cli](/docs/cli) — Complete CLI command reference
 
 - [/docs/cli/lock](/docs/cli/lock) — 管理 Schema Lock（列出、迁移、检测过期）
 - [/docs/cli/pack](/docs/cli/pack) — 管理 Provider Pack（安装、更新、搜索）

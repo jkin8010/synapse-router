@@ -171,7 +171,7 @@ Trace 自动记录路径选择：
 
 ```typescript
 outputs: [
-  { type: 'http', url: 'http://localhost:3000/api/traces' }
+  { type: 'http', url: 'http://localhost:3011/api/traces' }
 ]
 ```
 

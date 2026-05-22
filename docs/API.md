@@ -2,7 +2,7 @@
 
 Synapse Router HTTP API Server 提供 RESTful 接口，用于 Schema 协商、连接调用、Provider 管理和 API Key 管理。
 
-**默认地址**：`http://localhost:3000`
+**默认地址**：`http://localhost:3011`
 
 ## 启动 API Server
 
@@ -20,7 +20,7 @@ synapse serve
 ### GET /health
 
 ```bash
-curl http://localhost:3000/health
+curl http://localhost:3011/health
 # {"status":"ok","version":"0.1.0"}
 ```
 
@@ -92,7 +92,7 @@ curl http://localhost:3000/health
 **请求**:
 
 ```bash
-curl -X POST http://localhost:3000/execute \
+curl -X POST http://localhost:3011/execute \
   -H "Content-Type: application/json" \
   -d '{
     "provider": "deepseek",
@@ -134,7 +134,7 @@ curl -X POST http://localhost:3000/execute \
 #### 模式二：通过 negotiation_id 执行
 
 ```bash
-curl -X POST http://localhost:3000/execute \
+curl -X POST http://localhost:3011/execute \
   -H "Content-Type: application/json" \
   -d '{
     "negotiation_id": "uuid-xxx",
@@ -159,7 +159,7 @@ curl -X POST http://localhost:3000/execute \
 存储 API Key。
 
 ```bash
-curl -X POST http://localhost:3000/vault/keys \
+curl -X POST http://localhost:3011/vault/keys \
   -H "Content-Type: application/json" \
   -d '{"provider":"openai","key":"sk-proj-xxxx"}'
 ```
@@ -177,7 +177,7 @@ curl -X POST http://localhost:3000/vault/keys \
 验证指定 Provider 的 API Key 是否有效。
 
 ```bash
-curl -X POST http://localhost:3000/vault/verify/openai
+curl -X POST http://localhost:3011/vault/verify/openai
 # {"provider":"openai","valid":true}
 ```
 

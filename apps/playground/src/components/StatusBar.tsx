@@ -1,6 +1,8 @@
 import { useAppState } from "../context";
+import { useI18n } from "../i18n/context";
 
 export default function StatusBar() {
+  const { t, language, setLanguage } = useI18n();
   const { status, selectedProviderId, schemaValid, providers } = useAppState();
   const configuredCount = providers.filter((p) => p.configured).length;
   const totalCount = providers.length;
@@ -31,7 +33,7 @@ export default function StatusBar() {
         <span
           className={`w-2 h-2 rounded-full inline-block ${dot.color} ${isActive ? "animate-pulse" : ""}`}
         />
-        <span className={dot.color}>{dot.label}</span>
+        <span className={dot.color}>{t(`status.${status}`)}</span>
       </div>
       <div className="flex items-center gap-2">
         <span>Provider: {selectedProviderId || "-"}</span>
@@ -49,8 +51,15 @@ export default function StatusBar() {
         )}
       </div>
       <div>
-        Schema: {schemaValid ? "valid" : "invalid"} | v0.1.0
+        Schema: {schemaValid ? t("status.schema.valid") : t("status.schema.invalid")} | v0.1.0
       </div>
+      <button
+        onClick={() => setLanguage(language === "en" ? "zh" : "en")}
+        className="text-xs text-zinc-500 hover:text-zinc-300 ml-2 cursor-pointer"
+        title={language === "en" ? t("language.zh") : t("language.en")}
+      >
+        {language === "en" ? "中文" : "EN"}
+      </button>
     </div>
   );
 }

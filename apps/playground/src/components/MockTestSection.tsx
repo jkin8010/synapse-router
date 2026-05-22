@@ -2,6 +2,7 @@ import { useState, useCallback } from "react";
 import { useAppState } from "../context";
 import { useCodeMirror } from "../hooks/useCodeMirror";
 import useMockTest from "../hooks/useMockTest";
+import { useI18n } from "../i18n/context";
 
 const DEFAULT_MOCK_TEMPLATE = JSON.stringify(
   {
@@ -12,6 +13,7 @@ const DEFAULT_MOCK_TEMPLATE = JSON.stringify(
 );
 
 export default function MockTestSection() {
+  const { t } = useI18n();
   const [isExpanded, setIsExpanded] = useState(false);
   const [mockValue, setMockValue] = useState(DEFAULT_MOCK_TEMPLATE);
   const [editorContainer, setEditorContainer] = useState<HTMLDivElement | null>(null);
@@ -50,7 +52,7 @@ export default function MockTestSection() {
         onClick={() => setIsExpanded(!isExpanded)}
       >
         <span className="text-xs font-semibold text-zinc-400 uppercase tracking-wider">
-          Mock Test
+          {t("mockTest.title")}
         </span>
         <span className="text-xs text-zinc-500 select-none">
           {isExpanded ? "[-]" : "[+]"}
@@ -98,7 +100,7 @@ export default function MockTestSection() {
                 />
               </svg>
             )}
-            {isTesting ? "Testing..." : "Run Mock Test"}
+            {isTesting ? t("action.testing") : t("action.runMock")}
           </button>
 
           {/* Results area */}
@@ -120,7 +122,7 @@ export default function MockTestSection() {
                       d="M5 13l4 4L19 7"
                     />
                   </svg>
-                  Passed
+                  {t("mockTest.result.passed")}
                 </div>
               ) : (
                 <div className="flex items-center gap-2 text-red-400 text-sm">
@@ -137,47 +139,47 @@ export default function MockTestSection() {
                       d="M6 18L18 6M6 6l12 12"
                     />
                   </svg>
-                  Failed
+                  {t("mockTest.result.failed")}
                 </div>
               )}
 
               {/* Expected fields */}
               <div className="text-zinc-400 text-xs">
-                Expected: {result.expected.length > 0
+                {t("mockTest.expected")}: {result.expected.length > 0
                   ? result.expected.join(", ")
                   : "-"}
               </div>
 
               {/* Got fields */}
               <div className="text-zinc-300 text-xs">
-                Got: {result.got.length > 0
+                {t("mockTest.got")}: {result.got.length > 0
                   ? result.got.join(", ")
                   : "-"}
               </div>
 
               {/* Field coverage */}
               <div className="text-zinc-400 text-xs">
-                Fields mapped: {result.fieldCoverage}
+                {t("mockTest.fieldsMapped")}: {result.fieldCoverage}
               </div>
 
               {/* Missing fields */}
               {result.missingFields.length > 0 && (
                 <div className="text-red-400 text-xs">
-                  Missing: {result.missingFields.join(", ")}
+                  {t("mockTest.missing")}: {result.missingFields.join(", ")}
                 </div>
               )}
 
               {/* Extra fields */}
               {result.extraFields.length > 0 && (
                 <div className="text-yellow-400 text-xs">
-                  Extra: {result.extraFields.join(", ")}
+                  {t("mockTest.extra")}: {result.extraFields.join(", ")}
                 </div>
               )}
 
               {/* Type mismatches */}
               {result.typeMismatches.length > 0 && (
                 <div className="text-red-400 text-xs">
-                  Type mismatches: {result.typeMismatches.join(", ")}
+                  {t("mockTest.typeMismatches")}: {result.typeMismatches.join(", ")}
                 </div>
               )}
             </div>

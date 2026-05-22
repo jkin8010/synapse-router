@@ -385,15 +385,15 @@ $ synapse inspect openai
 
 # 5. 启动 API Server
 $ synapse serve
-  → Synapse Router API running at http://localhost:3000
+  → Synapse Router API running at http://localhost:3011
 
 # 6. Agent 通过 API 协商
-POST http://localhost:3000/v1/negotiate
+POST http://localhost:3011/v1/negotiate
 { "intent": "text-to-image", "provider": "openai" }
 → { "schema_id": "abc123", "agent_schema": {...}, "server_schema": {...} }
 
 # 7. Agent 通过 API 执行
-POST http://localhost:3000/v1/execute/abc123
+POST http://localhost:3011/v1/execute/abc123
 { "prompt": "a cat on the moon" }
 → { "image_url": "https://...", "revised_prompt": "..." }
 

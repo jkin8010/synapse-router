@@ -3,22 +3,22 @@ sidebar_position: 6
 title: synapse pack
 ---
 
-# synapse pack — 管理 Provider Pack
+# synapse pack — Manage Provider Packs
 
-pack 命令管理 Provider Pack 的安装、搜索、更新和删除。每个 Provider Pack 是一个目录，包含 `provider-card.json`（Provider 能力声明）和 `dsl/`（Agent Schema DSL 文件）。Pack 可以从本地 Registry 或远程 Registry 安装。
+The pack command manages the installation, search, update, and removal of Provider Packs. Each Provider Pack is a directory containing a `provider-card.json` (Provider capability declaration) and `dsl/` (Agent Schema DSL files). Packs can be installed from a local or remote Registry.
 
-## 子命令 (Subcommands)
+## Subcommands
 
-| 子命令 | 说明 |
+| Subcommand | Description |
 |--------|------|
-| `add <pack-id>` | 从 Registry 安装 Pack |
-| `search <query>` | 在 Registry 中搜索 Pack |
-| `list [--remote]` | 列出本地或远程 Pack |
-| `update <pack-id>` | 更新已安装的 Pack |
-| `remove <pack-id>` | 删除已安装的 Pack |
-| `show <pack-id>` | 显示 Pack 详情 |
+| `add <pack-id>` | Install a Pack from the Registry |
+| `search <query>` | Search for Packs in the Registry |
+| `list [--remote]` | List local or remote Packs |
+| `update <pack-id>` | Update an installed Pack |
+| `remove <pack-id>` | Remove an installed Pack |
+| `show <pack-id>` | Show Pack details |
 
-## 示例 (Examples)
+## Examples
 
 Example 1 — Search for a provider pack:
 ```bash
@@ -50,7 +50,7 @@ Example 6 — Remove a pack:
 synapse pack remove deepseek-v3
 ```
 
-## 相关命令 (Related Commands)
+## Related Commands
 
-- [synapse lock](/docs/cli/lock) — 管理 Pack 关联的 Schema Lock
-- [Pack Development Guide](/docs/packs) — Provider Pack 开发指南
+- [synapse lock](/docs/cli/lock) — Manage Schema Locks associated with Packs
+- [Pack Development Guide](/docs/packs) — Guide for developing Provider Packs

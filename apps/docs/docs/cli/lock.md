@@ -3,27 +3,27 @@ sidebar_position: 7
 title: synapse lock
 ---
 
-# synapse lock — 管理 Schema Lock
+# synapse lock — Manage Schema Locks
 
-lock 命令管理 Schema 契约（Schema Contract）的冻结快照——Schema Lock。Schema Lock 类似 `package-lock.json`：一旦锁定后不可变（Immutable），不会自动随 Pack 更新变化，确保确定性（Deterministic）行为。支持过期检测（Outdated Detection）和迁移（Migration）。
+The lock command manages frozen snapshots of Schema Contracts, known as Schema Locks. A Schema Lock is similar to `package-lock.json`: once locked, it is immutable and does not automatically change with Pack updates, ensuring deterministic behavior. It supports outdated detection and migration.
 
-## Schema Lock 特性 (Properties)
+## Schema Lock Properties
 
-- **不可变 (Immutable)** — 一旦锁定后不会自动随 Pack 更新变化，确保确定性（Deterministic）行为
-- **过期检测 (Outdated Detection)** — `synapse lock outdated` 检测 Pack 版本变化后需要重新协商的 Lock
-- **迁移 (Migration)** — `synapse lock migrate` 将现有 Lock 迁移到新 Pack 版本
+- **Immutable** — Once locked, does not automatically change with Pack updates, ensuring deterministic behavior
+- **Outdated Detection** — `synapse lock outdated` detects Locks that need renegotiation after Pack version changes
+- **Migration** — `synapse lock migrate` migrates an existing Lock to a new Pack version
 
-## 子命令 (Subcommands)
+## Subcommands
 
-| 子命令 | 说明 |
+| Subcommand | Description |
 |--------|------|
-| `list` | 列出所有 Schema Lock |
-| `show <lock-id>` | 显示 Lock 详情（Provider、Feature、版本、字段映射） |
-| `remove <lock-id>` | 删除指定 Lock |
-| `migrate <lock-id> <new-pack-version>` | 迁移 Lock 到新 Pack 版本 |
-| `outdated` | 检测过期 Lock（Pack 版本变化后需重新协商） |
+| `list` | List all Schema Locks |
+| `show <lock-id>` | Show Lock details (Provider, Feature, version, field mapping) |
+| `remove <lock-id>` | Remove the specified Lock |
+| `migrate <lock-id> <new-pack-version>` | Migrate a Lock to a new Pack version |
+| `outdated` | Detect outdated Locks (need renegotiation after Pack version changes) |
 
-## 示例 (Examples)
+## Examples
 
 Example 1 — List all locks:
 ```bash
@@ -45,7 +45,7 @@ Example 4 — Migrate a lock:
 synapse lock migrate chat_deepseek_v1.0.0 deepseek-v3
 ```
 
-## 相关命令 (Related Commands)
+## Related Commands
 
-- [synapse evolve --tune](/docs/cli/evolve) — 重新协商并更新所有 Lock
-- [synapse pack](/docs/cli/pack) — 管理 Provider Pack
+- [synapse evolve --tune](/docs/cli/evolve) — Renegotiate and update all Locks
+- [synapse pack](/docs/cli/pack) — Manage Provider Packs

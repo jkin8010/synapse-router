@@ -3,56 +3,56 @@ sidebar_position: 3
 title: synapse route
 ---
 
-# synapse route — 多维评分路由
+# synapse route — Multi-Dimensional Scored Routing
 
-route 命令对候选 Provider 进行多维度评分（Multi-Dimensional Scoring）、过滤和排序，选择最优 Provider。路由是纯函数（Pure Function），相同输入始终得到相同输出。支持 5 种内置策略和自定义策略。
+The `route` command performs multi-dimensional scoring, filtering, and sorting across candidate Providers to select the optimal Provider. Routing is a pure function — the same input always produces the same output. It supports 5 built-in strategies and custom strategies.
 
-## 参数 (Parameters)
+## Parameters
 
-| 参数 | 类型 | 必需 | 默认值 | 说明 |
-|------|------|------|--------|------|
-| `<intent>` | string | 是 | — | 意图类型（如 `chat`, `text-to-image`） |
-| `--strategy <s>` | string | 否 | `balanced` | 路由策略：`cheap` / `fast` / `quality` / `balanced` / `cost-capped` |
-| `--exclude <ids>` | string | 否 | — | 排除的 Provider 列表（逗号分隔） |
-| `--region <region>` | string | 否 | — | 偏好地区（如 `us-east`, `eu-west`, `apac`） |
-| `--min-version <v>` | string | 否 | — | 最低模型版本（如 `3.5`, `4.0`） |
+| Parameter | Type | Required | Default | Description |
+|-----------|------|----------|---------|-------------|
+| `<intent>` | string | Yes | — | Intent type (e.g. `chat`, `text-to-image`) |
+| `--strategy <s>` | string | No | `balanced` | Routing strategy: `cheap` / `fast` / `quality` / `balanced` / `cost-capped` |
+| `--exclude <ids>` | string | No | — | Comma-separated list of Providers to exclude |
+| `--region <region>` | string | No | — | Preferred region (e.g. `us-east`, `eu-west`, `apac`) |
+| `--min-version <v>` | string | No | — | Minimum model version (e.g. `3.5`, `4.0`) |
 
-## 路由策略 (Routing Strategies)
+## Routing Strategies
 
-系统提供 5 种内置策略，每种策略在不同评分维度上有不同的权重分布：
+The system provides 5 built-in strategies, each with different weight distributions across scoring dimensions:
 
-| 策略 ID | 名称 | 权重分布 (cost/latency/reliability/featureMatch/preference) | 适用场景 |
-|---------|------|------------------------------------------------------------|---------|
-| `cheap` | 成本优先 | 5 / 1 / 1 / 1 / 0.5 | 成本敏感型场景 |
-| `fast` | 速度优先 | 1 / 5 / 1 / 1 / 0.5 | 实时交互场景 |
-| `quality` | 质量优先 | 0.25 / 0.25 / 6 / 4 / 0.5 | 质量关键型场景 |
-| `balanced` | 均衡策略（默认） | 1 / 1 / 1 / 1 / 0.5 | 通用场景 |
-| `cost-capped` | 预算封顶 | 3 / 1 / 2 / 2 / 0.5 (+ maxCost 过滤) | 有预算约束的场景 |
+| Strategy ID | Name | Weight Distribution (cost/latency/reliability/featureMatch/preference) | Use Case |
+|-------------|------|-----------------------------------------------------------------------|----------|
+| `cheap` | Cost First | 5 / 1 / 1 / 1 / 0.5 | Cost-sensitive scenarios |
+| `fast` | Speed First | 1 / 5 / 1 / 1 / 0.5 | Real-time interaction scenarios |
+| `quality` | Quality First | 0.25 / 0.25 / 6 / 4 / 0.5 | Quality-critical scenarios |
+| `balanced` | Balanced (default) | 1 / 1 / 1 / 1 / 0.5 | General purpose |
+| `cost-capped` | Budget Capped | 3 / 1 / 2 / 2 / 0.5 (+ maxCost filter) | Budget-constrained scenarios |
 
-自定义策略可通过 `synapse config set route.strategies.<name>` 注册。
+Custom strategies can be registered via `synapse config set route.strategies.<name>`.
 
-## 评分维度 (Scoring Dimensions)
+## Scoring Dimensions
 
-每个候选 Provider 在 5 个维度上评分，归一化到 [0, 100]：
+Each candidate Provider is scored across 5 dimensions, normalized to [0, 100]:
 
-- **cost (成本)** — Feature 级别成本系数 + 输入规模预估
-- **latency (延迟)** — Provider 延迟等级（cheap/fast/quality）+ 地区匹配加分
-- **reliability (可靠性)** — Provider 可靠性系数 0~1
-- **featureMatch (功能匹配)** — Intent 精确/模糊匹配 + 地区前缀 + 版本过滤
-- **preference (偏好)** — 用户指定的 preferredProviders 提权
+- **cost** — Feature-level cost coefficient + input size estimate
+- **latency** — Provider latency tier (cheap/fast/quality) + region matching bonus
+- **reliability** — Provider reliability coefficient 0~1
+- **featureMatch** — Exact/fuzzy intent matching + region prefix + version filter
+- **preference** — User-specified preferredProviders boost
 
-加权总分公式：`totalScore = Σ(dimensionScore × weight)`
+Weighted total formula: `totalScore = Σ(dimensionScore × weight)`
 
-### 过滤规则 (Filtering Rules)
+### Filtering Rules
 
-- **显式排除** — `--exclude` 指定的 Provider 完全不参与评分
-- **Intent 过滤** — 完全不匹配 intent 的 Provider 排除
-- **成本封顶** — 预估成本超过 `maxCost` 阈值的 Provider 过滤
-- **可靠性阈值** — 低于 `minReliability` 的 Provider 过滤
-- **版本过滤** — 不满足 `minVersion` 要求的 featureMatch 降级
-- **地区匹配** — 精确地区 +15 分，前缀匹配 +10 分
+- **Explicit exclusion** — Providers specified in `--exclude` are excluded from scoring entirely
+- **Intent filter** — Providers that do not match the intent at all are excluded
+- **Cost cap** — Providers with estimated cost exceeding the `maxCost` threshold are filtered out
+- **Reliability threshold** — Providers below `minReliability` are filtered out
+- **Version filter** — featureMatch is downgraded for providers not meeting `minVersion`
+- **Region matching** — Exact region match: +15 points, prefix match: +10 points
 
-## 示例 (Examples)
+## Examples
 
 ### Example 1 — Balanced strategy (default)
 
@@ -84,12 +84,12 @@ synapse route chat --region apac --min-version 3.5
 synapse route text-to-image --strategy cheap
 ```
 
-## 决策可解释 (Decision Explainability)
+## Decision Explainability
 
-每次路由结果包含完整的决策记录（RouteResult），可查看以下信息：
+Each routing result includes a complete decision record (RouteResult) containing the following information:
 
-- **intent** — 路由目标意图
-- **totalCandidates** — 总候选 Provider 数
-- **filteredAfterConstraints** — 被过滤的 Provider 数（含排除）
-- **strategyWeights** — 使用的权重向量
-- **failoverChain** — 降级链（若发生降级）
+- **intent** — The routed intent
+- **totalCandidates** — Total number of candidate Providers
+- **filteredAfterConstraints** — Number of Providers filtered out (including exclusions)
+- **strategyWeights** — The weight vector used
+- **failoverChain** — The failover chain (if failover occurred)

@@ -3,19 +3,19 @@ sidebar_position: 5
 title: synapse billing
 ---
 
-# synapse billing — 账单管理与配额查看
+# synapse billing — Billing Management and Quota Viewing
 
-billing 命令管理 Provider 调用的用量计费（Usage Billing）和配额（Quota）。支持多种定价策略（Pricing Strategy）：`flat`（按次固定费率）、`perToken`（按 Token 计费）、`perUnit`（按单位计费）、`tiered`（阶梯定价）。配额持久化使用 FileQuotaStorage，存储于 `~/.synapse/quotas/`。
+The billing command manages usage billing and quotas for Provider calls. It supports multiple pricing strategies: `flat` (fixed rate per call), `perToken` (per-token billing), `perUnit` (per-unit billing), and `tiered` (tiered pricing). Quota persistence uses FileQuotaStorage, stored at `~/.synapse/quotas/`.
 
-## 子命令 (Subcommands)
+## Subcommands
 
-| 子命令 | 说明 |
+| Subcommand | Description |
 |--------|------|
-| `init [--strategy <s>] [--limit <n>] [--provider <id>]` | 交互式初始化计费配置 |
-| `config [set\|get]` | 查看或修改计费配置 |
-| `status [--format json\|table]` | 查看配额状态和预估费用 |
+| `init [--strategy <s>] [--limit <n>] [--provider <id>]` | Interactive billing configuration initialization |
+| `config [set\|get]` | View or modify billing configuration |
+| `status [--format json\|table]` | View quota status and estimated costs |
 
-## 示例 (Examples)
+## Examples
 
 Example 1 — Interactive initialization:
 ```bash
@@ -37,17 +37,17 @@ Example 4 — Check status (JSON format):
 synapse billing status --format json
 ```
 
-## 降级策略 (Downgrade Strategies)
+## Downgrade Strategies
 
-| 策略 | 行为 |
+| Strategy | Behavior |
 |------|------|
-| `warn`（默认） | 记录告警但不阻止调用 |
-| `reject` | 超出配额时拒绝调用 |
-| `downgrade` | 自动降级到低价 Provider |
-| `notify` | 发送通知并继续执行 |
+| `warn` (default) | Logs a warning but does not block calls |
+| `reject` | Rejects calls when quota is exceeded |
+| `downgrade` | Automatically downgrades to a lower-cost Provider |
+| `notify` | Sends a notification and continues execution |
 
-## 相关命令 (Related Commands)
+## Related Commands
 
-- [synapse connect](/docs/cli/connect) — billing 自动包裹 connect 调用
-- [synapse config](/docs/cli/config) — 通过 `synapse config set billing.*` 管理计费配置
-- [synapse evolve --with-billing](/docs/cli/evolve) — 生成含 BillingTracker 的 SDK
+- [synapse connect](/docs/cli/connect) — Billing is automatically wrapped around connect calls
+- [synapse config](/docs/cli/config) — Manage billing configuration via `synapse config set billing.*`
+- [synapse evolve --with-billing](/docs/cli/evolve) — Generate an SDK with BillingTracker included

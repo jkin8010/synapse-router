@@ -1,4 +1,5 @@
 import { useAppState } from "../context";
+import { useI18n } from "../i18n/context";
 
 interface ActionBarProps {
   onNegotiate: () => void;
@@ -6,6 +7,7 @@ interface ActionBarProps {
 }
 
 export default function ActionBar({ onNegotiate, onExecute }: ActionBarProps) {
+  const { t } = useI18n();
   const { schemaValid, selectedProviderId, status, negotiationResult, timing } = useAppState();
 
   const isNegotiating = status === "negotiating";
@@ -17,25 +19,25 @@ export default function ActionBar({ onNegotiate, onExecute }: ActionBarProps) {
 
   // Disabled reason strings for tooltip display (D-15-09)
   const negotiateDisabledReason = !schemaValid
-    ? "Schema is invalid -- fix JSON errors first"
+    ? t("negotiateDisabled.noSchema")
     : !selectedProviderId
-      ? "No provider selected -- choose a provider from the left panel"
+      ? t("negotiateDisabled.noProvider")
       : isNegotiating
-        ? "Negotiation already in progress"
+        ? t("negotiateDisabled.negotiating")
         : isExecuting
-          ? "Cannot negotiate while executing"
+          ? t("negotiateDisabled.executing")
           : "";
 
   const executeDisabledReason = !negotiationResult
-    ? "No negotiation result -- negotiate first"
+    ? t("executeDisabled.noResult")
     : isExecuting
-      ? "Execution already in progress"
+      ? t("executeDisabled.executing")
       : isNegotiating
-        ? "Cannot execute while negotiating"
+        ? t("executeDisabled.negotiating")
         : "";
 
   const mockTestDisabledReason = !schemaValid
-    ? "Schema is invalid -- fix JSON errors first"
+    ? t("mockTestDisabled.noSchema")
     : "";
 
   return (
@@ -44,8 +46,8 @@ export default function ActionBar({ onNegotiate, onExecute }: ActionBarProps) {
       <button
         disabled={negotiateDisabled}
         onClick={onNegotiate}
-        title={negotiateDisabled ? negotiateDisabledReason : "Negotiate schema with selected provider"}
-        aria-label={negotiateDisabled ? negotiateDisabledReason : "Negotiate schema with selected provider"}
+        title={negotiateDisabled ? negotiateDisabledReason : t("tooltip.negotiate")}
+        aria-label={negotiateDisabled ? negotiateDisabledReason : t("tooltip.negotiate")}
         className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md text-sm font-medium transition-colors duration-150 ${
           !negotiateDisabled
             ? "bg-emerald-500 text-white hover:bg-emerald-400"
@@ -74,7 +76,7 @@ export default function ActionBar({ onNegotiate, onExecute }: ActionBarProps) {
             />
           </svg>
         )}
-        {isNegotiating ? "Negotiating..." : "Negotiate"}
+        {isNegotiating ? t("action.negotiating") : t("action.negotiate")}
         {!isNegotiating && <kbd className="ml-1">{"⌘↩"}</kbd>}
       </button>
 
@@ -82,8 +84,8 @@ export default function ActionBar({ onNegotiate, onExecute }: ActionBarProps) {
       <button
         disabled={executeDisabled}
         onClick={onExecute}
-        title={executeDisabled ? executeDisabledReason : "Execute the negotiated request"}
-        aria-label={executeDisabled ? executeDisabledReason : "Execute the negotiated request"}
+        title={executeDisabled ? executeDisabledReason : t("tooltip.execute")}
+        aria-label={executeDisabled ? executeDisabledReason : t("tooltip.execute")}
         className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md text-sm font-medium transition-colors duration-150 ${
           !executeDisabled
             ? "bg-zinc-800 text-zinc-300 hover:bg-zinc-700 hover:text-zinc-100"
@@ -112,22 +114,22 @@ export default function ActionBar({ onNegotiate, onExecute }: ActionBarProps) {
             />
           </svg>
         )}
-        {isExecuting ? "Executing..." : "Execute"}
+        {isExecuting ? t("action.executing") : t("action.execute")}
         {!isExecuting && <kbd className="ml-1">{"⌘⇧⏎"}</kbd>}
       </button>
 
       {/* Mock Test button */}
       <button
         disabled={mockTestDisabled}
-        title={mockTestDisabled ? mockTestDisabledReason : "Run mock test against the schema"}
-        aria-label={mockTestDisabled ? mockTestDisabledReason : "Run mock test against the schema"}
+        title={mockTestDisabled ? mockTestDisabledReason : t("tooltip.mockTest")}
+        aria-label={mockTestDisabled ? mockTestDisabledReason : t("tooltip.mockTest")}
         className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md text-sm font-medium transition-colors duration-150 ${
           !mockTestDisabled
             ? "bg-zinc-800 text-zinc-300 hover:bg-zinc-700 hover:text-zinc-100"
             : "opacity-50"
         }`}
       >
-        Mock Test
+        {t("action.mockTest")}
       </button>
 
       {/* Timing display */}

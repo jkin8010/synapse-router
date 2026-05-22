@@ -1,0 +1,41 @@
+{
+  "title": {
+    "message": "Synapse Router",
+    "description": "The title in the navbar"
+  },
+  "item.Overview": {
+    "message": "概览"
+  },
+  "item.CLI Reference": {
+    "message": "CLI 参考"
+  },
+  "item.SDK Guide": {
+    "message": "SDK 指南"
+  },
+  "item.Registry": {
+    "message": "Registry"
+  },
+  "item.GitHub": {
+    "message": "GitHub"
+  },
+  "logo.alt": {
+    "message": "Synapse Router",
+    "description": "The alt text of navbar logo"
+  },
+  "item.label.Overview": {
+    "message": "Overview",
+    "description": "Navbar item with label Overview"
+  },
+  "item.label.CLI Reference": {
+    "message": "CLI Reference",
+    "description": "Navbar item with label CLI Reference"
+  },
+  "item.label.SDK Guide": {
+    "message": "SDK Guide",
+    "description": "Navbar item with label SDK Guide"
+  },
+  "item.label.GitHub": {
+    "message": "GitHub",
+    "description": "Navbar item with label GitHub"
+  }
+}

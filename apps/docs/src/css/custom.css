@@ -8,6 +8,23 @@
   --ifm-color-primary-lightest: #aef3d8;
   --ifm-code-font-size: 95%;
   --docusaurus-highlighted-code-line-bg: rgba(0, 0, 0, 0.1);
+  --synapse-background: #09090b;
+  --synapse-surface: #18181b;
+  --synapse-border: #27272a;
+  --synapse-muted: #a1a1aa;
+  --synapse-accent: #34d399;
+  /* Force dark theme even before JS sets data-theme attribute */
+  --ifm-background-color: #09090b;
+  --ifm-background-surface-color: #18181b;
+  --ifm-navbar-background-color: #09090b;
+  --ifm-card-background-color: #18181b;
+  --ifm-footer-background-color: #09090b;
+  --ifm-font-color-base: #f4f4f5;
+  --ifm-font-color-secondary: #a1a1aa;
+  --ifm-link-color: #34d399;
+  --ifm-link-hover-color: #5de0a8;
+  --ifm-code-background: #27272a;
+  --ifm-code-color: #f472b6;
 }
 
 [data-theme='dark'] {
@@ -19,7 +36,7 @@
   --ifm-color-primary-lighter: #86ecc3;
   --ifm-color-primary-lightest: #aef3d8;
   --docusaurus-highlighted-code-line-bg: rgba(0, 0, 0, 0.3);
-  /* Zinc palette overrides -- synapse-registry unified design system */
+  /* Zinc palette — Synapse Registry unified design system */
   --ifm-background-color: #09090b;
   --ifm-background-surface-color: #18181b;
   --ifm-navbar-background-color: #09090b;
@@ -28,4 +45,144 @@
   --ifm-footer-background-color: #09090b;
   --ifm-font-color-base: #f4f4f5;
   --ifm-font-color-secondary: #a1a1aa;
+  --ifm-link-color: #34d399;
+  --ifm-link-hover-color: #5de0a8;
+  --ifm-code-background: #27272a;
+  --ifm-code-color: #f472b6;
+}
+
+/* Synapse-style card component */
+.synapse-card {
+  border-radius: 0.75rem;
+  border: 1px solid #27272a;
+  background: rgba(24, 24, 27, 0.5);
+  padding: 1.25rem;
+  transition: border-color 0.15s, background-color 0.15s;
+}
+.synapse-card:hover {
+  border-color: #52525b;
+  background: #18181b;
+}
+
+/* Synapse-style stat card */
+.synapse-stat {
+  border-radius: 0.75rem;
+  border: 1px solid #27272a;
+  background: rgba(24, 24, 27, 0.5);
+  padding: 1.25rem;
+}
+
+/* Synapse-style tag */
+.synapse-tag {
+  display: inline-flex;
+  border-radius: 0.25rem;
+  background: #27272a;
+  padding: 0.125rem 0.5rem;
+  font-size: 0.75rem;
+  color: #a1a1aa;
+}
+
+/* Synapse-style button */
+.synapse-button {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  border-radius: 0.5rem;
+  border: 1px solid #3f3f46;
+  background: #18181b;
+  padding: 0.375rem 1rem;
+  font-size: 0.875rem;
+  color: #d4d4d8;
+  transition: border-color 0.15s;
+  cursor: pointer;
+  text-decoration: none;
+}
+.synapse-button:hover {
+  border-color: #52525b;
+  color: #d4d4d8;
+  text-decoration: none;
+}
+.synapse-button--primary {
+  background: #34d399;
+  border-color: #34d399;
+  color: #09090b;
+  font-weight: 500;
+}
+.synapse-button--primary:hover {
+  background: #5de0a8;
+  border-color: #5de0a8;
+  color: #09090b;
+}
+
+/* Custom scrollbar — Synapse Registry style */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+::-webkit-scrollbar-thumb {
+  background: #3f3f46;
+  border-radius: 4px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: #52525b;
+}
+* {
+  scrollbar-width: thin;
+  scrollbar-color: #3f3f46 #09090b;
+}
+
+/* Docusaurus navbar overrides */
+.navbar {
+  border-bottom: 1px solid #27272a;
+}
+.navbar__link {
+  font-size: 0.875rem;
+  color: #a1a1aa;
+}
+.navbar__link:hover,
+.navbar__link--active {
+  color: #fafafa;
+}
+.navbar__title {
+  font-size: 1.125rem;
+  font-weight: 600;
+}
+
+/* Docusaurus footer overrides */
+.footer--dark {
+  --ifm-footer-background-color: #09090b;
+  border-top: 1px solid #27272a;
+}
+.footer__copyright {
+  font-size: 0.75rem;
+  color: #71717a;
+}
+
+/* Docusaurus table of contents */
+.table-of-contents__link {
+  color: #a1a1aa;
+}
+.table-of-contents__link:hover,
+.table-of-contents__link--active {
+  color: #34d399;
+}
+
+/* Markdown content overrides */
+.markdown a {
+  color: #34d399;
+}
+.markdown a:hover {
+  color: #5de0a8;
+}
+.markdown code {
+  background: #27272a;
+  color: #f472b6;
+  border: none;
+  padding: 0.125rem 0.375rem;
+  border-radius: 0.25rem;
+  font-size: 0.875rem;
+}
+.markdown pre code {
+  background: transparent;
+  color: inherit;
 }

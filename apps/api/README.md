@@ -49,7 +49,7 @@ GET /health
 ```
 
 ```bash
-curl http://localhost:3000/health
+curl http://localhost:3011/health
 # { "status": "ok" }
 ```
 
@@ -64,7 +64,7 @@ GET /providers
 ```
 
 ```bash
-curl http://localhost:3000/providers
+curl http://localhost:3011/providers
 ```
 
 响应：
@@ -95,7 +95,7 @@ GET /providers/:id
 ```
 
 ```bash
-curl http://localhost:3000/providers/openai
+curl http://localhost:3011/providers/openai
 ```
 
 响应：完整的 `ProviderCard` 对象，包含所有 features、field_mappings、pricing 等。
@@ -265,7 +265,7 @@ GET /vault/keys
 ```
 
 ```bash
-curl http://localhost:3000/vault/keys
+curl http://localhost:3011/vault/keys
 # { "keys": ["openai", "stability"] }
 ```
 
@@ -276,7 +276,7 @@ POST /vault/keys
 ```
 
 ```bash
-curl -X POST http://localhost:3000/vault/keys \
+curl -X POST http://localhost:3011/vault/keys \
   -H "Content-Type: application/json" \
   -d '{"provider": "openai", "key": "sk-xxx", "auth_type": "Bearer"}'
 # { "stored": true, "provider": "openai" }
@@ -295,7 +295,7 @@ DELETE /vault/keys/:provider
 ```
 
 ```bash
-curl -X DELETE http://localhost:3000/vault/keys/openai
+curl -X DELETE http://localhost:3011/vault/keys/openai
 # { "removed": true, "provider": "openai" }
 ```
 
@@ -306,7 +306,7 @@ POST /vault/verify/:provider
 ```
 
 ```bash
-curl -X POST http://localhost:3000/vault/verify/openai
+curl -X POST http://localhost:3011/vault/verify/openai
 # { "provider": "openai", "valid": true }
 ```
 

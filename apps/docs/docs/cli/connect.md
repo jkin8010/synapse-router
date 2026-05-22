@@ -3,22 +3,22 @@ sidebar_position: 1
 title: synapse connect
 ---
 
-# synapse connect — 连接 Provider 并执行
+# synapse connect — Connect to a Provider and Execute
 
-connect 命令连接指定 Provider（如 `deepseek`、`openai`）并执行一个功能（Intent），如 `chat`、`text-to-image`。命令会查找 Provider 的 Schema Lock，通过 Connector（薄连接层）发起 HTTP 调用，并将 Provider 的私有响应结构映射为标准输出。
+The `connect` command connects to a specified Provider (e.g. `deepseek`, `openai`) and executes an Intent such as `chat` or `text-to-image`. The command looks up the Provider's Schema Lock, makes HTTP calls through the Connector (a thin connection layer), and maps the Provider's private response structure to standardized output.
 
-当 billing 配置存在时，connect 命令自动包裹计费追踪（Billing Tracking）：每次调用前检查配额（Quota Check），调用后记录用量（Usage Recording）。billing 错误默认不阻塞 API 调用，仅产生告警。
+When billing configuration is present, the `connect` command automatically wraps Billing Tracking: it checks the quota before each call and records usage afterward. Billing errors do not block API calls by default — they only produce warnings.
 
-## 参数 (Parameters)
+## Parameters
 
-| 参数 | 类型 | 必需 | 说明 |
-|------|------|------|------|
-| `<provider>` | string | 是 | Provider ID（如 `deepseek`, `openai`） |
-| `<intent>` | string | 是 | 意图类型（如 `chat`, `text-to-image`） |
-| `--input <json>` | string | 是 | 输入参数的 JSON 字符串 |
-| `--billing <strategy>` | string | 否 | 计费策略（如 `preCall`），billing 配置存在时自动包裹 |
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `<provider>` | string | Yes | Provider ID (e.g. `deepseek`, `openai`) |
+| `<intent>` | string | Yes | Intent type (e.g. `chat`, `text-to-image`) |
+| `--input <json>` | string | Yes | JSON string of input parameters |
+| `--billing <strategy>` | string | No | Billing strategy (e.g. `preCall`), automatically wrapped when billing config exists |
 
-## 示例 (Examples)
+## Examples
 
 ### Example 1 — Chat with DeepSeek
 
@@ -44,20 +44,20 @@ synapse connect deepseek chat --input '{"messages":[{"role":"user","content":"He
 synapse connect stability-ai text-to-image --input '{"prompt":"A serene mountain lake at sunset","width":1024,"height":1024}'
 ```
 
-## 计费包裹 (Billing Wrapping)
+## Billing Wrapping
 
-当 billing 配置存在时，connect 命令对 Connector 进行自动包裹（Auto Wrapping），执行流程如下：
+When billing configuration is present, the `connect` command automatically wraps the Connector. The execution flow is as follows:
 
-1. **preCall** — 检查配额（Quota）是否充足，如果超出限额则根据降级策略（Downgrade Strategy）决定行为
-2. **Execute** — 执行实际的 API 调用
-3. **postCall** — 调用完成后记录用量消耗
+1. **preCall** — Checks if quota is sufficient; if exceeded, behavior is determined by the downgrade strategy
+2. **Execute** — Performs the actual API call
+3. **postCall** — Records usage consumption after the call completes
 
-billing 错误默认不阻塞 API 调用（`warn` 策略），仅记录告警。
+Billing errors do not block API calls by default (`warn` strategy); they only log warnings.
 
-## 注意事项 (Notes)
+## Notes
 
-- API Key 需要提前通过 [synapse vault set](/docs/cli/vault) 配置
-- 首次使用可通过 [synapse setup](/docs/cli/setup) 交互式向导完成配置，向导会引导选择 Provider 和配置 API Key
-- `--billing` 参数激活后，每次调用自动检查配额（Quota），超出配额时的行为由降级策略（Downgrade Strategy）决定，可选 `warn`、`reject`、`downgrade`、`notify`
-- 更多 billing 配置请参考 [`synapse billing`](/docs/cli/billing)
-- Provider Pack 的管理（安装、更新、删除）通过 [`synapse pack`](/docs/cli/pack) 完成
+- API Keys must be configured in advance via [synapse vault set](/docs/cli/vault)
+- First-time users can complete configuration through the [synapse setup](/docs/cli/setup) interactive wizard, which guides selection of Providers and API Key configuration
+- When `--billing` is active, each call automatically checks the quota. Behavior on exceeding the quota is determined by the downgrade strategy: `warn`, `reject`, `downgrade`, or `notify`
+- For more billing configuration, see [`synapse billing`](/docs/cli/billing)
+- Provider Pack management (install, update, delete) is handled through [`synapse pack`](/docs/cli/pack)

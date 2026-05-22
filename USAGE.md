@@ -712,7 +712,7 @@ synapse negotiate my-agent.json --intent text-to-image
 #   stability — text_to_image      (quality: standard, cost: $0.04/image)
 
 # 使用 HTTP API，让 Router 自动选择
-curl -X POST http://localhost:3000/execute \
+curl -X POST http://localhost:3011/execute \
   -H "Content-Type: application/json" \
   -d '{
     "intent": "text-to-image",
@@ -1142,11 +1142,11 @@ synapse serve
 
 ```bash
 # 健康检查
-curl http://localhost:3000/health
+curl http://localhost:3011/health
 # {"status":"ok","version":"0.1.0"}
 
 # 连接调用
-curl -X POST http://localhost:3000/execute \
+curl -X POST http://localhost:3011/execute \
   -H "Content-Type: application/json" \
   -d '{
     "provider": "deepseek",

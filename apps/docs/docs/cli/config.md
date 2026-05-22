@@ -3,26 +3,26 @@ sidebar_position: 8
 title: synapse config
 ---
 
-# synapse config — 配置管理
+# synapse config — Configuration Management
 
-config 命令管理 Synapse Router 的全局配置（Global Configuration）。支持点号记法（Dot Notation）访问嵌套配置项，如 `billing.strategy`、`route.strategies.xxx`。配置持久化到 `~/.synapse/config.json`。
+The config command manages Synapse Router's global configuration. It supports dot notation for accessing nested configuration items, such as `billing.strategy` and `route.strategies.xxx`. Configuration is persisted to `~/.synapse/config.json`.
 
-## 命名空间 (Namespace)
+## Namespace
 
-| 命名空间 | 说明 |
+| Namespace | Description |
 |----------|------|
-| `billing.*` | 计费配置（策略、限额、Provider、降级策略） |
-| `route.*` | 路由配置（默认策略、自定义策略权重、偏好设置） |
+| `billing.*` | Billing configuration (strategy, limit, Provider, downgrade strategy) |
+| `route.*` | Routing configuration (default strategy, custom strategy weights, preferences) |
 
-## 子命令 (Subcommands)
+## Subcommands
 
-| 子命令 | 说明 |
+| Subcommand | Description |
 |--------|------|
-| `set <key> <value>` | 设置配置值，支持点号记法 |
-| `get <key>` | 获取配置值 |
-| `list` | 列出所有配置 |
+| `set <key> <value>` | Set a configuration value, supports dot notation |
+| `get <key>` | Get a configuration value |
+| `list` | List all configuration |
 
-## 示例 (Examples)
+## Examples
 
 Example 1 — Set billing strategy:
 ```bash
@@ -45,7 +45,7 @@ Example 4 — Set custom route strategy:
 synapse config set route.strategies.my-custom '{"cost":3,"latency":2,"reliability":2,"featureMatch":2,"preference":1}'
 ```
 
-## 相关命令 (Related Commands)
+## Related Commands
 
-- [synapse billing config](/docs/cli/billing) — billing 配置的快捷入口
-- [synapse setup](/docs/cli/setup) — 交互式初始化向导（自动设置基础配置）
+- [synapse billing config](/docs/cli/billing) — Shortcut for billing configuration
+- [synapse setup](/docs/cli/setup) — Interactive setup wizard (automatically sets up base configuration)

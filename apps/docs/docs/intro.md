@@ -3,62 +3,62 @@ sidebar_position: 1
 title: Overview & Getting Started
 ---
 
-# Synapse Router 概览与快速开始 (Overview & Getting Started)
+# Synapse Router Overview & Getting Started
 
-Synapse Router 是一个面向 AI Agent 的受控 Schema 协商（Schema Negotiation）与多 Provider 路由层（Multi-Provider Router）。它位于 AI Agent 与多 Provider API 之间，确保每次请求在执行前都有明确契约（Contract）。Router 不是运行时中间件，而是开发时 SDK 生成引擎（SDK Generation Engine）。
+Synapse Router is a controlled Schema Negotiation and Multi-Provider Router layer designed for AI Agents. It sits between AI Agents and multiple Provider APIs, ensuring every request has a clear Contract before execution. The Router is not a runtime middleware — it is a development-time SDK Generation Engine.
 
-## 快速开始 (Getting Started)
+## Getting Started
 
-### 1. 安装 (Installation)
+### 1. Installation
 
-**前置要求：** Node.js 22+
+**Prerequisites:** Node.js 22+
 
-全局安装 Synapse CLI：
+Install the Synapse CLI globally:
 
 ```bash
 npm install -g @synapse-router/cli
 ```
 
-或者使用 pnpm：
+Or using pnpm:
 
 ```bash
 pnpm add -g @synapse-router/cli
 ```
 
-安装完成后，验证版本：
+After installation, verify the version:
 
 ```bash
 synapse --version
 ```
 
-### 2. 配置 Provider (Provider Configuration)
+### 2. Provider Configuration
 
-配置 Provider 有两种方式：交互式向导或手动配置。
+There are two ways to configure a Provider: interactive wizard or manual configuration.
 
-**交互式方式：** 运行 `synapse setup`，按照提示选择 Provider、输入 API Key 并完成基础配置。
+**Interactive mode:** Run `synapse setup`, follow the prompts to select a Provider, enter your API Key, and complete the basic configuration.
 
 ```bash
 synapse setup
 ```
 
-**手动方式：** 使用 `synapse vault set` 命令直接存储 API Key 并指定 API 地址。
+**Manual mode:** Use the `synapse vault set` command to directly store an API Key and specify the API address.
 
 ```bash
 synapse vault set deepseek sk-xxx --base-url https://api.deepseek.com/v1
 synapse vault set openai sk-proj-xxx --base-url https://api.openai.com/v1
 ```
 
-API Key 使用 AES-256-GCM 加密存储，永不明文落盘。所有日志输出自动脱敏，确保 Key 不会出现在 Trace 或 Span 中。
+API Keys are encrypted using AES-256-GCM and are never written to disk in plain text. All log output is automatically redacted to ensure Keys never appear in Traces or Spans.
 
-### 3. 首次连接 (First Connect)
+### 3. First Connect
 
-配置完成后，使用 `synapse connect` 命令连接 Provider 并执行一个功能：
+After configuration, use the `synapse connect` command to connect to a Provider and execute a feature:
 
 ```bash
-synapse connect deepseek chat --input '{"messages":[{"role":"user","content":"你好，请介绍一下你自己"}]}'
+synapse connect deepseek chat --input '{"messages":[{"role":"user","content":"Hello, please introduce yourself"}]}'
 ```
 
-预期输出（以下为示例，实际内容因 Provider 而异）：
+Expected output (example below; actual content varies by Provider):
 
 ```json
 {
@@ -70,47 +70,47 @@ synapse connect deepseek chat --input '{"messages":[{"role":"user","content":"�
 }
 ```
 
-如果已配置计费（Billing）策略，可以添加 `--billing` 参数自动包裹用量追踪：
+If you have configured a billing strategy, add the `--billing` flag to automatically wrap usage tracking:
 
 ```bash
 synapse connect deepseek chat --input '{"messages":[]}' --billing preCall
 ```
 
-### 4. 生成 SDK (Generate SDK)
+### 4. Generate SDK
 
-连接验证成功后，下一步是使用 `synapse evolve` 生成零依赖 SDK。此命令将 Schema 协商结果转换为纯函数 SDK 代码，应用代码中不再需要 Router，只引用生成的 SDK。
+After connection is verified, the next step is to use `synapse evolve` to generate a zero-dependency SDK. This command converts Schema Negotiation results into pure function SDK code — your application code no longer needs the Router, it only references the generated SDK.
 
 ```bash
 synapse evolve
 ```
 
-如需包含用量追踪能力：
+To include usage tracking capabilities:
 
 ```bash
 synapse evolve --with-billing
 ```
 
-详细的 evolve 使用说明请参考 [SDK Guide](/docs/sdk)。
+For detailed evolve usage instructions, see the [SDK Guide](/docs/sdk).
 
-## 核心定位 (Core Position)
+## Core Position
 
-Router 不是运行时中间件，而是**开发时 SDK 生成引擎**。应用代码里没有 Router，只有生成的 SDK。所有协商、路由决策、Provider 选择在开发时完成，运行时只有纯代码 SDK。
+The Router is not a runtime middleware — it is a **development-time SDK generation engine**. Your application code contains no Router, only the generated SDK. All negotiation, routing decisions, and Provider selection happen at development time; at runtime, there is only pure-code SDK.
 
-**开发时协商，运行时无感** — 协商阶段可以复杂、可以调用 LLM、可以探索，因为它是离线的、一次性的。运行时只有纯代码逻辑的 SDK，确定性（Deterministic）、零 Token 成本（Zero Token Cost）、零 LLM 意外。
+**Negotiate at dev time, zero impact at runtime** — the negotiation phase can be complex, can call LLMs, and can explore because it is offline and one-time. At runtime, there is only pure-code SDK — deterministic, zero token cost, zero LLM surprises.
 
-## 架构概览 (Architecture Overview)
+## Architecture Overview
 
-整个系统的工作流程分为三个阶段：
+The entire system workflow is divided into three stages:
 
-1. **Schema 协商（Schema Negotiation）** — Intent 匹配 + 能力验证 + 字段级 Manifest 约束检查。协商引擎将 Agent 的意图匹配到 Provider 的 Feature，生成 Schema 契约（Contract）。
-2. **Provider 路由（Provider Routing）** — 多维评分路由引擎根据策略（cheap/fast/quality/balanced/cost-capped）对候选 Provider 进行评分、过滤、排序，选择最优 Provider。
-3. **SDK 生成（SDK Generation）** — 通过 `synapse evolve` 将 Schema Lock 转换为纯函数 SDK 代码（TypeScript / Python），零外部依赖。
+1. **Schema Negotiation** — Intent matching + capability verification + field-level Manifest constraint checking. The negotiation engine matches the Agent's intent to a Provider's Feature and generates a Schema Contract.
+2. **Provider Routing** — A multi-dimensional scoring routing engine scores, filters, and sorts candidate Providers based on strategy (cheap/fast/quality/balanced/cost-capped) to select the optimal Provider.
+3. **SDK Generation** — Converts Schema Locks into pure function SDK code (TypeScript / Python) with zero external dependencies via `synapse evolve`.
 
-Synapse CLI 提供了上述所有能力的统一入口。详细命令说明见 [CLI Reference](/docs/cli)。
+The Synapse CLI provides a unified entry point for all of the above capabilities. See the [CLI Reference](/docs/cli) for detailed command documentation.
 
-## 下一步 (Next Steps)
+## Next Steps
 
-- [/docs/cli](/docs/cli) — 所有命令的完整参考（complete command reference）
-- [/docs/sdk](/docs/sdk) — SDK 生成与使用详解（SDK generation and usage）
-- [/docs/api](/docs/api) — REST API 接口文档（REST API documentation）
-- [/docs/packs](/docs/packs) — Provider Pack 开发指南（Provider Pack development guide）
+- [/docs/cli](/docs/cli) — Complete command reference
+- [/docs/sdk](/docs/sdk) — SDK generation and usage
+- [/docs/api](/docs/api) — REST API documentation
+- [/docs/packs](/docs/packs) — Provider Pack development guide

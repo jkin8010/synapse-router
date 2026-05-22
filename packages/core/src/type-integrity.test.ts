@@ -58,7 +58,7 @@ describe("AgentSchema type integrity", () => {
 
   it("creates AgentSchema with all 4 access protocol kinds", () => {
     const apiProto: AccessProtocol = { kind: "api", auth_type: "APIKey" };
-    const mcpProto: AccessProtocol = { kind: "mcp", server_url: "http://localhost:3000" };
+    const mcpProto: AccessProtocol = { kind: "mcp", server_url: "http://localhost:3011" };
     const cliProto: AccessProtocol = { kind: "cli", command: "my-cli" };
     const a2aProto: AccessProtocol = { kind: "a2a", agent_url: "http://agent.example.com" };
 
@@ -347,13 +347,15 @@ describe("Type cross-reference", () => {
       { type: "key.expiring_soon", data: { days_remaining: 7 } },
       { type: "key.grace_period_started", data: { grace_ends_at: "2026-02-01T00:00:00Z" } },
       { type: "key.expired", data: { schema_retention_days: 30 } },
-      { type: "schema.breaking_change", data: {
-        change_id: "bc-1",
-        description: "API v2",
-        affected_features: ["text-to-image"],
-        planned_at: "2026-03-01T00:00:00Z",
-        severity: "breaking",
-      }},
+      {
+        type: "schema.breaking_change", data: {
+          change_id: "bc-1",
+          description: "API v2",
+          affected_features: ["text-to-image"],
+          planned_at: "2026-03-01T00:00:00Z",
+          severity: "breaking",
+        }
+      },
       { type: "schema.deprecated", data: { feature_id: "old-feature", sunset_date: "2026-06-01" } },
     ];
     assert.equal(events.length, 5);
