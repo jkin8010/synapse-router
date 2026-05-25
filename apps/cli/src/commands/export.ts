@@ -375,32 +375,7 @@ async function exportSynapse(options: ExportOptions): Promise<void> {
 }
 
 export function printExportHelp(): void {
-  console.log(`
-synapse export — Export .synapse/ data for transfer to development environment
-
-Usage:
-  synapse export [options]
-
-Options:
-  --output <path>    Output file path (default: ./synapse-data.tgz)
-  --stdout           Write tar.gz to stdout (for pipe mode)
-  --minimal          Export only profiles + memories (no raw events)
-
-Description:
-  Creates a tar.gz archive of the .synapse/ directory for transfer
-  between production and development environments.
-
-  API keys are NOT included — they live in ~/.synapse/keys/ (global vault).
-
-Modes:
-  Full export:     includes profiles, memories, config, schemas, and raw events
-  Minimal export:  only profiles + memories + config (smaller, no raw events)
-
-Examples:
-  synapse export
-  synapse export --output ./backup.tgz
-  synapse export --stdout --minimal | ssh prod "synapse import --stdin --merge"
-`);
+  console.log(HELP_EXPORT);
 }
 
 // ---------------------------------------------------------------------------
@@ -542,32 +517,7 @@ async function importSynapse(options: ImportOptions): Promise<void> {
 }
 
 export function printImportHelp(): void {
-  console.log(`
-synapse import — Import .synapse/ data from an export archive
-
-Usage:
-  synapse import <file.tgz> [options]
-  synapse import --stdin [options]
-
-Options:
-  --stdin             Read tar.gz from stdin (for pipe mode)
-  --dry-run           Preview import contents without writing files
-  --merge             Merge with local data (skip existing files)
-  --overwrite         Overwrite existing files (default behavior)
-
-Security:
-  Import performs automatic validation:
-  - No path traversal (../)
-  - No suspicious characters (;|&\$)
-  - No API key patterns in content
-  - All paths must be within .synapse/
-
-Examples:
-  synapse import ./synapse-data.tgz
-  synapse import ./synapse-data.tgz --dry-run
-  synapse import ./synapse-data.tgz --merge
-  ssh prod "synapse export --stdout --minimal" | synapse import --stdin --merge
-`);
+  console.log(HELP_IMPORT);
 }
 
 // ---------------------------------------------------------------------------

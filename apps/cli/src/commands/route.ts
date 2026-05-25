@@ -383,53 +383,7 @@ export async function handleRouteCommand(rawArgs: string[]): Promise<void> {
 // ---------------------------------------------------------------------------
 
 export function printRouteHelp(): void {
-  console.log(`
-synapse route — Multi-dimensional routing to select the best provider
-
-Usage:
-  synapse route <intent> [options]
-
-Arguments:
-  <intent>                     Provider intent (e.g. "chat", "text-to-image",
-                               "embeddings", "text-generation")
-
-Options:
-  --strategy, -s <name>        Routing strategy (default: balanced)
-                               Built-in: cheap, fast, quality, balanced, cost-capped
-                               Custom:   from 'config set route.strategies.<id>'
-  --max-cost <usd>             Max cost per call in USD (e.g. 0.01)
-  --min-reliability <0-1>      Min reliability threshold (e.g. 0.9)
-  --prefer, -p <ids>           Preferred providers (comma-separated)
-  --exclude, -x <ids>          Excluded providers (comma-separated)
-  --region <name>              Preferred region (e.g. "us-east", "eu-west")
-  --min-version <ver>          Minimum model version (e.g. "4.0")
-  --strategy-weights <json>    One-off custom weights (e.g. '{"cost":2,"latency":1}')
-  --format, -f <fmt>           Output format: json | table | compact (default: json)
-  --help, -h                   Show this help
-
-Config persistence:
-  synapse config set route.strategies.myCustom.weights.cost 3
-  synapse config set route.strategies.myCustom.weights.reliability 2
-  synapse config set route.strategies.myCustom.maxCost 0.05
-
-Examples:
-  synapse route chat
-  synapse route chat --strategy fast
-  synapse route text-to-image --strategy cheap --format table
-  synapse route chat --prefer openai,anthropic --exclude groq
-  synapse route chat --max-cost 0.01 --format compact
-  synapse route chat --strategy-weights '{"cost":5,"latency":1}'
-  synapse route chat --region us-east --min-version 4.0
-
-Output (json):
-  {
-    "provider": "groq",
-    "score": { "totalScore": 85.3, "dimensions": {...} },
-    "candidates": [...],
-    "strategy": "fast",
-    "explanation": { "intent": "chat", "totalCandidates": 5, ... }
-  }
-`);
+  console.log(HELP_ROUTE);
 }
 
 // ---------------------------------------------------------------------------

@@ -19,47 +19,7 @@ interface InitOptions {
 // ---------------------------------------------------------------------------
 
 export function printInitHelp(): void {
-  console.log(`
-synapse init — Initialize a synapse-sdk project
-
-Usage:
-  synapse init [options]
-
-Options:
-  --provider <name>     Provider ID to pre-configure (e.g. openai, replicate)
-  --out-dir <path>      Output directory (default: ./synapse-sdk)
-  --with-cicd           Generate GitHub Actions CI/CD workflow template
-
-Description:
-  Creates a synapse-sdk project directory structure with a synapse.json
-  configuration file. Run this in your project root before generating SDKs.
-
-  With --with-cicd, creates .github/workflows/synapse-evolve.yml for
-  automated weekly SDK evolution with production profile data.
-
-Output structure:
-  <out-dir>/
-  ├── README.md              # Integration instructions
-  └── .gitkeep               # Ensures directory is tracked
-
-  synapse.json               # Generation configuration
-
-  .github/workflows/         # (with --with-cicd)
-  └── synapse-evolve.yml     # CI/CD workflow template
-
-Examples:
-  # Interactive setup
-  synapse init
-
-  # Pre-select openai provider
-  synapse init --provider openai
-
-  # Custom output directory
-  synapse init --out-dir ./src/sdk
-
-  # Include CI/CD workflow
-  synapse init --with-cicd
-`);
+  console.log(HELP_INIT);
 }
 
 // ---------------------------------------------------------------------------

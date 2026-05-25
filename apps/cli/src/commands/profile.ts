@@ -385,28 +385,7 @@ async function refreshProfiles(): Promise<void> {
 // ---------------------------------------------------------------------------
 
 export function printProfileHelp(): void {
-  console.log(`
-synapse profile — View and manage Provider Profiles
-
-Usage:
-  synapse profile list                 List all providers with summary stats
-  synapse profile show <provider>      Show detailed stats for a provider
-  synapse profile reset <provider>     Reset provider profile data
-  synapse profile stats                Global statistics across all providers
-  synapse profile refresh              Rebuild profiles from events.ndjson
-
-Description:
-  Provider Profiles aggregate runtime event data from
-  .synapse/watchdog/events.ndjson. Each profile contains
-  success rates, latency percentiles, error breakdowns,
-  and per-feature statistics.
-
-Examples:
-  synapse profile list
-  synapse profile show openai
-  synapse profile stats
-  synapse profile refresh
-`);
+  console.log(HELP_PROFILE);
 }
 
 // ---------------------------------------------------------------------------

@@ -343,37 +343,7 @@ export function formatSmokeOutput(results: SmokeResult[], format: "json" | "tabl
 // ---------------------------------------------------------------------------
 
 export function printSmokeHelp(): void {
-  console.log(`
-synapse smoke — Run provider smoke tests against live production APIs
-
-Usage:
-  synapse smoke --provider <name> [options]
-
-Options:
-  --provider <name>    Provider ID (required): openai, replicate
-  --timeout <seconds>  Timeout per test in seconds (default: 30)
-  --format <fmt>       Output format: json | table | compact (default: table)
-  --verbose, -v        Show detailed output including raw response
-  --api-key <key>      Override API key (prefer vault)
-  --help, -h           Show this help
-
-Examples:
-  # Test OpenAI connectivity
-  synapse smoke --provider openai
-
-  # Test Replicate with custom timeout
-  synapse smoke --provider replicate --timeout 60
-
-  # JSON output for scripting
-  synapse smoke --provider openai --format json
-
-  # Verbose output with raw response
-  synapse smoke --provider openai --verbose
-
-See also:
-  synapse vault    — Manage API keys
-  synapse connect  — Connect to a provider
-`);
+  console.log(HELP_SMOKE);
 }
 
 // ---------------------------------------------------------------------------

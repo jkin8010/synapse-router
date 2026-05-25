@@ -780,48 +780,7 @@ rules:
 // ---------------------------------------------------------------------------
 
 export function printWatchdogHelp(): void {
-  console.log(`
-synapse watchdog — Pure-code rule engine for monitoring Synapse events
-
-Usage:
-  synapse watchdog [subcommand] [options]
-
-Subcommands:
-  (none)                      Single-run: read events, evaluate rules, create issues
-  rules list                  List loaded rules from config
-  rules validate              Validate rule configuration
-  init                        Initialize watchdog config and events directory
-
-Options:
-  --daemon                    Run in daemon mode (continuous monitoring)
-  --interval <duration>       Override check interval (e.g. 5m, 10m, 1h)
-  --config <path>             Path to rules config YAML (default: .synapse/watchdog.yml)
-  --dry-run                   Preview actions without creating issues
-  --help, -h                  Show this help
-
-Examples:
-  # Single run (great for CI)
-  synapse watchdog
-
-  # Daemon mode with default 5m interval
-  synapse watchdog --daemon
-
-  # Daemon with custom interval
-  synapse watchdog --daemon --interval 10m
-
-  # Custom config + preview mode
-  synapse watchdog --config ./my-rules.yml --dry-run
-
-  # List rules
-  synapse watchdog rules list
-
-  # Validate rules
-  synapse watchdog rules validate
-
-See also:
-  synapse evolve    — Generate SDK from provider packs
-  synapse init      — Initialize synapse-sdk project
-`);
+  console.log(HELP_WATCHDOG);
 }
 
 // ---------------------------------------------------------------------------

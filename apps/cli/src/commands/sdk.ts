@@ -27,32 +27,7 @@ interface SdkCommandOptions {
 // ---------------------------------------------------------------------------
 
 export function printSdkHelp(): void {
-  console.log(`
-synapse sdk — Generate SDKs from Provider Packs
-
-Usage:
-  synapse sdk generate --pack <pack> --lang <lang> --output <dir> [options]
-
-Commands:
-  generate    Generate an SDK from a Provider Pack
-
-Options:
-  --pack <id>           Pack ID or path (e.g. openai, ./packs/openai)
-  --lang <lang>         Target language: typescript | python
-  --output <dir>        Output directory for generated SDK
-  --provider <id>       Override provider name (e.g. deepseek using openai pack)
-  --base-url <url>      Override default base URL
-
-Examples:
-  # Generate TypeScript SDK from openai pack
-  synapse sdk generate --pack openai --lang typescript --output ./generated-sdk
-
-  # Generate Python SDK
-  synapse sdk generate --pack openai --lang python --output ./generated-sdk
-
-  # Generate DeepSeek SDK using openai pack
-  synapse sdk generate --pack openai --lang typescript --provider deepseek --base-url https://api.deepseek.com/v1 --output ./generated-sdk
-`);
+  console.log(HELP_SDK);
 }
 
 // ---------------------------------------------------------------------------
