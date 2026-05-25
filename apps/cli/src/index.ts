@@ -22,7 +22,11 @@ import { handleLockCommand, printLockHelp } from "./commands/lock.js";
 import { handleSdkCommand, printSdkHelp } from "./commands/sdk.js";
 import { handlePackCommand, printPackHelp } from "./commands/pack.js";
 import { handleRouteCommand, printRouteHelp } from "./commands/route.js";
-import { getOrCreateLock, detectOutdatedLocks, type SchemaLock } from "@synapse-router/lock";
+import { getOrCreateLock } from "@synapse-router/lock";
+import { negotiateAndVerify, matchManifest, loadManifestFromPack } from "@synapse-router/negotiator";
+import type { NegotiateAndVerifyInput, NegotiationResult } from "@synapse-router/negotiator";
+import type { ContractVerificationError } from "@synapse-router/negotiator";
+import type { ProviderCard } from "@synapse-router/core";
 import { createRegistryClient } from "@synapse-router/registry-client";
 import { readFileSync, existsSync } from "node:fs";
 
@@ -231,7 +235,7 @@ synapse negotiate — Run schema negotiation
 
 Usage:
   synapse negotiate <schema-file>                   Negotiate from agent schema file
-  synapse negotiate --intent <intent> --provider <provider>  Negotiate specific intent+provider
+  synapse negotiate --intent <intent> --provider <provider>  Full negotiation pipeline
 
 Arguments:
   <schema-file>          Path to agent schema JSON file
@@ -239,12 +243,14 @@ Arguments:
 Options:
   --intent <intent>      Feature intent (e.g. chat, text-to-image)
   --provider <provider>  Provider ID (e.g. openai, deepseek)
-  --no-cache             Force re-negotiation (ignore cached lock)
+  --no-cache             Force re-negotiation (delete cached lock + verification)
+  --format <fmt>         Output format: json | table (default: table)
 
 Examples:
   synapse negotiate ./my-agent-schema.json
   synapse negotiate --intent chat --provider openai
   synapse negotiate --intent chat --provider openai --no-cache
+  synapse negotiate --intent chat --provider openai --format json
 
 See also:
   synapse provider list   — List available providers
@@ -298,6 +304,52 @@ async function findPacksDir(): Promise<string> {
   } else {
     return join(dirname(dirname(dirname(absolutePath))), "packs"); // 3 levels up from src/index.ts
   }
+}
+
+const USER_PACKS_DIR = join(homedir(), ".synapse", "packs");
+const LOCAL_PACKS_DIR = () => join(process.cwd(), ".synapse", "packs");
+
+async function loadProviderCard(
+  packsDir: string, providerId: string
+): Promise<{ card: ProviderCard; dir: string } | null> {
+  // Search priority: built-in packs/ > local .synapse/packs/ > ~/.synapse/packs/
+  for (const dir of [packsDir, LOCAL_PACKS_DIR(), USER_PACKS_DIR]) {
+    // Try namespaced format: "aliyun/qwen-image" → dir/aliyun__qwen-image/
+    if (providerId.includes("/")) {
+      const nsDirName = providerId.replace("/", "__");
+      const cardPath = join(dir, nsDirName, "provider-card.json");
+      try {
+        const content = await readFile(cardPath, "utf8");
+        return { card: JSON.parse(content) as ProviderCard, dir };
+      } catch { /* try flat fallback */ }
+    }
+    // Fallback: flat format (built-in packs or pre-namespaced installs)
+    const flatName = providerId.includes("/") ? providerId.split("/")[1] : providerId;
+    const cardPath = join(dir, flatName, "provider-card.json");
+    try {
+      const content = await readFile(cardPath, "utf8");
+      return { card: JSON.parse(content) as ProviderCard, dir };
+    } catch {
+      // Flat name not found, try scanning all subdirectories by provider.id
+      // (handles registry-installed packs with compound dir names like aliyun__qwen-image-edit)
+    }
+
+    // Scan all subdirectories for a provider-card.json with matching provider.id
+    try {
+      const entries = await readdir(dir, { withFileTypes: true });
+      for (const entry of entries) {
+        if (!entry.isDirectory() || entry.name.startsWith(".")) continue;
+        try {
+          const cardContent = await readFile(join(dir, entry.name, "provider-card.json"), "utf8");
+          const parsed = JSON.parse(cardContent) as ProviderCard;
+          if (parsed.provider?.id === providerId) {
+            return { card: parsed, dir: join(dir, entry.name) };
+          }
+        } catch { /* not a valid pack directory */ }
+      }
+    } catch { /* directory doesn't exist, try next source */ }
+  }
+  return null;
 }
 
 // ---------------------------------------------------------------------------
@@ -608,11 +660,27 @@ async function vaultRotate(provider: string): Promise<void> {
 // Negotiate
 // ---------------------------------------------------------------------------
 
+// Generate example value from field definition for display
+function exampleValue(fdef: { type?: string; enumValues?: string[]; fallback?: unknown } | null, fm: { fallback?: unknown } | null): unknown {
+  // Use fallback if available
+  if (fm?.fallback !== undefined) return fm.fallback;
+  if (fdef?.fallback !== undefined) return fdef.fallback;
+  // Generate from type
+  if (fdef?.enumValues?.length) return fdef.enumValues[0];
+  if (fdef?.type === "string") return "<value>";
+  if (fdef?.type === "number") return 0;
+  if (fdef?.type === "boolean") return true;
+  if (fdef?.type === "array") return [];
+  if (fdef?.type === "object") return {};
+  return "<value>";
+}
+
 async function negotiate(rawArgs: string[]): Promise<void> {
   // Parse flags
   let schemaFile: string | undefined;
   let intentFlag: string | undefined;
   let providerFlag: string | undefined;
+  let formatFlag: "json" | "table" = "table";
   let noCache = false;
   const positional: string[] = [];
 
@@ -622,6 +690,8 @@ async function negotiate(rawArgs: string[]): Promise<void> {
       intentFlag = rawArgs[++i];
     } else if (arg === "--provider" && rawArgs[i + 1]) {
       providerFlag = rawArgs[++i];
+    } else if (arg === "--format" && rawArgs[i + 1]) {
+      formatFlag = rawArgs[++i] as "json" | "table";
     } else if (arg === "--no-cache") {
       noCache = true;
     } else if (!arg.startsWith("-")) {
@@ -634,44 +704,228 @@ async function negotiate(rawArgs: string[]): Promise<void> {
   const packsDir = await findPacksDir();
   const configDir = join(homedir(), ".synapse");
 
-  // Mode 1: --intent + --provider → use Schema Lock
+  // Mode 1: --intent + --provider → negotiateAndVerify pipeline
   if (intentFlag && providerFlag) {
+    // Load provider card from multiple sources (built-in packs/, local .synapse/packs/, user ~/.synapse/packs/)
+    const found = await loadProviderCard(packsDir, providerFlag);
+    if (!found) {
+      console.error(
+        `Error: Provider pack not found for "${providerFlag}". ` +
+        `Ensure the pack is installed via "synapse pack add ${providerFlag}"`
+      );
+      process.exit(1);
+    }
+    const { card, dir: packSourceDir } = found;
+
+    // Find matching feature
+    const feature = card.features.find((f: any) => f.intent === intentFlag || f.id === intentFlag);
+    if (!feature) {
+      console.error(
+        `Error: No feature found for intent "${intentFlag}" in pack "${providerFlag}". ` +
+        `Available intents: ${card.features.map((f: any) => f.intent || f.id).join(", ")}`
+      );
+      process.exit(1);
+    }
+
+    if (noCache) {
+      // Remove existing lock first
+      const { LockStorage } = await import("@synapse-router/lock");
+      const storage = new LockStorage(join(configDir, "schemas"));
+      const locks = await storage.list();
+      for (const l of locks) {
+        if (l.intent === intentFlag && l.provider === providerFlag) {
+          await storage.remove(l.lock_id);
+          console.log(`Removed cached lock: ${l.lock_id}`);
+        }
+      }
+    }
+
+    // Build pack dir for DSL loading (use dir found by loadProviderCard)
+    const providerPackDir = packSourceDir;
+
+    // Build task/goal/constraints from feature
+    const task = (feature as any).description ?? `Execute ${intentFlag} for ${providerFlag}`;
+    const goal = `Provide ${intentFlag} functionality via ${providerFlag}`;
+    const constraints: Record<string, unknown> = {};
+
+    // Read LLM API key from vault (key name: "negotiator-llm")
+    let llmApiKey: string | undefined;
     try {
-      if (noCache) {
-        // Remove existing lock first
-        const { LockStorage } = await import("@synapse-router/lock");
-        const storage = new LockStorage(join(configDir, "schemas"));
-        const locks = await storage.list();
-        for (const l of locks) {
-          if (l.intent === intentFlag && l.provider === providerFlag) {
-            await storage.remove(l.lock_id);
-            console.log(`Removed cached lock: ${l.lock_id}`);
+      const vault = makeVault();
+      llmApiKey = (await vault.getKey("negotiator-llm")) ?? undefined;
+    } catch {
+      // Vault may not be initialized; fall back to no key (stub mode)
+    }
+
+    // Read model and baseUrl from config
+    const config = await loadMergedConfig();
+    const llmModel = (config as any).negotiator?.model as string | undefined;
+    const llmBaseUrl = (config as any).negotiator?.baseUrl as string | undefined;
+
+    // Build NegotiateAndVerifyInput
+    const input: NegotiateAndVerifyInput = {
+      task,
+      goal,
+      constraints,
+      providerId: providerFlag,
+      packDir: providerPackDir,
+      llmOptions: llmApiKey ? { apiKey: llmApiKey, model: llmModel, baseUrl: llmBaseUrl } : undefined,
+    };
+
+    try {
+      const result: NegotiationResult = await negotiateAndVerify(input);
+
+      // Display full negotiation process
+      console.log(`\n━━━ Provider Feature ──────────────────────────────`);
+      console.log(`  Feature:     ${feature.name ?? feature.id}`);
+      console.log(`  Description: ${(feature as any).description ?? "-"}`);
+      console.log(`\n  Input fields (${feature.input.fields.length}):`);
+      for (const f of feature.input.fields) {
+        const req = f.required ? " (required)" : "";
+        const fe = (f as any).enum;
+        const enumInfo = fe && fe.length ? ` [${fe.join(", ")}]` : "";
+        console.log(`    - ${f.name}: ${f.type}${req}${enumInfo}`);
+      }
+      console.log(`  Output fields (${feature.output.fields.length}):`);
+      for (const f of feature.output.fields) {
+        console.log(`    - ${f.name}: ${f.type}`);
+      }
+
+      console.log(`\n━━━ Negotiated Schema ────────────────────────────`);
+      console.log(`  Schema ID:   ${result.schema_id}`);
+      console.log(`  Name:        ${result.schema.name}`);
+      console.log(`  Fields:      ${result.schema.fields.length}`);
+      for (const field of result.schema.fields) {
+        const req = field.required ? " (required)" : "";
+        const enumInfo = field.type === "enum" && field.enumValues ? ` [${field.enumValues.join(", ")}]` : "";
+        console.log(`    - ${field.name}: ${field.type}${req}${enumInfo}`);
+      }
+      if (result.sdk_code) {
+        const lines = result.sdk_code.split("\n").length;
+        console.log(`  SDK code:     generated (${lines} lines)`);
+      }
+
+      // Run manifest matching to show field-level comparison
+      try {
+        const manifestConstraints = await loadManifestFromPack(providerPackDir);
+        const merged = manifestConstraints.reduce((acc: any, c: any) => {
+          if (c.required) acc.required = [...new Set([...(acc.required ?? []), ...c.required])];
+          if (c.type) acc.type = { ...(acc.type ?? {}), ...c.type };
+          return acc;
+        }, {});
+        if (Object.keys(merged).length > 0) {
+          const manifestMatch = matchManifest(result.schema, merged);
+          console.log(`\n━━━ Manifest Match ──────────────────────────────`);
+          console.log(`  Status:      ${manifestMatch.valid ? "passed" : "adapted"}`);
+          if (manifestMatch.missing.length > 0) {
+            console.log(`  Missing:     ${manifestMatch.missing.join(", ")}`);
           }
+          if (manifestMatch.extra.length > 0) {
+            console.log(`  Extra:       ${manifestMatch.extra.join(", ")}`);
+          }
+          if (manifestMatch.type_mismatch.length > 0) {
+            for (const tm of manifestMatch.type_mismatch) {
+              console.log(`  Type:        ${tm.field}: expected ${tm.expected}, got ${tm.actual}`);
+            }
+          }
+        }
+      } catch { /* manifest matching is best-effort */ }
+
+      console.log(`\n━━━ Field Mappings (${feature.field_mappings.length}) ───────────────────`);
+      for (const fm of feature.field_mappings) {
+        const req = fm.required ? " (required)" : "";
+        const xfrm = fm.transform ? ` => transform: ${fm.transform}` : "";
+        const fb = fm.fallback !== undefined ? ` ⤵ ${JSON.stringify(fm.fallback)}` : "";
+        console.log(`    ${fm.canonical_field} ⇄ ${fm.provider_field}${req}${xfrm}${fb}`);
+      }
+
+      // Show example API call from feature definition
+      const exampleBody: Record<string, unknown> = {};
+      for (const fm of feature.field_mappings) {
+        const fdef = feature.input.fields.find((f: any) => f.name === fm.provider_field);
+        exampleBody[fm.provider_field] = exampleValue(fdef ?? fm, fm);
+      }
+      const exampleOutput: Record<string, unknown> = {};
+      for (const f of feature.output.fields) {
+        exampleOutput[f.name] = exampleValue(f, null);
+      }
+      const exLines = Object.keys(exampleBody).length;
+      const outLines = Object.keys(exampleOutput).length;
+      if (exLines > 0 || outLines > 0) {
+        console.log(`\n━━━ Example I/O ───────────────────────────────────`);
+        if (exLines > 0) {
+          console.log(`  POST ${(card as any).service?.base_url ?? "/api/v1/"}  (input example)`);
+          console.log(`  ${JSON.stringify(exampleBody, null, 4).split("\n").join("\n  ")}`);
+        }
+        if (outLines > 0) {
+          console.log(`  Response (output example):`);
+          console.log(`  ${JSON.stringify(exampleOutput, null, 4).split("\n").join("\n  ")}`);
         }
       }
 
-      const { lock, cached } = await getOrCreateLock({
-        intent: intentFlag,
-        provider: providerFlag,
-        packDir: packsDir,
-        configDir,
-      });
+      console.log(`\n━━━ Verification ──────────────────────────────────`);
+      console.log(`  Status:      ${result.verification_result.status}`);
+      if ((result.schema as any).llm_provider) {
+        console.log(`  LLM:         ${(result.schema as any).llm_provider}`);
+      }
+      console.log(``);
 
-      if (cached) {
-        console.log(`Using cached lock: ${lock.lock_id}`);
-      } else {
-        console.log(`Created new lock: ${lock.lock_id}`);
+      // Auto-save Schema Lock
+      let lockInfo: { lock_id: string; status: string } | null = null;
+      try {
+        const { lock, cached } = await getOrCreateLock({
+          intent: intentFlag,
+          provider: providerFlag,
+          packDir: packsDir,  // parent packs/ directory
+          configDir,
+          card,
+        });
+        lockInfo = { lock_id: lock.lock_id, status: cached ? "reused" : "created" };
+        console.log(`  Lock:         ${lock.lock_id} (${lockInfo.status})`);
+      } catch (lockErr: any) {
+        console.error(`  Lock save:    failed (${lockErr.message})`);
       }
 
-      console.log(`  Intent:    ${lock.intent}`);
-      console.log(`  Provider:  ${lock.provider}`);
-      console.log(`  Feature:   ${lock.feature_id}`);
-      console.log(`  Pack:      v${lock.pack_version}`);
-      console.log(`  Input:     ${lock.input_schema.fields.length} fields`);
-      console.log(`  Output:    ${lock.output_schema.fields.length} fields`);
-      console.log(`  Mappings:  ${lock.field_mappings.length} fields`);
-    } catch (err: any) {
-      console.error(`Error: ${err.message}`);
+      // --format json output
+      if (formatFlag === "json") {
+        const output: Record<string, unknown> = {
+          schema: result.schema,
+          schema_id: result.schema_id,
+          verification: result.verification_result,
+          sdk_code_lines: result.sdk_code ? result.sdk_code.split("\n").length : 0,
+        };
+        if (lockInfo) {
+          output.lock = lockInfo;
+        }
+        console.log(JSON.stringify(output, null, 2));
+      }
+    } catch (err: unknown) {
+      // Handle ContractVerificationError with structured output
+      if (err && typeof err === "object" && "status" in err && "suggestions" in err) {
+        const cvErr = err as ContractVerificationError;
+        console.error(`Negotiation failed: ${cvErr.status}`);
+        if (cvErr.manifest_diff) {
+          console.error(`  Missing fields:    ${cvErr.manifest_diff.missing.join(", ") || "none"}`);
+          console.error(`  Extra fields:      ${cvErr.manifest_diff.extra.join(", ") || "none"}`);
+          if (cvErr.manifest_diff.type_mismatch.length > 0) {
+            for (const tm of cvErr.manifest_diff.type_mismatch) {
+              console.error(`  Type mismatch:     ${tm.field} (expected ${tm.expected}, got ${tm.actual})`);
+            }
+          }
+        }
+        if (cvErr.mock_result?.error_message) {
+          console.error(`  Mock test error:   ${cvErr.mock_result.error_message}`);
+        }
+        if (typeof cvErr.retries === "number") {
+          console.error(`  Retries:           ${cvErr.retries}`);
+        }
+        if (cvErr.suggestions.length > 0) {
+          console.error(`  Suggestions:       ${cvErr.suggestions.join("; ")}`);
+        }
+      } else {
+        const msg = err instanceof Error ? err.message : String(err ?? "Unknown error");
+        console.error(`Error: ${msg}`);
+      }
       process.exit(1);
     }
     return;
@@ -693,31 +947,37 @@ async function negotiate(rawArgs: string[]): Promise<void> {
     process.exit(1);
   }
 
-  let entries;
-  try {
-    entries = await readdir(packsDir, { withFileTypes: true });
-  } catch {
-    console.error(`Error: packs directory not found at ${packsDir}`);
-    process.exit(1);
-  }
-
   console.log("Matched providers:");
   let found = false;
-  for (const entry of entries) {
-    if (!entry.isDirectory() || entry.name.startsWith(".")) continue;
-    const cardPath = join(packsDir, entry.name, "provider-card.json");
+
+  // Collect unique provider directories from all pack sources
+  const seen = new Set<string>();
+  for (const dir of [packsDir, LOCAL_PACKS_DIR(), USER_PACKS_DIR]) {
+    let dirEntries;
     try {
-      const card = JSON.parse(await readFile(cardPath, "utf8"));
-      const features: Array<{ id?: string; intent?: string }> = card.features ?? [];
-      const matchedFeatures = features.filter((f) =>
-        agentSchema.features?.some((af) => af.intent === f.intent)
-      );
-      if (matchedFeatures.length > 0) {
-        console.log(`  ${card.provider.id}: ${matchedFeatures.map((f) => f.id).join(", ")}`);
-        found = true;
-      }
+      dirEntries = await readdir(dir, { withFileTypes: true });
     } catch {
-      // skip
+      continue; // directory doesn't exist, skip
+    }
+    for (const entry of dirEntries) {
+      if (!entry.isDirectory() || entry.name.startsWith(".")) continue;
+      if (seen.has(entry.name)) continue;
+      seen.add(entry.name);
+
+      const cardPath = join(dir, entry.name, "provider-card.json");
+      try {
+        const card = JSON.parse(await readFile(cardPath, "utf8"));
+        const features: Array<{ id?: string; intent?: string }> = card.features ?? [];
+        const matchedFeatures = features.filter((f) =>
+          agentSchema.features?.some((af) => af.intent === f.intent)
+        );
+        if (matchedFeatures.length > 0) {
+          console.log(`  ${card.provider.id}: ${matchedFeatures.map((f) => f.id).join(", ")}`);
+          found = true;
+        }
+      } catch {
+        // skip
+      }
     }
   }
   if (!found) {

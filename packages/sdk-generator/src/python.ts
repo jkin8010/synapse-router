@@ -1,7 +1,7 @@
 // @synapse-router/sdk-generator — Python code generator (skeleton, P2)
 
-import type { PackData, GeneratedFile } from "./generator.js";
-import { featureIdToMethodName } from "./generator.js";
+import type { PackData, GeneratedFile, FeatureEndpointMap } from "./generator.js";
+import { featureIdToMethodName, buildFeatureEndpointMap } from "./generator.js";
 import type { ProviderCard } from "@synapse-router/core";
 
 // ---------------------------------------------------------------------------
@@ -21,8 +21,11 @@ function className(providerName: string): string {
   return `${toPascalCase(providerName)}Client`;
 }
 
-/** Build the endpoint path from feature_id. */
-function featureIdToEndpoint(featureId: string): string {
+/** Build the endpoint path from feature_id, with DSL endpoint override. */
+function featureIdToEndpoint(featureId: string, endpointMap?: FeatureEndpointMap): string {
+  if (endpointMap?.has(featureId)) {
+    return endpointMap.get(featureId)!;
+  }
   const match = featureId.match(/_(?:post|get|put|patch|delete)_v\d+_(.+)$/);
   if (match) {
     return "/" + match[1].replace(/_/g, "/");
@@ -35,9 +38,10 @@ function featureIdToEndpoint(featureId: string): string {
 // ---------------------------------------------------------------------------
 
 export function generatePython(packData: PackData): GeneratedFile[] {
-  const { providerCard, providerId, providerName, baseUrl } = packData;
+  const { providerCard, providerId, providerName, baseUrl, dslDocuments } = packData;
   const clientClass = className(providerName);
   const now = new Date().toISOString().split("T")[0];
+  const endpointMap = buildFeatureEndpointMap(dslDocuments);
 
   const files: GeneratedFile[] = [];
 
@@ -50,7 +54,7 @@ export function generatePython(packData: PackData): GeneratedFile[] {
   // ---- client.py ----
   files.push({
     path: "client.py",
-    content: generateClient(providerCard, clientClass, baseUrl, providerId, providerName, now),
+    content: generateClient(providerCard, clientClass, baseUrl, providerId, providerName, now, endpointMap),
   });
 
   // ---- pyproject.toml ----
@@ -84,6 +88,7 @@ function generateClient(
   providerId: string,
   providerName: string,
   now: string,
+  endpointMap?: FeatureEndpointMap,
 ): string {
   const lines: string[] = [];
 
@@ -110,7 +115,7 @@ function generateClient(
   // Methods
   for (const feature of providerCard.features) {
     const methodName = featureIdToMethodName(feature.id);
-    const endpoint = featureIdToEndpoint(feature.id);
+    const endpoint = featureIdToEndpoint(feature.id, endpointMap);
 
     lines.push(`    async def ${methodName}(self, **kwargs: Any) -> dict[str, Any]:`);
     if (feature.description) {

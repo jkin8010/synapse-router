@@ -56,6 +56,7 @@ synapse evolve --output ./production-sdk --with-billing --tune
 
 ## Related Commands
 
+- [synapse negotiate](/docs/cli/negotiate) — Explicit Schema negotiation and lock creation
 - [/docs/cli/lock](/docs/cli/lock) — View existing Schema Locks
 - [/docs/cli/pack](/docs/cli/pack) — View installed Provider Packs
 - [/docs/sdk](/docs/sdk) — SDK usage detailed guide

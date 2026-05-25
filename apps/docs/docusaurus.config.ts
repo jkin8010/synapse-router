@@ -1,5 +1,5 @@
-import {themes as prismThemes} from 'prism-react-renderer';
-import type {Config} from '@docusaurus/types';
+import { themes as prismThemes } from 'prism-react-renderer';
+import type { Config } from '@docusaurus/types';
 import type * as Preset from '@docusaurus/preset-classic';
 
 // This runs in Node.js - Don't use client-side code here (browser APIs, JSX...)
@@ -78,17 +78,20 @@ const config: Config = {
       },
       items: [
         {
-          to: '/docs/intro',
+          type: 'doc',
+          docId: 'intro',
           label: 'Overview',
           position: 'left',
         },
         {
-          to: '/docs/cli',
+          type: 'doc',
+          docId: 'cli/index',
           label: 'CLI Reference',
           position: 'left',
         },
         {
-          to: '/docs/sdk',
+          type: 'doc',
+          docId: 'sdk/index',
           label: 'SDK Guide',
           position: 'left',
         },

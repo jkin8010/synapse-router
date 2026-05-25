@@ -56,6 +56,7 @@ Billing errors do not block API calls by default (`warn` strategy); they only lo
 
 ## Notes
 
+- **Schema Negotiation** — On the first call to a provider, `synapse connect` automatically performs Schema negotiation to create a Schema Lock. Subsequent calls reuse the cached lock. Use `--no-cache` or run [synapse negotiate](/docs/cli/negotiate) to force re-negotiation
 - API Keys must be configured in advance via [synapse vault set](/docs/cli/vault)
 - First-time users can complete configuration through the [synapse setup](/docs/cli/setup) interactive wizard, which guides selection of Providers and API Key configuration
 - When `--billing` is active, each call automatically checks the quota. Behavior on exceeding the quota is determined by the downgrade strategy: `warn`, `reject`, `downgrade`, or `notify`

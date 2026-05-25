@@ -513,10 +513,16 @@ export async function handleConnectCommand(argv: string[]): Promise<void> {
         if (enableBilling) {
           const raw = readFileSync(BILLING_CONFIG_PATH, "utf-8");
           const billingConfig = JSON.parse(raw);
-          const providerConfig = billingConfig.providers?.[provider ?? ""];
+          let matchedId = provider ?? "";
+          let providerConfig = billingConfig.providers?.[matchedId];
+          if (!providerConfig && provider?.includes("/")) {
+            const ns = provider.split("/")[0];
+            providerConfig = billingConfig.providers?.[ns];
+            if (providerConfig) matchedId = ns;
+          }
           if (providerConfig) {
-            billingWrapperConfig = { ...providerConfig, providerId: provider };
-            console.log(`Billing tracking enabled for ${provider}`);
+            billingWrapperConfig = { ...providerConfig, providerId: matchedId };
+            console.log(`Billing tracking enabled for ${matchedId}`);
           } else {
             console.warn(`Warning: No billing config for provider "${provider}". Skipping billing.`);
           }

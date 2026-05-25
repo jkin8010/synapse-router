@@ -15,7 +15,9 @@ Synapse CLI 是 Router 的开发者工具入口。所有 Schema 协商（Schema 
 |------|------|------|
 | `synapse connect` | 连接 Provider 并执行功能（intent） | [/docs/cli/connect](/docs/cli/connect) |
 | `synapse vault` | 管理加密 API Key（AES-256-GCM） | [/docs/cli/vault](/docs/cli/vault) |
+| `synapse negotiate` | Schema 协商（Intent 匹配与 Schema Lock 创建） | [/docs/cli/negotiate](/docs/cli/negotiate) |
 | `synapse evolve` | 生成零依赖 SDK | [/docs/cli/evolve](/docs/cli/evolve) |
+| `synapse sdk` | 从单个 Provider Pack 生成 SDK | [/docs/cli/sdk](/docs/cli/sdk) |
 | `synapse route` | 多维评分路由 | [/docs/cli/route](/docs/cli/route) |
 | `synapse billing` | 账单管理与配额查看 | [/docs/cli/billing](/docs/cli/billing) |
 | `synapse pack` | 管理 Provider Pack | [/docs/cli/pack](/docs/cli/pack) |
@@ -27,7 +29,7 @@ Synapse CLI 是 Router 的开发者工具入口。所有 Schema 协商（Schema 
 
 按使用类别分组，便于快速定位：
 
-- **核心操作 (Core Operations):** [connect](/docs/cli/connect)、[route](/docs/cli/route)、[evolve](/docs/cli/evolve)
+- **核心操作 (Core Operations):** [connect](/docs/cli/connect)、[negotiate](/docs/cli/negotiate)、[route](/docs/cli/route)、[evolve](/docs/cli/evolve)、[sdk](/docs/cli/sdk)
 - **配置与管理 (Configuration & Management):** [setup](/docs/cli/setup)、[config](/docs/cli/config)
 - **安全与资源 (Security & Resources):** [vault](/docs/cli/vault)、[billing](/docs/cli/billing)、[pack](/docs/cli/pack)、[lock](/docs/cli/lock)
 
@@ -63,8 +65,10 @@ API Key 使用 AES-256-GCM 加密算法存储，永不明文落盘（never store
 
 - [connect](/docs/cli/connect)
 - [vault](/docs/cli/vault)
+- [negotiate](/docs/cli/negotiate)
 - [route](/docs/cli/route)
 - [evolve](/docs/cli/evolve)
+- [sdk](/docs/cli/sdk)
 - [billing](/docs/cli/billing)
 - [pack](/docs/cli/pack)
 - [lock](/docs/cli/lock)

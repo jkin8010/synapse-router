@@ -169,9 +169,21 @@ Plans:
 
 **Note:** Phases 14 and 15 are independent of each other and can be partially parallelized.
 
+### Phase 16: Negotiator CLI Integration
+**Goal**: `synapse negotiate` CLI 命令真正调用 `@synapse-router/negotiator` 包的完整协商管道（LLM Schema 生成 → Manifest 字段级匹配 → Mock 测试 → Schema Lock 保存）
+**Depends on**: Nothing (Phase 1 Negotiator Reliability 已完成，negotiator 包已实现但未接入 CLI)
+**Requirements**: None
+**Success Criteria** (what must be TRUE):
+  1. `synapse negotiate --intent X --provider Y` 调用 `negotiateAndVerify()` 全链路
+  2. LLM API Key 从 Vault 读取（key 名 `negotiator-llm`）
+  3. 输出显示协商详细报告：Schema 字段、Manifest 匹配、Mock 测试结果、Lock 保存确认
+  4. 无 vault key 时降级为确定性 stub（不报错、不阻塞）
+  5. `--no-cache` 跳过缓存强制重新协商
+**Plans**: TBD
+
 ## Progress
 
-**Execution Order:** Phase 1 -> Phase 2 -> Phase 3 -> Phase 4 -> Phase 5 -> Phase 6 -> Phase 7 -> Phase 8 -> Phase 9 -> Phase 10 -> Phase 11 -> Phase 12 -> Phase 13 -> Phase 14 -> Phase 15
+**Execution Order:** Phase 1 -> Phase 2 -> Phase 3 -> Phase 4 -> Phase 5 -> Phase 6 -> Phase 7 -> Phase 8 -> Phase 9 -> Phase 10 -> Phase 11 -> Phase 12 -> Phase 13 -> Phase 14 -> Phase 15 -> Phase 16
 
 | Phase | Milestone | Plans Complete | Status | Completed |
 |-------|-----------|----------------|--------|-----------|
@@ -190,6 +202,7 @@ Plans:
 | 13. Docs Scaffold + Playground Infra | v4.0 | 0/0 | Planned | - |
 | 14. Documentation Site Content | v4.0 | 0/0 | Planned | - |
 | 15. Playground Core UI Upgrade | v4.0 | 0/2 | Planned | - |
+| 16. Negotiator CLI Integration | v4.0 | 1/1 | Complete    | 2026-05-25 |
 
 ## Post-Roadmap Enhancement: Router Package Rewrite (2026-05-09)
 

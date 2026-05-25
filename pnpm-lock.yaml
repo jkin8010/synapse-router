@@ -41,6 +41,9 @@ importers:
       '@synapse-router/lock':
         specifier: workspace:*
         version: link:../../packages/lock
+      '@synapse-router/negotiator':
+        specifier: workspace:*
+        version: link:../../packages/negotiator
       '@synapse-router/registry-client':
         specifier: workspace:*
         version: link:../../packages/registry-client
@@ -53,6 +56,18 @@ importers:
       '@synapse-router/vault':
         specifier: workspace:*
         version: link:../../packages/vault
+
+  apps/comfy-node:
+    devDependencies:
+      '@types/node':
+        specifier: ^22.10.0
+        version: 22.19.17
+      tsx:
+        specifier: ^4.20.0
+        version: 4.21.0
+      typescript:
+        specifier: ^5.9.0
+        version: 5.9.3
 
   apps/docs:
     dependencies:

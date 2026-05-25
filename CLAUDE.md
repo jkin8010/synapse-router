@@ -218,28 +218,67 @@ synapse route chat --strategy quality
 synapse route chat --exclude openai --region apac --min-version 3.5
 ```
 
-### evolve — 生成零依赖 SDK
+### evolve — 生成零依赖 SDK（批量、生产工作流）
 
 ```bash
-synapse evolve [--output <dir>] [--tune] [--with-billing]
+synapse evolve [--output <dir>] [--tune] [--with-billing] [--dry-run]
 ```
 
 **参数：**
 - `--output <dir>` — 输出目录（默认 `./synapse-sdk`）
-- `--tune` — 重新协商 Schema Lock
+- `--tune` — 重新协商 Schema Lock 并生成策略调优报告
 - `--with-billing` — 包含 BillingTracker 类
+- `--with-profile` — 注入生产 Profile 数据（genesis.json）
+- `--from-registry` — 检查 Registry 是否有新版 Pack
+- `--provider <id>` — 只生成指定 Provider 的 SDK
+- `--dry-run` — 预览模式，扫描但不写入
 
 **示例：**
 ```bash
-# 生成 SDK
+# 从所有已安装 Pack 生成 SDK
 synapse evolve
 
 # 生成带有 Billing 追踪的 SDK
 synapse evolve --with-billing
 
-# 指定输出目录并重新协商
-synapse evolve --output ./my-sdk --tune
+# 注入生产 Profile 并调优策略
+synapse evolve --with-profile --tune
+
+# 指定输出目录
+synapse evolve --output ./my-sdk
+
+# 仅生成指定 Provider
+synapse evolve --provider deepseek
 ```
+
+> `evolve` 是高阶工作流命令，循环调用 `@synapse-router/sdk-generator` 为每个 Pack 生成 SDK，并叠加 Pack 发现、Profile 注入、策略调优等能力。底层原语是 `synapse sdk generate`。
+
+### sdk — 从 Provider Pack 生成 SDK（低层原语）
+
+```bash
+synapse sdk generate --pack <pack> --lang <lang> --output <dir> [options]
+```
+
+**参数：**
+- `--pack <id>` — Pack ID 或路径（如 `openai`、`./packs/openai`）
+- `--lang <lang>` — 目标语言：`typescript` | `python`
+- `--output <dir>` — 输出目录
+- `--provider <id>` — 覆盖 Provider 名称（如用 openai Pack 生成 deepseek SDK）
+- `--base-url <url>` — 覆盖默认 base_url
+
+**示例：**
+```bash
+# 生成 TypeScript SDK
+synapse sdk generate --pack openai --lang typescript --output ./sdk
+
+# 生成 Python SDK
+synapse sdk generate --pack openai --lang python --output ./sdk
+
+# 使用 openai Pack 生成 DeepSeek SDK（覆盖 provider 和 base_url）
+synapse sdk generate --pack openai --lang typescript --provider deepseek --base-url https://api.deepseek.com/v1 --output ./sdk
+```
+
+> `sdk generate` 是低层原语——一个 Pack、一种语言、一次输出。`synapse evolve` 是其高阶封装，自动处理所有 Pack 的批量生成。
 
 ### pack — 从 Registry 管理 Provider Pack
 

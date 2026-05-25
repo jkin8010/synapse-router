@@ -11,6 +11,30 @@ import { generateBillingTracker, generatePricingSnapshot } from "./billing.js";
 // Public types
 // ---------------------------------------------------------------------------
 
+/** Map of feature_id → endpoint path from DSL access_protocol */
+export type FeatureEndpointMap = Map<string, string>;
+
+// ---------------------------------------------------------------------------
+// Public helpers
+// ---------------------------------------------------------------------------
+
+/** Build a map from feature_id → DSL access_protocol.endpoint */
+export function buildFeatureEndpointMap(dslDocuments: DslDocument[]): FeatureEndpointMap {
+  const map: FeatureEndpointMap = new Map();
+  for (const doc of dslDocuments) {
+    const endpoint = doc.access_protocol?.endpoint;
+    if (!endpoint) continue;
+    for (const feat of doc.features) {
+      map.set(feat.feature_id, endpoint);
+    }
+  }
+  return map;
+}
+
+// ---------------------------------------------------------------------------
+// Public types
+// ---------------------------------------------------------------------------
+
 export interface GeneratedFile {
   path: string;      // relative path within output dir
   content: string;
@@ -72,6 +96,8 @@ interface DslDocument {
   access_protocol: {
     kind: string;
     auth_type: string;
+    endpoint?: string;
+    server_url?: string;
   };
   features: DslFeature[];
 }

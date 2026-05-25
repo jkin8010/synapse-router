@@ -1,7 +1,7 @@
 // @synapse-router/sdk-generator — TypeScript code generator
 
-import type { PackData, GeneratedFile } from "./generator.js";
-import { featureIdToMethodName, dslTypeToTsType } from "./generator.js";
+import type { PackData, GeneratedFile, FeatureEndpointMap } from "./generator.js";
+import { featureIdToMethodName, dslTypeToTsType, buildFeatureEndpointMap } from "./generator.js";
 import type { ProviderCard, ProviderFeature } from "@synapse-router/core";
 
 // ---------------------------------------------------------------------------
@@ -29,8 +29,13 @@ function packageName(providerId: string): string {
  *  chat_post_v1_chat_completions -> /chat/completions
  *  embeddings_post_v1_embeddings -> /embeddings
  *  images_generations_post_v1_images_generations -> /images/generations
+ *  Falls back to DSL access_protocol.endpoint when available via the map.
  */
-function featureIdToEndpoint(featureId: string): string {
+function featureIdToEndpoint(featureId: string, endpointMap?: FeatureEndpointMap): string {
+  // Use DSL endpoint when available
+  if (endpointMap?.has(featureId)) {
+    return endpointMap.get(featureId)!;
+  }
   // Extract the path segment after _post_v1_ (or _get_v1_, etc.)
   const match = featureId.match(/_(?:post|get|put|patch|delete)_v\d+_(.+)$/);
   if (match) {
@@ -85,7 +90,7 @@ function generateInterface(name: string, fields: FieldInfo[], fieldMappings?: Ar
 // Method generation
 // ---------------------------------------------------------------------------
 
-function generateMethod(feature: ProviderFeature, providerId: string): string {
+function generateMethod(feature: ProviderFeature, providerId: string, endpointMap?: FeatureEndpointMap): string {
   const methodName = featureIdToMethodName(feature.id);
   const inputTypeName = feature.input.fields.length > 0
     ? toPascalCase(methodName) + "Input"
@@ -93,7 +98,7 @@ function generateMethod(feature: ProviderFeature, providerId: string): string {
   const outputTypeName = feature.output.fields.length > 0
     ? toPascalCase(methodName) + "Output"
     : "Record<string, unknown>";
-  const endpoint = featureIdToEndpoint(feature.id);
+  const endpoint = featureIdToEndpoint(feature.id, endpointMap);
 
   const lines: string[] = [];
 
@@ -144,9 +149,10 @@ function generateMethod(feature: ProviderFeature, providerId: string): string {
 // ---------------------------------------------------------------------------
 
 export function generateTypeScript(packData: PackData): GeneratedFile[] {
-  const { providerCard, providerId, providerName, baseUrl, authType } = packData;
+  const { providerCard, providerId, providerName, baseUrl, authType, dslDocuments } = packData;
   const clientClass = className(providerName);
   const now = new Date().toISOString().split("T")[0];
+  const endpointMap = buildFeatureEndpointMap(dslDocuments);
 
   const files: GeneratedFile[] = [];
 
@@ -171,7 +177,7 @@ export function generateTypeScript(packData: PackData): GeneratedFile[] {
   // ---- client.ts ----
   files.push({
     path: "client.ts",
-    content: generateClientFile(providerCard, clientClass, baseUrl, authType, providerId, providerName, now),
+    content: generateClientFile(providerCard, clientClass, baseUrl, authType, providerId, providerName, now, endpointMap),
   });
 
   // ---- index.ts ----
@@ -195,7 +201,7 @@ export function generateTypeScript(packData: PackData): GeneratedFile[] {
   // ---- README.md ----
   files.push({
     path: "README.md",
-    content: generateReadme(providerId, providerName, clientClass, baseUrl, providerCard.features),
+    content: generateReadme(providerId, providerName, clientClass, baseUrl, providerCard.features, endpointMap),
   });
 
   return files;
@@ -248,6 +254,7 @@ function generateClientFile(
   providerId: string,
   providerName: string,
   now: string,
+  endpointMap?: FeatureEndpointMap,
 ): string {
   const lines: string[] = [];
 
@@ -306,7 +313,7 @@ function generateClientFile(
   // Methods
   for (const feature of providerCard.features) {
     lines.push("");
-    lines.push(generateMethod(feature, providerId));
+    lines.push(generateMethod(feature, providerId, endpointMap));
   }
 
   lines.push("}");
@@ -361,6 +368,7 @@ function generateReadme(
   clientClass: string,
   baseUrl: string,
   features: readonly ProviderFeature[],
+  endpointMap?: FeatureEndpointMap,
 ): string {
   const now = new Date().toISOString().split("T")[0];
 
@@ -371,7 +379,7 @@ function generateReadme(
     const desc = feature.description ?? feature.name;
     const requiredCount = feature.input.fields.filter((f: any) => f.required).length;
     const totalCount = feature.input.fields.length;
-    methodLines.push(`| \`${methodName}()\` | \`${baseUrl}${featureIdToEndpoint(feature.id)}\` | ${desc} | ${totalCount} (${requiredCount} required) |`);
+    methodLines.push(`| \`${methodName}()\` | \`${baseUrl}${featureIdToEndpoint(feature.id, endpointMap)}\` | ${desc} | ${totalCount} (${requiredCount} required) |`);
   }
   const methodTable = methodLines.join("\n");
 

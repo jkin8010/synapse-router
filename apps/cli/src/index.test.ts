@@ -223,6 +223,20 @@ describe("negotiate", () => {
     const result = runCli(["negotiate", "/tmp/doesnotexist-xyz.json"]);
     assert.notStrictEqual(result.code, 0);
   });
+
+  it("exits with error when provider pack not found", () => {
+    const result = runCli(["negotiate", "--intent", "chat", "--provider", "nonexistent-provider-xyz"]);
+    assert.notStrictEqual(result.code, 0);
+    assert.ok(
+      result.stderr.includes("Provider pack not found") || result.stderr.includes("Error"),
+      `got stdout: ${result.stdout}, stderr: ${result.stderr}`
+    );
+  });
+
+  it("help output documents --format flag", () => {
+    const result = runCli(["negotiate", "--help"]);
+    assert.ok(result.stdout.includes("--format"), `help should include --format flag, got: ${result.stdout}`);
+  });
 });
 
 // ---------------------------------------------------------------------------

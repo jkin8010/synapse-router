@@ -17,6 +17,7 @@
     "@synapse-router/billing": "workspace:*",
     "@synapse-router/connector": "workspace:*",
     "@synapse-router/lock": "workspace:*",
+    "@synapse-router/negotiator": "workspace:*",
     "@synapse-router/registry-client": "workspace:*",
     "@synapse-router/router": "workspace:*",
     "@synapse-router/sdk-generator": "workspace:*",
