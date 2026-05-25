@@ -290,7 +290,7 @@ Plans:
 | 16. Negotiator CLI Integration | v4.0 | 1/1 | Complete | 2026-05-25 |
 | 17. CLI Infrastructure | v5.0 | 3/3 | Complete    | 2026-05-25 |
 | 18. Interactive Negotiation | v5.0 | 3/3 | Complete    | 2026-05-25 |
-| 19. Command Simplification | v5.0 | 3/3 | Complete   | 2026-05-25 |
+| 19. Command Simplification | v5.0 | 3/3 | Complete    | 2026-05-25 |
 | 20. Docs + Playground Updates | v5.0 | 0/0 | Planned | - |
 
 ## Post-Roadmap Enhancement: Router Package Rewrite (2026-05-09)
