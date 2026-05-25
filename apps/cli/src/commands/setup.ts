@@ -6,6 +6,7 @@ import { join, dirname } from "node:path";
 import { homedir } from "node:os";
 import { createVault } from "@synapse-router/vault";
 import { loadMergedConfig, saveGlobalConfig } from "../utils/config.js";
+import { promptSelect, promptInput, promptPassword } from "../utils/prompts.js";
 
 // ---------------------------------------------------------------------------
 // Types
@@ -57,68 +58,6 @@ const PROVIDER_PRESETS: ProviderPreset[] = [
   },
 ];
 
-// ---------------------------------------------------------------------------
-// Readline helpers
-// ---------------------------------------------------------------------------
-
-async function prompt(question: string, hidden = false): Promise<string> {
-  const readline = await import("node:readline");
-
-  if (hidden) {
-    // Display prompt text first, then suppress only the typed input echo
-    return new Promise((resolve) => {
-      // Print the question before overriding stdout so the user can read it
-      process.stdout.write(question);
-
-      const rl = readline.createInterface({
-        input: process.stdin,
-        output: process.stdout,
-      });
-
-      // Suppress key echo — only blocks character output, not newlines
-      const origWrite = process.stdout.write.bind(process.stdout);
-      const suppressed = (buffer: string | Buffer) => {
-        if (typeof buffer === "string" && buffer !== "\n" && buffer !== "\r" && buffer !== "\r\n") {
-          return true;
-        }
-        return origWrite(buffer);
-      };
-      process.stdout.write = suppressed as typeof process.stdout.write;
-
-      rl.question("", (answer) => {
-        process.stdout.write = origWrite;
-        rl.close();
-        console.log(""); // newline after hidden input
-        resolve(answer.trim());
-      });
-    });
-  }
-
-  return new Promise((resolve) => {
-    const rl = readline.createInterface({
-      input: process.stdin,
-      output: process.stdout,
-    });
-    rl.question(question, (answer) => {
-      rl.close();
-      resolve(answer.trim());
-    });
-  });
-}
-
-async function promptSelect(label: string, options: string[]): Promise<number> {
-  console.log(`\n${label}`);
-  options.forEach((opt, i) => {
-    console.log(`  ${i === 0 ? "❯" : " "} ${opt}`);
-  });
-
-  const answer = await prompt("\n  Enter number (or press Enter for first): ");
-  if (!answer) return 0;
-  const idx = parseInt(answer, 10) - 1;
-  if (idx >= 0 && idx < options.length) return idx;
-  console.log("  Invalid selection, using first option.");
-  return 0;
-}
 
 // ---------------------------------------------------------------------------
 // Load available packs from packs directory
@@ -225,7 +164,11 @@ export async function handleSetupCommand(argv: string[]): Promise<void> {
   }
   allOptions.push("Custom provider...");
 
-  const selectedIndex = await promptSelect("Step 1: Choose a provider", allOptions);
+  const selectedIndex = await promptSelect<number>(
+    "Step 1: Choose a provider",
+    allOptions.map((label, i) => ({ name: label, value: i })),
+    { defaultIndex: 0 }
+  );
 
   let preset: ProviderPreset;
 
@@ -234,7 +177,11 @@ export async function handleSetupCommand(argv: string[]): Promise<void> {
   } else if (allOptions[selectedIndex] === "More from installed packs...") {
     // Show pack-based providers
     const packOptions = availablePacks.map((p) => p);
-    const packIdx = await promptSelect("Select from installed packs:", packOptions);
+    const packIdx = await promptSelect<number>(
+      "Select from installed packs:",
+      packOptions.map((name, i) => ({ name, value: i })),
+      { defaultIndex: 0 }
+    );
     const packId = availablePacks[packIdx];
     preset = {
       id: packId,
@@ -245,8 +192,8 @@ export async function handleSetupCommand(argv: string[]): Promise<void> {
     };
   } else {
     // Custom provider
-    const customId = await prompt("  Provider ID: ");
-    const customName = await prompt("  Provider name: ");
+    const customId = await promptInput("  Provider ID: ");
+    const customName = await promptInput("  Provider name: ");
     preset = {
       id: customId || "custom",
       name: customName || customId || "Custom",
@@ -259,7 +206,7 @@ export async function handleSetupCommand(argv: string[]): Promise<void> {
   console.log(`\n  Selected: ${preset.name} (${preset.id})`);
 
   // Step 2: Enter API key
-  const apiKey = await prompt("\nStep 2: Enter your API key\n  API Key: ", true);
+  const apiKey = await promptPassword("\nStep 2: Enter your API key\n  API Key: ");
   if (!apiKey) {
     console.error("  Error: API key is required");
     process.exit(1);
@@ -267,14 +214,21 @@ export async function handleSetupCommand(argv: string[]): Promise<void> {
 
   // Step 3: Configure base URL
   const defaultBaseUrl = preset.baseUrl;
-  const baseUrl = await prompt(`\nStep 3: Configure base URL\n  Base URL [${defaultBaseUrl}]: `);
+  const baseUrl = await promptInput(
+    `\nStep 3: Configure base URL\n  Base URL [${defaultBaseUrl}]: `,
+    { defaultVal: defaultBaseUrl }
+  );
   const finalBaseUrl = baseUrl || defaultBaseUrl;
 
   // Step 4: Select pack
   const packOptions = availablePacks.length > 0
     ? [...availablePacks.map((p) => `${p} (compatible with ${preset.name})`), "Use default (openai)"]
     : ["openai (OpenAI-compatible)", "Generate new pack from OpenAPI spec"];
-  const packIdx = await promptSelect("Step 4: Select pack", packOptions);
+  const packIdx = await promptSelect<number>(
+    "Step 4: Select pack",
+    packOptions.map((label, i) => ({ name: label, value: i })),
+    { defaultIndex: 0 }
+  );
   let pack: string;
   if (packIdx < availablePacks.length && availablePacks.length > 0) {
     pack = availablePacks[packIdx];
