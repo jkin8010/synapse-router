@@ -46,6 +46,22 @@ describe("help", () => {
     assert.ok(result.stdout.includes("Synapse Router CLI"), `got: ${result.stdout}`);
     assert.strictEqual(result.code, 0);
   });
+
+  it("prints 3-group section headers: Core Workflow, Configuration, Advanced", () => {
+    // Task 2 TDD: these will fail until printHelp() is updated to 3-group format
+    const result = runCli(["--help"]);
+    assert.ok(result.stdout.includes("Core Workflow"), `should have Core Workflow section, got: ${result.stdout}`);
+    assert.ok(result.stdout.includes("Configuration"), `should have Configuration section, got: ${result.stdout}`);
+    assert.ok(result.stdout.includes("Advanced"), `should have Advanced section, got: ${result.stdout}`);
+    assert.strictEqual(result.code, 0);
+  });
+
+  it("still shows Getting started and Detailed help sections", () => {
+    const result = runCli(["--help"]);
+    assert.ok(result.stdout.includes("Getting started"), `got: ${result.stdout}`);
+    assert.ok(result.stdout.includes("Detailed help"), `got: ${result.stdout}`);
+    assert.strictEqual(result.code, 0);
+  });
 });
 
 // ---------------------------------------------------------------------------
