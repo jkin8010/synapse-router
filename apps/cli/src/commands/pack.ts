@@ -4,7 +4,7 @@
  * Uses @synapse-router/registry-client for API calls and filesystem operations.
  */
 
-import { readFile } from "node:fs/promises";
+import { readFile, readdir } from "node:fs/promises";
 import { join } from "node:path";
 import { homedir } from "node:os";
 import {
@@ -221,22 +221,46 @@ async function handlePackSearch(args: string[]): Promise<void> {
 }
 
 async function handlePackList(): Promise<void> {
-  const entries: ManifestEntry[] = await listInstalledPacks();
+  const registryEntries: ManifestEntry[] = await listInstalledPacks();
+  const localEntries: Array<{ name: string; version: string; source: string }> = [];
 
-  if (entries.length === 0) {
+  // Scan local .synapse/packs/ for locally-installed packs
+  const localDir = join(process.cwd(), ".synapse", "packs");
+  try {
+    const entries = await readdir(localDir, { withFileTypes: true });
+    for (const entry of entries) {
+      if (!entry.isDirectory() || entry.name.startsWith(".")) continue;
+      const cardPath = join(localDir, entry.name, "provider-card.json");
+      try {
+        const content = await readFile(cardPath, "utf8");
+        const card = JSON.parse(content);
+        if (card?.provider?.id) {
+          localEntries.push({
+            name: card.provider.id,
+            version: card.service?.version ?? "?",
+            source: "local",
+          });
+        }
+      } catch { /* skip invalid */ }
+    }
+  } catch { /* no local packs dir */ }
+
+  const all = [...registryEntries, ...localEntries];
+
+  if (all.length === 0) {
     console.log("No packs installed.");
     console.log("\nInstall a pack: synapse pack add openai");
     return;
   }
 
-  console.log(`Installed packs (${entries.length}):\n`);
-  console.log(`  ${"NAME".padEnd(25)} ${"VERSION".padEnd(12)} INSTALLED AT`);
-  console.log(`  ${"─".repeat(25)} ${"─".repeat(12)} ───────────────────`);
+  console.log(`Installed packs (${all.length}):\n`);
+  console.log(`  ${"NAME".padEnd(25)} ${"VERSION".padEnd(12)} SOURCE`);
+  console.log(`  ${"─".repeat(25)} ${"─".repeat(12)} ─────────`);
 
-  for (const entry of entries.sort((a, b) => a.name.localeCompare(b.name))) {
-    const date = new Date(entry.installed_at).toLocaleDateString("zh-CN");
+  for (const entry of all.sort((a, b) => a.name.localeCompare(b.name))) {
+    const source = "source" in entry ? (entry as any).source : "registry";
     console.log(
-      `  ${entry.name.padEnd(25)} ${entry.version.padEnd(12)} ${date}`,
+      `  ${entry.name.padEnd(25)} ${(entry as any).version?.padEnd(12) ?? "?".padEnd(12)} ${source}`,
     );
   }
 }
