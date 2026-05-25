@@ -75,11 +75,11 @@
 - [x] **NEGO-03**: 字段自定义增减 — 用户可以对 optional 字段选择包含/排除，支持批量操作
 - [x] **NEGO-04**: LLM Key 发现与引导 — 协商前检查 vault/config/env 中是否有 LLM API Key，无 key 时引导配置
 - [x] **NEGO-05**: Stub 输出标记 — 当使用确定性 stub（无 LLM key）时，在输出中醒目提示用户这不是真正的协商
-- [ ] **NEGO-06**: Lock diff 预览 — 保存前显示当前 Lock 与现有 Lock（如有）的差异
-- [ ] **NEGO-07**: 协商后路由菜单 — 协商成功后提供菜单：测试 connect / 生成 SDK / 查看 @synapse-router/sdk 接入 / 退出
-- [ ] **NEGO-08**: 非交互模式保持 — `--intent X --provider Y` 保留现有行为不变
-- [ ] **NEGO-09**: SIGINT/SIGTERM 正确处理 — 中断时清理部分状态，不产生孤儿 Lock
-- [ ] **NEGO-10**: 提示分级 — 每个提示分类为 required/recommended/contextual/confirmation，Enter 键接受默认值
+- [x] **NEGO-06**: Lock diff 预览 — 保存前显示当前 Lock 与现有 Lock（如有）的差异
+- [x] **NEGO-07**: 协商后路由菜单 — 协商成功后提供菜单：测试 connect / 生成 SDK / 查看 @synapse-router/sdk 接入 / 退出
+- [x] **NEGO-08**: 非交互模式保持 — `--intent X --provider Y` 保留现有行为不变
+- [x] **NEGO-09**: SIGINT/SIGTERM 正确处理 — 中断时清理部分状态，不产生孤儿 Lock
+- [x] **NEGO-10**: 提示分级 — 每个提示分类为 required/recommended/contextual/confirmation，Enter 键接受默认值
 
 ## CMD — 命令精简
 
@@ -148,11 +148,11 @@
 | NEGO-03 | Phase 18 | Complete |
 | NEGO-04 | Phase 18 | Complete |
 | NEGO-05 | Phase 18 | Complete |
-| NEGO-06 | Phase 18 | Pending |
-| NEGO-07 | Phase 18 | Pending |
-| NEGO-08 | Phase 18 | Pending |
-| NEGO-09 | Phase 18 | Pending |
-| NEGO-10 | Phase 18 | Pending |
+| NEGO-06 | Phase 18 | Complete |
+| NEGO-07 | Phase 18 | Complete |
+| NEGO-08 | Phase 18 | Complete |
+| NEGO-09 | Phase 18 | Complete |
+| NEGO-10 | Phase 18 | Complete |
 | CMD-01 | Phase 19 | Pending |
 | CMD-02 | Phase 19 | Pending |
 | CMD-03 | Phase 19 | Pending |
