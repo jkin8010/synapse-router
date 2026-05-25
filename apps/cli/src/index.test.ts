@@ -138,6 +138,56 @@ describe("init → setup redirect", () => {
 });
 
 // ---------------------------------------------------------------------------
+// Profile/export/import → config subcommands (Task 3: 19-02)
+// ---------------------------------------------------------------------------
+
+describe("profile → config profile redirect", () => {
+  it("synapse profile --help shows deprecation notice", () => {
+    const result = runCli(["profile", "--help"]);
+    assert.ok(result.stdout.includes("merged into"), `should show merge notice, got: ${result.stdout}`);
+    assert.strictEqual(result.code, 0);
+  });
+
+  it("synapse profile list shows deprecation warning on stderr", () => {
+    const result = runCli(["profile", "list"]);
+    assert.ok(result.stderr.includes("merged into"), `stderr should contain deprecation warning, got: ${result.stderr}`);
+  });
+});
+
+describe("export → config export redirect", () => {
+  it("synapse export --help shows deprecation notice", () => {
+    const result = runCli(["export", "--help"]);
+    assert.ok(result.stdout.includes("merged into"), `should show merge notice, got: ${result.stdout}`);
+    assert.strictEqual(result.code, 0);
+  });
+
+  it("synapse export shows deprecation warning on stderr", () => {
+    const result = runCli(["export"]);
+    assert.ok(result.stderr.includes("merged into"), `stderr should contain deprecation warning, got: ${result.stderr}`);
+  });
+});
+
+describe("import → config import redirect", () => {
+  it("synapse import --help shows deprecation notice", () => {
+    const result = runCli(["import", "--help"]);
+    assert.ok(result.stdout.includes("merged into"), `should show merge notice, got: ${result.stdout}`);
+    assert.strictEqual(result.code, 0);
+  });
+
+  it("synapse import shows deprecation warning on stderr", () => {
+    const result = runCli(["import"]);
+    assert.ok(result.stderr.includes("merged into"), `stderr should contain deprecation warning, got: ${result.stderr}`);
+  });
+});
+
+describe("config set|get|list still works normally", () => {
+  it("synapse config set|get|list does not have deprecation warnings", () => {
+    const result = runCli(["config", "get", "nonexistent"]);
+    assert.ok(!result.stderr.includes("merged into"), `stderr should not contain deprecation warning, got: ${result.stderr}`);
+  });
+});
+
+// ---------------------------------------------------------------------------
 // Version
 // ---------------------------------------------------------------------------
 

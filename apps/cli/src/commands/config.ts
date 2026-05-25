@@ -10,6 +10,8 @@ import {
   saveLocalConfig,
   getLocalConfigPath,
 } from "../utils/config.js";
+import { handleProfileCommand } from "./profile.js";
+import { handleExportCommand, handleImportCommand } from "./export.js";
 
 // ---------------------------------------------------------------------------
 // Types
@@ -402,6 +404,21 @@ export async function handleConfigCommand(argv: string[]): Promise<void> {
     case "list":
       await configList();
       break;
+    case "profile": {
+      const profileArgs = argv.slice(1); // skip "profile"
+      await handleProfileCommand(profileArgs);
+      break;
+    }
+    case "export": {
+      const exportArgs = argv.slice(1); // skip "export"
+      await handleExportCommand(exportArgs);
+      break;
+    }
+    case "import": {
+      const importArgs = argv.slice(1); // skip "import"
+      await handleImportCommand(importArgs);
+      break;
+    }
     default:
       if (!subcommand) {
         configList();

@@ -647,16 +647,18 @@ async function main(): Promise<void> {
         break;
       case "profile":
         if (flags.has("help") || args.includes("--help") || args.includes("-h")) {
-          printProfileHelp();
+          console.log(HELP_PROFILE);
         } else {
-          await handleProfileCommand(rawArgs);
+          console.error("Note: `synapse profile` has been merged into `synapse config profile`. Use that instead.");
+          await handleConfigCommand(["profile", ...rawArgs]);
         }
         break;
       case "export":
         if (flags.has("help") || args.includes("--help") || args.includes("-h")) {
-          printExportHelp();
+          console.log(HELP_EXPORT);
         } else {
-          await handleExportCommand(rawArgs);
+          console.error("Note: `synapse export` has been merged into `synapse config export`. Use that instead.");
+          await handleConfigCommand(["export", ...rawArgs]);
         }
         break;
       case "route":
@@ -668,9 +670,10 @@ async function main(): Promise<void> {
         break;
       case "import":
         if (flags.has("help") || args.includes("--help") || args.includes("-h")) {
-          printImportHelp();
+          console.log(HELP_IMPORT);
         } else {
-          await handleImportCommand(rawArgs);
+          console.error("Note: `synapse import` has been merged into `synapse config import`. Use that instead.");
+          await handleConfigCommand(["import", ...rawArgs]);
         }
         break;
       case "execute":
