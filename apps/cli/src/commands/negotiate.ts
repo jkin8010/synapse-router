@@ -9,7 +9,7 @@ import { loadMergedConfig } from "../utils/config.js";
 import { negotiateAndVerify, matchManifest, loadManifestFromPack } from "@synapse-router/negotiator";
 import type { NegotiateAndVerifyInput, NegotiationResult, ContractVerificationError } from "@synapse-router/negotiator";
 import type { ProviderCard } from "@synapse-router/core";
-import { getOrCreateLock } from "@synapse-router/lock";
+import { getOrCreateLock, LockStorage } from "@synapse-router/lock";
 import { findPacksDir, loadProviderCard, USER_PACKS_DIR, LOCAL_PACKS_DIR } from "../utils/packs.js";
 import { isInteractive } from "../utils/tty.js";
 import { promptSearch, promptSelect, promptCheckbox, promptConfirm } from "../utils/prompts.js";
@@ -146,6 +146,146 @@ function buildFieldChoices(feature: any): any[] {
   }));
 }
 
+// ---------------------------------------------------------------------------
+// Lock diff preview
+// ---------------------------------------------------------------------------
+
+/**
+ * Show lock diff preview before save: compare existing lock (if any)
+ * with new negotiation result.
+ */
+async function showLockDiffPreview(
+  intent: string,
+  provider: string,
+  result: NegotiationResult,
+  configDir: string,
+): Promise<void> {
+  const storage = new LockStorage(join(configDir, "schemas"));
+  const existingLocks = await storage.list();
+  const existingLock = existingLocks.find(
+    (l: any) => l.intent === intent && l.provider === provider,
+  );
+
+  if (existingLock) {
+    const oldLock = await storage.load(existingLock.lock_id);
+    console.log(pc.bold(pc.cyan("\n  Lock Diff Preview")));
+    console.log(pc.dim("  " + "=".repeat(50)));
+    console.log(pc.yellow("  Current lock:  " + existingLock.lock_id));
+    console.log(pc.dim("    Created:     " + (oldLock?.locked_at ?? "unknown")));
+    console.log(pc.dim("    Fields:      " + (oldLock?.input_schema?.fields?.length ?? 0)));
+    console.log(pc.green("  New negotiation:"));
+    console.log(pc.dim("    Schema:      " + result.schema_id));
+    console.log(pc.dim("    Fields:      " + result.schema.fields.length));
+
+    const oldNames = new Set((oldLock?.input_schema?.fields ?? []).map((f: any) => f.name));
+    const newNames = new Set(result.schema.fields.map((f: any) => f.name));
+    const added = result.schema.fields.filter((f: any) => !oldNames.has(f.name));
+    const removed = (oldLock?.input_schema?.fields ?? []).filter((f: any) => !newNames.has(f.name));
+
+    if (added.length > 0) {
+      console.log(pc.green("    + Added:      " + added.map((f: any) => f.name).join(", ")));
+    }
+    if (removed.length > 0) {
+      console.log(pc.red("    - Removed:    " + removed.map((f: any) => f.name).join(", ")));
+    }
+    if (added.length === 0 && removed.length === 0) {
+      console.log(pc.dim("    (No field changes -- lock will be re-created)"));
+    }
+  } else {
+    console.log(pc.dim("\n  First Schema Lock for " + intent + " / " + provider));
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Post-negotiation routing menu
+// ---------------------------------------------------------------------------
+
+/**
+ * Display 5-option routing menu after successful negotiation.
+ * Tier: confirmation -- user chooses from list
+ */
+async function promptRoutingMenu(
+  selectedProvider: string,
+  selectedIntent: string,
+  _result: NegotiationResult,
+): Promise<void> {
+  console.log(pc.bold(pc.cyan("\n  What would you like to do next?\n")));
+
+  const routeChoices = [
+    {
+      name: pc.green("Test connection") + pc.dim("  (synapse connect)"),
+      value: "connect",
+      description: `synapse connect ${selectedProvider} ${selectedIntent} --input '...'`,
+    },
+    {
+      name: pc.green("Generate SDK") + pc.dim("  (synapse evolve)"),
+      value: "evolve",
+      description: `synapse evolve --provider ${selectedProvider}`,
+    },
+    {
+      name: pc.cyan("Show SDK integration code"),
+      value: "sdk-code",
+      description: "Display @synapse-router/sdk import + usage example",
+    },
+    {
+      name: pc.magenta("Open in Playground"),
+      value: "playground",
+      description: "Open the web Playground for visual exploration",
+    },
+    {
+      name: pc.dim("Save and exit"),
+      value: "exit",
+      description: "Return to shell",
+    },
+  ];
+
+  // Tier: confirmation -- user chooses from list
+  const action = await promptSelect("Select an action:", routeChoices, { pageSize: 7 });
+
+  switch (action) {
+    case "connect":
+      console.log(pc.cyan("\n  Run this command to test:"));
+      console.log(pc.bold("  synapse connect " + selectedProvider + " " + selectedIntent + " --input '{\"...\":\"...\"}'"));
+      console.log(pc.dim("\n  Add --billing preCall to track costs."));
+      break;
+    case "evolve":
+      console.log(pc.cyan("\n  Generate a zero-dependency SDK:"));
+      console.log(pc.bold("  synapse evolve --provider " + selectedProvider));
+      console.log(pc.dim("\n  Add --with-billing for BillingTracker."));
+      console.log(pc.dim("  Add --output ./my-sdk for custom output directory."));
+      break;
+    case "sdk-code":
+      console.log(pc.cyan("\n  SDK Integration Example:\n"));
+      console.log(pc.dim("  // Import the generated SDK"));
+      console.log(pc.bold("  import { " + selectedProvider + "SDK } from \"./synapse-sdk/" + selectedProvider + "\";"));
+      console.log("");
+      console.log(pc.dim("  // Create a client"));
+      console.log(pc.bold("  const client = new " + selectedProvider + "SDK();"));
+      console.log(pc.bold("  const output = await client." + selectedIntent + "({\n    // your input\n  });"));
+      console.log("");
+      console.log(pc.dim("  // Zero dependencies, uses built-in fetch."));
+      console.log(pc.dim("  // No @synapse-router/* runtime required."));
+      break;
+    case "playground": {
+      const playgroundUrl = "http://localhost:5173";
+      console.log(pc.cyan("\n  Opening Playground: " + playgroundUrl));
+      const { execSync } = await import("node:child_process");
+      try {
+        if (process.platform === "darwin") execSync("open \"" + playgroundUrl + "\"");
+        else if (process.platform === "win32") execSync("start \"\" \"" + playgroundUrl + "\"");
+        else execSync("xdg-open \"" + playgroundUrl + "\"");
+        console.log(pc.green("  Playground opened in browser."));
+      } catch {
+        console.log(pc.dim("  Could not open browser. Visit: " + playgroundUrl));
+      }
+      break;
+    }
+    case "exit":
+      console.log(pc.green("\n  Negotiation complete.\n"));
+      break;
+  }
+}
+
 /**
  * Show full schema table, then prompt user to select/deselect optional fields.
  * Required fields are locked (checked + disabled).
@@ -153,6 +293,7 @@ function buildFieldChoices(feature: any): any[] {
 async function promptFieldSelection(feature: any): Promise<string[]> {
   displayFeatureSchema(feature);
   const choices = buildFieldChoices(feature);
+  // Tier: recommended -- Enter accepts all fields selected as default
   return promptCheckbox(
     pc.bold("Select input fields to include (required fields are locked):"),
     choices,
@@ -163,11 +304,24 @@ async function promptFieldSelection(feature: any): Promise<string[]> {
 /** Full interactive intent + provider selection flow */
 async function runInteractiveNegotiation(
   packsDir: string,
-  _configDir: string,
+  configDir: string,
   _opts: NegotiateOptions,
 ): Promise<void> {
-  // Step 1: Display header
-  console.log(pc.bold(pc.cyan("\n  Synapse Interactive Negotiation\n")));
+  // SIGINT/SIGTERM cleanup handler (NEGO-09)
+  let interrupted = false;
+  const cleanup = () => {
+    if (interrupted) return;
+    interrupted = true;
+    console.log(pc.yellow("\n\n  Interrupted. Cleaning up..."));
+    console.log(pc.yellow("  No changes saved."));
+    process.exit(130);
+  };
+  process.on("SIGINT", cleanup);
+  process.on("SIGTERM", cleanup);
+
+  try {
+    // Step 1: Display header
+    console.log(pc.bold(pc.cyan("\n  Synapse Interactive Negotiation\n")));
 
   // Step 2: Intent selection
   const intents = await collectAvailableIntents(packsDir);
@@ -189,6 +343,7 @@ async function runInteractiveNegotiation(
     return filtered.map(i => ({ name: i, value: i }));
   };
 
+  // Tier: required -- no default, user must select an intent
   const selectedIntent = await promptSearch(
     "Select an intent (type to filter):",
     intentSource,
@@ -211,6 +366,7 @@ async function runInteractiveNegotiation(
     name: `${p.providerId} — ${p.providerName}`,
     value: p.providerId,
   }));
+  // Tier: required -- no default, user must select a provider
   const selectedProvider = await promptSelect(
     pc.bold(`Select a provider for "${selectedIntent}":`),
     providerChoices,
@@ -283,6 +439,7 @@ async function runInteractiveNegotiation(
     console.log(pc.dim("  Or set: export OPENAI_API_KEY=<your-key>"));
     console.log("");
 
+    // Tier: contextual -- only shown when no LLM key detected
     const continueStub = await promptConfirm("Continue with deterministic stub?", { defaultVal: true });
     if (!continueStub) {
       console.log(pc.dim("\n  Negotiation cancelled.\n"));
@@ -352,6 +509,48 @@ async function runInteractiveNegotiation(
     console.log(pc.bold(pc.yellow("\n  ⚠  Negotiation used deterministic stub (no LLM key configured).")));
     console.log(pc.yellow("  The resulting schema is a generic placeholder, not a real negotiation."));
     console.log(pc.yellow("  To get a meaningful AI-generated schema, configure an LLM key."));
+  }
+
+  // ── Step 11: Lock diff preview + save ──────────────────────────────
+  await showLockDiffPreview(selectedIntent, selectedProvider, result, configDir);
+
+  // Tier: confirmation -- Enter accepts default (true)
+  const doSave = await promptConfirm(
+    pc.bold("\n  Save this Schema Lock?"),
+    { defaultVal: true },
+  );
+
+  if (doSave) {
+    try {
+      const { lock, cached } = await getOrCreateLock({
+        intent: selectedIntent,
+        provider: selectedProvider,
+        packDir: packsDir,
+        configDir,
+        card: found.card,
+      });
+      console.log(pc.green("\n  Lock saved: " + pc.bold(lock.lock_id)));
+      if (cached) {
+        console.log(pc.dim("  (Reused existing -- schema unchanged)"));
+      }
+    } catch (lockErr: any) {
+      console.error(pc.red("  Lock save failed: " + (lockErr?.message ?? lockErr)));
+    }
+  } else {
+    console.log(pc.dim("\n  Lock not saved. Use --dry-run for preview-only mode."));
+  }
+
+  // ── Step 12: Post-negotiation routing menu ─────────────────────────
+  await promptRoutingMenu(selectedProvider, selectedIntent, result);
+
+  // ── Cleanup signal handlers ──────────────────────────────────────
+  process.removeListener("SIGINT", cleanup);
+  process.removeListener("SIGTERM", cleanup);
+  } catch (err: any) {
+    if (err?.name === "ExitPromptError") {
+      cleanup();
+    }
+    throw err;
   }
 }
 
