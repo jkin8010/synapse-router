@@ -237,15 +237,15 @@ Plans:
 **Depends on**: Nothing (can be done independently)
 **Requirements**: CMD-01, CMD-02, CMD-03
 **Success Criteria** (what must be TRUE):
-  1. `--help` output organized into 5 categories: Getting Started, Core Workflow, Provider Management, Configuration, Advanced
-  2. Command merging feasibility evaluated and documented for: provider->pack, smoke->connect, init->setup, profile->config, export/import->config
-  3. Help text definitions extracted to shared location that stays in sync with docs site
+  1. `--help` output organized into 3 groups: Core Workflow (setup, negotiate, connect, evolve), Configuration (vault, config, pack, billing), Advanced (lock, route, sdk, provider, etc.)
+  2. Merged commands: smoke->connect --smoke, init->setup, profile->config profile, export/import->config export/import; provider stays standalone
+  3. Help text definitions extracted to `utils/help.ts` as shared module, imported by CLI and referenceable by docs site
 **Plans**: 3 plans
 
 Plans:
-- [ ] 17-01-PLAN.md — Install @inquirer/prompts, picocolors; create utils/tty.ts (isInteractive), utils/prompts.ts (wrapper functions)
-- [ ] 17-02-PLAN.md — Extract packs.ts (findPacksDir, loadProviderCard), extract negotiate.ts; add --yes/--dry-run/--no-save/--no-interactive flags
-- [ ] 17-03-PLAN.md — Refactor setup.ts and billing.ts init to use shared prompts.ts
+- [ ] 19-01-PLAN.md — Create utils/help.ts with all help text; update index.ts printHelp() to 3-group format; update help switch and inline helps
+- [ ] 19-02-PLAN.md — Merge commands: smoke->connect --smoke, init->setup, profile/export/import->config subcommands
+- [ ] 19-03-PLAN.md — Migrate all command files to import help text from utils/help.ts; build and test verification
 
 ### Phase 20: Docs + Playground Updates
 **Goal**: Documentation is updated for v5.0 changes, Playground has SDK preview and schema presets
@@ -290,7 +290,7 @@ Plans:
 | 16. Negotiator CLI Integration | v4.0 | 1/1 | Complete | 2026-05-25 |
 | 17. CLI Infrastructure | v5.0 | 3/3 | Complete    | 2026-05-25 |
 | 18. Interactive Negotiation | v5.0 | 3/3 | Complete    | 2026-05-25 |
-| 19. Command Simplification | v5.0 | 0/0 | Planned | - |
+| 19. Command Simplification | v5.0 | 0/3 | Planned | - |
 | 20. Docs + Playground Updates | v5.0 | 0/0 | Planned | - |
 
 ## Post-Roadmap Enhancement: Router Package Rewrite (2026-05-09)
