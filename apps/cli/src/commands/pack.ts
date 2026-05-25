@@ -231,12 +231,16 @@ async function handlePackList(): Promise<void> {
     for (const entry of entries) {
       if (!entry.isDirectory() || entry.name.startsWith(".")) continue;
       const cardPath = join(localDir, entry.name, "provider-card.json");
+      // Use directory name (with __ converted to /) as display name
+      const displayName = entry.name.includes("__")
+        ? entry.name.replace("__", "/")
+        : entry.name;
       try {
         const content = await readFile(cardPath, "utf8");
         const card = JSON.parse(content);
         if (card?.provider?.id) {
           localEntries.push({
-            name: card.provider.id,
+            name: displayName,
             version: card.service?.version ?? "?",
             source: "local",
           });
