@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: executing
-last_updated: "2026-05-25T09:51:53.417Z"
+last_updated: "2026-05-25T10:01:04.026Z"
 last_activity: 2026-05-25
 progress:
   total_phases: 8
   completed_phases: 5
   total_plans: 17
-  completed_plans: 16
-  percent: 94
+  completed_plans: 17
+  percent: 100
 ---
 
 # Synapse Router -- Execution State
@@ -24,7 +24,7 @@ See: .planning/PROJECT.md (updated 2026-05-25)
 ## Current Position
 
 Phase: 19 (Command Simplification) — EXECUTING
-Plan: 2 of 3
+Plan: 3 of 3
 Status: Ready to execute
 Last activity: 2026-05-25
 
@@ -40,6 +40,7 @@ Last activity: 2026-05-25
 | Phase 18-interactive-negotiation P02 | 14min | 2 tasks | 2 files |
 | Phase 18-interactive-negotiation P03 | 5 | 3 tasks | 1 files |
 | Phase 19-command-simplification P01 | 75m | 3 tasks | 4 files |
+| Phase 19-command-simplification P02 | 6min | 3 tasks | 4 files |
 
 ## 已完成的 Milestones
 
@@ -65,6 +66,13 @@ Last activity: 2026-05-25
   - Phase 20: Docs + Playground Updates — docs for negotiate flow, user journey guide, SDK preview, presets, billing cost preview
 - v5.0 has 25 requirements across 5 categories: CLI-INFRA (6), NEGO (10), CMD (3), DOCS (3), PLAY (3)
 - Phase 20 has a UI hint (Playground updates)
+
+## Decisions
+
+- "Deprecation warnings go to stderr (not stdout) so JSON/table output is not corrupted"
+- "smoke delegates to connect --smoke via handleConnectCommand with --smoke prepended to rawArgs"
+- "init passes rawArgs as-is to handleSetupCommand so --provider, --out-dir, --with-cicd work"
+- "profile/export/import slice argv[1:] to pass remaining args to their handler functions"
 
 ## Session Continuity
 
