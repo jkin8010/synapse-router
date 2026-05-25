@@ -139,7 +139,12 @@ Plans:
   2. Running `pnpm build` does not trigger Docusaurus build (no webpack/Vite conflict with main pipeline)
   3. Playground API calls use relative `/api` prefix and work through Vite proxy in both dev and production
   4. Docs site is registered in pnpm workspace as `@synapse-router/docs` (private) and imports resolve correctly
-**Plans**: TBD
+**Plans**: 3 plans
+
+Plans:
+- [ ] 17-01-PLAN.md — Install @inquirer/prompts, picocolors; create utils/tty.ts (isInteractive), utils/prompts.ts (wrapper functions)
+- [ ] 17-02-PLAN.md — Extract packs.ts (findPacksDir, loadProviderCard), extract negotiate.ts; add --yes/--dry-run/--no-save/--no-interactive flags
+- [ ] 17-03-PLAN.md — Refactor setup.ts and billing.ts init to use shared prompts.ts
 
 ### Phase 14: Documentation Site Content
 **Goal**: Developers can read Getting Started guide and complete CLI command reference on the docs site
@@ -149,7 +154,12 @@ Plans:
   1. Visitor can read a "Getting Started" page covering installation, first configuration, and first `synapse connect` call
   2. Visitor can browse a complete CLI command reference with all commands, parameter tables, and examples
   3. All pages are navigable via Docusaurus sidebar and render correctly on mobile viewports
-**Plans**: TBD
+**Plans**: 3 plans
+
+Plans:
+- [ ] 17-01-PLAN.md — Install @inquirer/prompts, picocolors; create utils/tty.ts (isInteractive), utils/prompts.ts (wrapper functions)
+- [ ] 17-02-PLAN.md — Extract packs.ts (findPacksDir, loadProviderCard), extract negotiate.ts; add --yes/--dry-run/--no-save/--no-interactive flags
+- [ ] 17-03-PLAN.md — Refactor setup.ts and billing.ts init to use shared prompts.ts
 
 ### Phase 15: Playground Core UI Upgrade
 **Goal**: Playground is usable on any screen size, with key status visibility and workflow-enhancing interactions
@@ -181,7 +191,6 @@ Plans:
   4. 无 vault key 时降级为确定性 stub（不报错、不阻塞）
   5. `--no-cache` 跳过缓存强制重新协商
 **Plans**: TBD
-
 ### Phase 17: CLI Infrastructure
 **Goal**: CLI command infrastructure is extracted and shared, interactive prompt utilities exist independently of index.ts
 **Depends on**: Phase 16 (Negotiator CLI Integration provides the negotiate pipeline before adding interactive flow)
@@ -194,7 +203,12 @@ Plans:
   5. `findPacksDir()` and `loadProviderCard()` extracted from index.ts to shared utility
   6. `setup.ts`, `connect.ts`, `billing.ts` migrated from local prompt calls to shared `utils/prompts.ts`
   7. All existing tests pass without modification
-**Plans**: TBD
+**Plans**: 3 plans
+
+Plans:
+- [ ] 17-01-PLAN.md — Install @inquirer/prompts, picocolors; create utils/tty.ts (isInteractive), utils/prompts.ts (wrapper functions)
+- [ ] 17-02-PLAN.md — Extract packs.ts (findPacksDir, loadProviderCard), extract negotiate.ts; add --yes/--dry-run/--no-save/--no-interactive flags
+- [ ] 17-03-PLAN.md — Refactor setup.ts and billing.ts init to use shared prompts.ts
 
 ### Phase 18: Interactive Negotiation
 **Goal**: Developers can run `synapse negotiate` interactively to review schemas, customize fields, and route post-negotiation
@@ -211,7 +225,12 @@ Plans:
   8. `--intent X --provider Y` (non-interactive mode) preserves existing behavior unchanged
   9. SIGINT/SIGTERM handled gracefully: partial state cleaned up, no orphan Lock files
   10. Prompts classified as required/recommended/contextual/confirmation; Enter accepts default value
-**Plans**: TBD
+**Plans**: 3 plans
+
+Plans:
+- [ ] 17-01-PLAN.md — Install @inquirer/prompts, picocolors; create utils/tty.ts (isInteractive), utils/prompts.ts (wrapper functions)
+- [ ] 17-02-PLAN.md — Extract packs.ts (findPacksDir, loadProviderCard), extract negotiate.ts; add --yes/--dry-run/--no-save/--no-interactive flags
+- [ ] 17-03-PLAN.md — Refactor setup.ts and billing.ts init to use shared prompts.ts
 
 ### Phase 19: Command Simplification
 **Goal**: CLI help output is organized, command duplication is reduced, help text is shared with docs site
@@ -221,7 +240,12 @@ Plans:
   1. `--help` output organized into 5 categories: Getting Started, Core Workflow, Provider Management, Configuration, Advanced
   2. Command merging feasibility evaluated and documented for: provider->pack, smoke->connect, init->setup, profile->config, export/import->config
   3. Help text definitions extracted to shared location that stays in sync with docs site
-**Plans**: TBD
+**Plans**: 3 plans
+
+Plans:
+- [ ] 17-01-PLAN.md — Install @inquirer/prompts, picocolors; create utils/tty.ts (isInteractive), utils/prompts.ts (wrapper functions)
+- [ ] 17-02-PLAN.md — Extract packs.ts (findPacksDir, loadProviderCard), extract negotiate.ts; add --yes/--dry-run/--no-save/--no-interactive flags
+- [ ] 17-03-PLAN.md — Refactor setup.ts and billing.ts init to use shared prompts.ts
 
 ### Phase 20: Docs + Playground Updates
 **Goal**: Documentation is updated for v5.0 changes, Playground has SDK preview and schema presets
@@ -234,7 +258,12 @@ Plans:
   4. Playground auto-preview shows generated SDK code when Schema changes (debounced)
   5. Playground has 3 built-in schema presets (Chat, Text-to-Image, Embedding) + localStorage custom presets
   6. Playground shows estimated billing cost for current Schema
-**Plans**: TBD
+**Plans**: 3 plans
+
+Plans:
+- [ ] 17-01-PLAN.md — Install @inquirer/prompts, picocolors; create utils/tty.ts (isInteractive), utils/prompts.ts (wrapper functions)
+- [ ] 17-02-PLAN.md — Extract packs.ts (findPacksDir, loadProviderCard), extract negotiate.ts; add --yes/--dry-run/--no-save/--no-interactive flags
+- [ ] 17-03-PLAN.md — Refactor setup.ts and billing.ts init to use shared prompts.ts
 **UI hint**: yes
 
 ## Progress
@@ -259,7 +288,7 @@ Plans:
 | 14. Documentation Site Content | v4.0 | 0/0 | Planned | - |
 | 15. Playground Core UI Upgrade | v4.0 | 0/2 | Planned | - |
 | 16. Negotiator CLI Integration | v4.0 | 1/1 | Complete | 2026-05-25 |
-| 17. CLI Infrastructure | v5.0 | 0/0 | Planned | - |
+| 17. CLI Infrastructure | v5.0 | 0/3 | Planned | - |
 | 18. Interactive Negotiation | v5.0 | 0/0 | Planned | - |
 | 19. Command Simplification | v5.0 | 0/0 | Planned | - |
 | 20. Docs + Playground Updates | v5.0 | 0/0 | Planned | - |
