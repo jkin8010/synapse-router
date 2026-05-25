@@ -51,76 +51,7 @@ interface PackEntry {
 // ---------------------------------------------------------------------------
 
 export function printEvolveHelp(): void {
-  console.log(`
-synapse evolve — Generate zero-dependency SDK from all installed Provider Packs
-
-Usage:
-  synapse evolve [options]
-
-Options:
-  --out-dir <path>      SDK output directory (default: ./synapse-sdk)
-  --provider <names>    Comma-separated provider IDs to include (default: all)
-  --dry-run             Preview changes without writing files
-  --force               Regenerate even if no provider changes detected
-  --with-profile        Read .synapse/profiles/ to inform SDK generation
-  --tune                Tune strategy weights from production profile data
-  --from-registry       Check registry for newer pack versions before generation
-  --registry-url <url>  Registry URL (implies --from-registry, overrides config/env)
-  --yes, -y             Non-interactive mode (auto-confirm downloads)
-
-Description:
-  Reads provider packs from built-in packs/ and ~/.synapse/packs/, then
-  generates a zero-dependency TypeScript SDK for each provider into the
-  output directory. The generated SDK uses native fetch only — no LLM,
-  no @synapse-router dependencies, no network dependencies beyond provider APIs.
-
-  With --with-profile, evolve reads production profiles from .synapse/profiles/
-  and includes them in the SDK output as genesis.json with per-provider stats,
-  success rates, and latency data. This enables development-time visibility
-  into production runtime behavior.
-
-Evolve Workflow:
-  1. Production SDK generates events -> .synapse/watchdog/events.ndjson
-  2. synapse profile refresh  -> aggregates events into .synapse/profiles/*.json
-  3. synapse export           -> packages .synapse/ as tar.gz for dev transfer
-  4. synapse import           -> restores .synapse/ in dev environment (via git or pipe)
-  5. synapse evolve --with-profile  -> reads profiles, generates SDK + genesis.json
-  6. Test -> deploy the new SDK
-  7. Repeat -- production data loops back to improve every evolve cycle
-
-  All complexity lives at development time. The generated SDK remains
-  pure zero-dependency code with no runtime Router or LLM dependency.
-
-Output structure:
-  <out-dir>/
-  ├── openai/
-  │   ├── index.ts           # Exports client + types
-  │   ├── client.ts          # HTTP client (zero-dependency)
-  │   ├── types.ts           # Type definitions
-  │   ├── <feature>.ts       # Per-feature type files
-  │   └── README.md
-  ├── replicate/
-  │   └── ...
-  ├── genesis.json           # Profile-informed metadata (with --with-profile)
-  ├── synapse.json           # Generation metadata
-  └── tsconfig.json          # TypeScript config
-
-Examples:
-  # Generate SDK for all providers
-  synapse evolve
-
-  # Generate only for openai and replicate
-  synapse evolve --provider openai,replicate
-
-  # Preview without writing
-  synapse evolve --dry-run
-
-  # Custom output directory
-  synapse evolve --out-dir ./my-sdk
-
-  # Include production profiles in SDK output
-  synapse evolve --with-profile
-`);
+  console.log(HELP_EVOLVE);
 }
 
 // ---------------------------------------------------------------------------

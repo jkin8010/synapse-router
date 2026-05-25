@@ -7,6 +7,7 @@ import { homedir } from "node:os";
 import { createVault } from "@synapse-router/vault";
 import { loadMergedConfig, saveGlobalConfig } from "../utils/config.js";
 import { promptSelect, promptInput, promptPassword } from "../utils/prompts.js";
+import { HELP_SETUP } from "../utils/help.js";
 
 // ---------------------------------------------------------------------------
 // Types
@@ -117,30 +118,7 @@ async function saveConfig(config: SynapseConfig): Promise<void> {
 // ---------------------------------------------------------------------------
 
 export function printSetupHelp(): void {
-  console.log(`
-synapse setup — Interactive first-time setup wizard
-
-Usage:
-  synapse setup
-
-Description:
-  Guides you through connecting your first provider:
-  1. Choose a provider (DeepSeek, OpenAI, Moonshot, etc.)
-  2. Enter your API key (hidden input)
-  3. Configure base URL (with default)
-  4. Select a pack (schema compatibility)
-
-  After setup, you can use:
-    synapse connect <provider> <intent>
-
-Examples:
-  synapse setup
-
-See also:
-  synapse connect   — Connect to a provider
-  synapse vault     — Manage API keys
-  synapse config    — Manage provider configuration
-`);
+  console.log(HELP_SETUP);
 }
 
 // ---------------------------------------------------------------------------

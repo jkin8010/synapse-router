@@ -12,6 +12,7 @@ import {
 } from "../utils/config.js";
 import { handleProfileCommand } from "./profile.js";
 import { handleExportCommand, handleImportCommand } from "./export.js";
+import { HELP_CONFIG } from "../utils/help.js";
 
 // ---------------------------------------------------------------------------
 // Types
@@ -204,64 +205,7 @@ function setNestedValue(obj: Record<string, unknown>, key: string, value: string
 // ---------------------------------------------------------------------------
 
 export function printConfigHelp(): void {
-  console.log(`
-synapse config — Manage Synapse Router configuration
-
-Usage:
-  synapse config set <key> <value> [--local]
-  synapse config get <key>
-  synapse config list
-
-Subcommands:
-  set <key> <value>   Set a configuration value (dot notation)
-    --local             Write to project-local .synapse/config.json instead of global ~/.synapse/config.json
-  get <key>           Get a configuration value
-  list                List all configuration
-  profile list|show|reset|stats|refresh  Manage Provider Profiles
-  export [--output|--stdout]              Export .synapse/ data
-  import <file> [--stdin]                 Import .synapse/ data
-
-Configuration keys use dot notation:
-  Provider config:    deepseek.base_url, deepseek.pack, deepseek.auth_type
-  Defaults:           format, defaults.format
-  Full path:          providers.deepseek.base_url, defaults.format
-
-Cascading config:
-  Global:   ~/.synapse/config.json
-  Project:  .synapse/config.json (in current directory — overrides global)
-  Use --local flag with 'set' to write to project config.
-
-Examples:
-  # Set DeepSeek base URL (global)
-  synapse config set deepseek.base_url https://api.deepseek.com/v1
-
-  # Set registry URL for current project only
-  synapse config set registry.url http://localhost:3100/api/v1 --local
-
-  # Set DeepSeek pack
-  synapse config set deepseek.pack openai
-
-  # Set default output format
-  synapse config set format json
-
-  # Get a provider's base URL
-  synapse config get deepseek.base_url
-
-  # List all configuration
-  synapse config list
-
-Billing configuration:
-  Billing settings are stored in ~/.synapse/billing-config.json and accessed
-  via the "billing.*" prefix:
-    synapse config set billing.openai.onError reject
-    synapse config get billing.openai.onError
-    synapse config set billing.openai.pricing.chat.strategy perToken
-
-See also:
-  synapse setup    — Interactive provider setup
-  synapse vault    — Manage API keys
-  synapse connect  — Connect to a provider
-`);
+  console.log(HELP_CONFIG);
 }
 
 // ---------------------------------------------------------------------------

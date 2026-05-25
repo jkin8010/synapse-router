@@ -47,26 +47,7 @@ async function findPacksDir(): Promise<string> {
 // ---------------------------------------------------------------------------
 
 export function printLockHelp(): void {
-  console.log(`
-synapse lock — Manage Schema Locks
-
-Usage:
-  synapse lock list                    List all cached Schema Locks
-  synapse lock show <lock-id>          Show Schema Lock details
-  synapse lock remove <lock-id>        Remove a Schema Lock (next negotiate regenerates)
-  synapse lock migrate <lock-id>       Migrate a Lock to the latest Pack version
-  synapse lock outdated                Check for Locks that are outdated
-
-Options:
-  --format <fmt>       Output format: json | table (default: table)
-
-Examples:
-  synapse lock list
-  synapse lock show chat_openai_v1.0.0_abc12345
-  synapse lock remove chat_openai_v1.0.0_abc12345
-  synapse lock migrate chat_openai_v1.0.0_abc12345
-  synapse lock outdated
-`);
+  console.log(HELP_LOCK);
 }
 
 // ---------------------------------------------------------------------------

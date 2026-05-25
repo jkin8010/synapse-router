@@ -13,6 +13,7 @@ import type { ProviderCard as CoreProviderCard } from "@synapse-router/core";
 import { negotiateAndVerify } from "@synapse-router/negotiator";
 import { loadMergedConfig } from "../utils/config.js";
 import { handleSmokeCommand } from "./smoke.js";
+import { HELP_CONNECT } from "../utils/help.js";
 
 // ---------------------------------------------------------------------------
 // Types
@@ -271,70 +272,7 @@ async function promptJson(label: string): Promise<Record<string, unknown>> {
 // ---------------------------------------------------------------------------
 
 export function printConnectHelp(): void {
-  console.log(`
-synapse connect — Connect to a provider and execute a feature call
-
-Usage:
-  synapse connect <provider> <intent> [options]
-  synapse connect                         (interactive mode)
-
-Arguments:
-  <provider>    Provider ID (e.g. deepseek, openai, moonshot)
-  <intent>      Feature intent (e.g. chat, text-to-image, embeddings)
-
-Options:
-  --input <json>        Input as JSON string (canonical fields)
-  --input-file <path>   Read input from JSON file
-  --base-url <url>      Override provider base URL
-  --api-key <key>       Override API key (prefer vault)
-  --lock <path>         Use existing schema lock file
-  --no-cache            Bypass schema lock cache (force re-negotiation)
-  --raw                 Output raw provider response
-  --format <fmt>        Output format: json | table | compact (default: json)
-  --with-billing          Enable billing tracking (skip prompt)
-  --no-billing            Disable billing tracking (skip prompt)
-  --smoke               Run provider smoke tests (synapse smoke replacement)
-
-Modes:
-  Imperative    Full parameters provided — no interaction
-                $ synapse connect deepseek chat --input '{"messages":[{"role":"user","content":"Hello"}]}'
-
-  Interactive   Missing parameters — guided prompts
-                $ synapse connect deepseek chat
-                $ synapse connect              (all parameters prompted)
-
-Examples:
-  # Chat with DeepSeek
-  synapse connect deepseek chat --input '{"messages":[{"role":"user","content":"Hello"}],"model":"deepseek-chat"}'
-
-  # Generate image with stability
-  synapse connect stability text-to-image --input '{"prompt":"A sunset over mountains"}'
-
-  # Read input from file
-  synapse connect openai chat --input-file ./my-request.json
-
-  # Interactive mode (auto-degraded when parameters missing)
-  synapse connect deepseek chat
-
-  # Full interactive
-  synapse connect
-
-  # Override base URL
-  synapse connect deepseek chat --base-url https://custom-api.example.com/v1 --raw
-
-Billing:
-  If a billing configuration exists (synapse billing init), connect will prompt
-  to enable billing tracking. When enabled, connector output includes billing
-  metadata: call count, remaining quota, and estimated cost.
-
-  --with-billing          Force-enable billing (skip prompt)
-  --no-billing            Skip billing even if config exists
-
-See also:
-  synapse setup   — Interactive first-time setup
-  synapse vault   — Manage API keys
-  synapse config  — Manage provider configuration
-`);
+  console.log(HELP_CONNECT);
 }
 
 // ---------------------------------------------------------------------------

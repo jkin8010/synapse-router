@@ -6,6 +6,7 @@ import { readFileSync, readdirSync } from "node:fs";
 import { join, dirname } from "node:path";
 import { homedir } from "node:os";
 import { pricingFromProviderCard } from "@synapse-router/billing";
+import { HELP_BILLING } from "../utils/help.js";
 import { promptSelect, promptInput, promptConfirm } from "../utils/prompts.js";
 import type { SelectOption } from "../utils/prompts.js";
 
@@ -68,33 +69,7 @@ interface ProviderCard {
 // ---------------------------------------------------------------------------
 
 export function printBillingHelp(): void {
-  console.log(`
-synapse billing -- Manage billing configuration and quota status
-
-Usage:
-  synapse billing init [options]     Initialize billing configuration
-  synapse billing config [subcommand]  View or modify billing configuration
-  synapse billing status [options]     View quota status and estimated costs
-
-Subcommands:
-  init         Interactive wizard to set up per-provider pricing and quotas
-  config       Set/get billing config values (also available via synapse config billing.*)
-  status       Display per-provider quota status in grouped table format
-
-Options (init):
-  --provider <id>           Provider ID to configure (can repeat for multiple)
-  --pricing-strategy <s>    Pricing strategy: perToken, perUnit, flat (default: perToken)
-  --quota <limit>           Quota limit in USD (default: 10)
-  --quota-period <period>   Quota period: hour, day, month (default: month)
-  --on-error <strategy>     Billing error handling: warn, reject (default: warn)
-
-Options (status):
-  --format json             Machine-readable output (default: table)
-
-See also:
-  synapse config            Manage configuration
-  synapse connect           Connect to a provider (auto-wraps with billing if configured)
-`);
+  console.log(HELP_BILLING);
 }
 
 // ---------------------------------------------------------------------------

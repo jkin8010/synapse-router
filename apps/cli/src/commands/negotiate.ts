@@ -13,6 +13,7 @@ import { getOrCreateLock, LockStorage } from "@synapse-router/lock";
 import { findPacksDir, loadProviderCard, USER_PACKS_DIR, LOCAL_PACKS_DIR } from "../utils/packs.js";
 import { isInteractive } from "../utils/tty.js";
 import { promptSearch, promptSelect, promptCheckbox, promptConfirm } from "../utils/prompts.js";
+import { HELP_NEGOTIATE } from "../utils/help.js";
 import pc from "picocolors";
 
 // ---------------------------------------------------------------------------
@@ -712,39 +713,7 @@ function exampleValue(fdef: { type?: string; enumValues?: string[]; fallback?: u
 // ---------------------------------------------------------------------------
 
 export function printNegotiateHelp(): void {
-  console.log(`
-synapse negotiate — Run schema negotiation
-
-Usage:
-  synapse negotiate <schema-file>                   Negotiate from agent schema file
-  synapse negotiate --intent <intent> --provider <provider>  Full negotiation pipeline
-
-Arguments:
-  <schema-file>          Path to agent schema JSON file
-
-Options:
-  --intent <intent>      Feature intent (e.g. chat, text-to-image)
-  --provider <provider>  Provider ID (e.g. openai, deepseek)
-  --no-cache             Force re-negotiation (delete cached lock + verification)
-  --format <fmt>         Output format: json | table (default: table)
-  --yes                  Skip all prompts, accept default values
-  --dry-run              Run full pipeline, preview results, do not save Lock
-  --no-save              Negotiate successfully but do not save Schema Lock
-  --no-interactive       Force non-interactive mode (fail if info missing)
-
-Examples:
-  synapse negotiate ./my-agent-schema.json
-  synapse negotiate --intent chat --provider openai
-  synapse negotiate --intent chat --provider openai --no-cache
-  synapse negotiate --intent chat --provider openai --format json
-  synapse negotiate --intent chat --provider openai --dry-run
-  synapse negotiate --intent chat --provider openai --no-save
-
-See also:
-  synapse provider list   — List available providers
-  synapse connect         — Connect to a provider
-  synapse lock list       — Manage cached Schema Locks
-`);
+  console.log(HELP_NEGOTIATE);
 }
 
 // ---------------------------------------------------------------------------

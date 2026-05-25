@@ -506,40 +506,5 @@ async function handlePackShow(args: string[]): Promise<void> {
 // ---------------------------------------------------------------------------
 
 export function printPackHelp(): void {
-  console.log(`
-synapse pack — Manage provider packs from the Registry
-
-Usage:
-  synapse pack add <pack>                    Install a pack from Registry
-  synapse pack add <pack>@<version>          Install specific version
-  synapse pack search <query>                Search Registry for packs
-  synapse pack list                          List installed packs
-  synapse pack check                         Check for registry updates
-  synapse pack update [name]                 Update a pack (or all)
-  synapse pack remove <name>                 Remove an installed pack
-  synapse pack show <name>                   Show pack details
-
-Arguments:
-  <pack>                   Pack name (e.g. openai, @official/openai)
-  <version>                Semver version (e.g. 2.0.0)
-  <query>                  Search term
-
-Options:
-  --yes                    Skip confirmation prompts (non-interactive)
-  --local                  Install to current project (.synapse/packs/) instead of ~/.synapse/packs/
-
-Examples:
-  synapse pack add openai
-  synapse pack add @official/openai@2.0.0
-  synapse pack search "chat completions"
-  synapse pack list
-  synapse pack check
-  synapse pack update openai
-  synapse pack update          # update all
-  synapse pack remove openai
-  synapse pack show openai
-
-Environment:
-  SYNAPSE_REGISTRY_URL       Override registry URL (default: https://registry.synrc.io)
-`);
+  console.log(HELP_PACK);
 }
