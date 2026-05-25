@@ -53,7 +53,72 @@
 - 共享 UI 组件库 (`@synapse-router/ui`) — React 版本冲突，且无复用场景
 - Playground 后台 API 新增端点 — 所有 UI 升级基于现有 API
 
+---
+
+# Milestone v5.0: 交互式协商与体验优化
+
+**Goal:** 让 `synapse negotiate` 成为真正的交互式协商工具，用户参与协定输入输出格式；精简命令体系，降低使用成本；更新文档站点和 Playground。
+
+## CLI-INFRA — CLI 基础设施
+
+- [ ] **CLI-INFRA-01**: 提取 negotiate 命令 — 将 `negotiate()` 从 `apps/cli/src/index.ts` 提取到 `apps/cli/src/commands/negotiate.ts`，遵循现有命令模式
+- [ ] **CLI-INFRA-02**: 共享 prompt 工具 — 创建 `apps/cli/src/utils/prompts.ts`，封装 `@inquirer/prompts` 所有提示类型
+- [ ] **CLI-INFRA-03**: TTY 检测 — 创建 `apps/cli/src/utils/tty.ts`，包含 `isInteractive()` 检查 stdin/stdout TTY + CI 环境变量 + `--no-interactive` 标志
+- [ ] **CLI-INFRA-04**: 全局跳过标志 — 添加 `--yes`（跳过所有提示）、`--dry-run`（预览不保存）、`--no-save`（不保存 Lock）
+- [ ] **CLI-INFRA-05**: 提取共享 pack 发现工具 — 将 `findPacksDir()`、`loadProviderCard()` 从 index.ts 提取到共享工具
+- [ ] **CLI-INFRA-06**: 重构已有交互命令 — `setup.ts`、`connect.ts`、`billing.ts` 迁移到共享 prompts
+
+## NEGO — 交互式协商
+
+- [ ] **NEGO-01**: 交互式协商流程入口 — `synapse negotiate`（无 flags）启动交互式协商流程：选择 intent → 选择 provider → 审查 Schema → 确认
+- [ ] **NEGO-02**: 输入输出 Schema 展示 — 格式化显示 Pack Feature 定义的输入输出字段，标明 required/optional
+- [ ] **NEGO-03**: 字段自定义增减 — 用户可以对 optional 字段选择包含/排除，支持批量操作
+- [ ] **NEGO-04**: LLM Key 发现与引导 — 协商前检查 vault/config/env 中是否有 LLM API Key，无 key 时引导配置
+- [ ] **NEGO-05**: Stub 输出标记 — 当使用确定性 stub（无 LLM key）时，在输出中醒目提示用户这不是真正的协商
+- [ ] **NEGO-06**: Lock diff 预览 — 保存前显示当前 Lock 与现有 Lock（如有）的差异
+- [ ] **NEGO-07**: 协商后路由菜单 — 协商成功后提供菜单：测试 connect / 生成 SDK / 查看 @synapse-router/sdk 接入 / 退出
+- [ ] **NEGO-08**: 非交互模式保持 — `--intent X --provider Y` 保留现有行为不变
+- [ ] **NEGO-09**: SIGINT/SIGTERM 正确处理 — 中断时清理部分状态，不产生孤儿 Lock
+- [ ] **NEGO-10**: 提示分级 — 每个提示分类为 required/recommended/contextual/confirmation，Enter 键接受默认值
+
+## CMD — 命令精简
+
+- [ ] **CMD-01**: Help 分组 — `--help` 输出按分类组织：Getting Started、Core Workflow、Provider Management、Configuration、Advanced
+- [ ] **CMD-02**: 命令合并评估 — 评估 `provider`→`pack`、`smoke`→`connect`、`init`→`setup`、`profile`→`config`、`export/import`→`config` 等合并方案
+- [ ] **CMD-03**: Help 文本共享 — 提取 help 文本到共享定义，与文档站点保持同步
+
+## DOCS — 文档更新
+
+- [ ] **DOCS-01**: 协商命令文档更新 — 更新 docs 中 `negotiate` 命令文档，覆盖交互式协商流程
+- [ ] **DOCS-02**: 用户旅程文档 — 新增"用户旅程"文档，描述从安装到使用的完整流程
+- [ ] **DOCS-03**: 命令参考更新 — 更新 CLI 命令参考，反映精简后的命令结构
+
+## PLAY — Playground 更新
+
+- [ ] **PLAY-06**: SDK 代码自动预览 — Playground 中 Schema 变化时自动预览生成的 SDK 代码
+- [ ] **PLAY-07**: Schema 预设 — 内置 Chat、Text-to-Image、Embedding 预设 + localStorage 自定义预设
+- [ ] **PLAY-08**: Billing 费用预览 — 在 Playground 中显示当前 Schema 的预估费用
+
+## Future Requirements (Deferred)
+
+- 协商记忆 (memo) 系统 (`~/.synapse/memos/`)
+- Lock diff 工具 (`diffLocks()`)
+- 多 Provider 并排对比
+- 可视化的字段映射展示
+- 协商历史 (`synapse negotiate --history`)
+- Schema 模板库 (`~/.synapse/templates/`)
+- "What if" 字段切换匹配预览
+
+## Out of Scope
+
+- 运行时 LLM 调用 — LLM 仅在开发时协商阶段使用
+- 完整 TUI (Ink/React) — 终端保持文本提示，图形界面在 Playground
+- 命令行拖拽字段映射 — 不适合 CLI 交互
+- 跨会话协商状态持久化 — 协商是临时的，中断则重来
+
 ## Traceability
+
+### v4.0
 
 | REQ-ID | Phase | Status |
 |--------|-------|--------|
@@ -67,3 +132,33 @@
 | PLAY-03 | Phase 15 | Pending |
 | PLAY-04 | Phase 15 | Pending |
 | PLAY-05 | Phase 15 | Pending |
+
+### v5.0
+
+| REQ-ID | Phase | Status |
+|--------|-------|--------|
+| CLI-INFRA-01 | Phase 17 | Pending |
+| CLI-INFRA-02 | Phase 17 | Pending |
+| CLI-INFRA-03 | Phase 17 | Pending |
+| CLI-INFRA-04 | Phase 17 | Pending |
+| CLI-INFRA-05 | Phase 17 | Pending |
+| CLI-INFRA-06 | Phase 17 | Pending |
+| NEGO-01 | Phase 18 | Pending |
+| NEGO-02 | Phase 18 | Pending |
+| NEGO-03 | Phase 18 | Pending |
+| NEGO-04 | Phase 18 | Pending |
+| NEGO-05 | Phase 18 | Pending |
+| NEGO-06 | Phase 18 | Pending |
+| NEGO-07 | Phase 18 | Pending |
+| NEGO-08 | Phase 18 | Pending |
+| NEGO-09 | Phase 18 | Pending |
+| NEGO-10 | Phase 18 | Pending |
+| CMD-01 | Phase 19 | Pending |
+| CMD-02 | Phase 19 | Pending |
+| CMD-03 | Phase 19 | Pending |
+| DOCS-01 | Phase 20 | Pending |
+| DOCS-02 | Phase 20 | Pending |
+| DOCS-03 | Phase 20 | Pending |
+| PLAY-06 | Phase 20 | Pending |
+| PLAY-07 | Phase 20 | Pending |
+| PLAY-08 | Phase 20 | Pending |

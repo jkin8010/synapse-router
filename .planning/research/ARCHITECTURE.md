@@ -1,584 +1,544 @@
-# Architecture: Billing Integration
+# Architecture Research: Interactive Negotiation
 
-**Domain:** Multi-provider AI routing layer (billing/usage metering integration)
-**Researched:** 2026-05-10
+**Domain:** Multi-provider AI routing layer (interactive schema negotiation UX)
+**Researched:** 2026-05-25
 **Confidence:** HIGH (based on direct codebase reading across all affected packages)
 
-## System Overview
+## Current State
 
-Billing sits at the boundary between invocation and observability. It is NOT embedded in any package -- it wraps from outside. This preserves the existing constraint that each package has a single, focused responsibility.
+### How Negotiate Works Today
+
+The negotiate flow is inline in `apps/cli/src/index.ts` (~300 lines at lines 678-986). It has two modes:
+
+**Mode 1 -- Full pipeline** (`--intent <intent> --provider <provider>`):
+1. Parse flags, load provider card from pack sources
+2. Find matching feature by intent
+3. Build `NegotiateAndVerifyInput` (task/goal/constraints from feature)
+4. Read LLM API key from vault (key `negotiator-llm`)
+5. Call `negotiateAndVerify()` from `@synapse-router/negotiator`, which:
+   - `negotiateSchema()` -- LLM generates a schema from task/goal
+   - `loadManifestFromPack()` -- read DSL constraints
+   - `matchManifest()` -- field-level comparison (missing/extra/type_mismatch)
+   - If mismatch: `retryWithFeedback()` -- LLM re-negotiates with structured feedback (max 2 retries)
+   - `runMockTest()` -- generates sample request, tests against mock server
+   - If mock fails: retry with feedback
+   - `cacheVerificationResultLocally()` + fire-and-forget `submitVerification()`
+6. Display full negotiation output (feature info, schema, manifest match, field mappings, example I/O)
+7. Auto-save Schema Lock via `getOrCreateLock()`
+
+**Mode 2 -- Legacy** (`<schema-file>`): Match features by intent from a local schema JSON file.
+
+### Problems with Current Architecture
+
+| Problem | Root Cause | Impact |
+|---------|------------|--------|
+| **No user oversight** | Full pipeline is automated with LLM. User has no chance to inspect, approve, or modify the schema. | Schema may not match user's actual needs. No trust. |
+| **No schema editing** | After LLM generates schema, it goes straight to validation. No `addField`/`removeField`/`toggleRequired` capability. | User can't customize. Must re-run with different input. |
+| **Implicit LLM dependency** | Without `negotiator-llm` key in vault, `createDefaultLLMClient()` falls back to a stub that returns `{input: string}`. User may not realize this. | Silent schema degradation. Confusing output. |
+| **No post-negotiation routing** | After negotiation completes, user sees output and process exits with no "what next" guidance. | Low completion rate to connect or SDK generation. |
+| **Monolithic inline code** | ~300 lines of negotiate logic lives inline in `apps/cli/src/index.ts`, mixed with provider/vault/help logic. | Hard to test, maintain, or extend with interactive features. |
+| **Lock doesn't store agent schema** | `buildLockFromProviderCard()` captures only the provider's canonical schema. The negotiated/edited agent schema is lost after the command exits. | Can't revisit or share the negotiation result. |
+
+## Target Architecture
+
+### System Overview
 
 ```
-                             Calling Code (CLI / API Server)
-                                      │
-                        ┌─────────────┴─────────────┐
-                        │       owns both           │
-                        ▼                           ▼
-              ┌─────────────────┐          ┌──────────────────┐
-              │   @billing      │          │ @observability   │
-              │   preCall()     │◄─span──►│ wrapBilling()    │
-              │   postCall()    │          │ createSpan()     │
-              └────────┬────────┘          └──────────────────┘
-                       │ wraps
-                       ▼
-              ┌─────────────────┐
-              │ @connector      │  ← unchanged, no billing knowledge
-              │ connect()       │
-              └─────────────────┘
-
-Dev-time only:
-  ┌─────────────────┐     ┌──────────────────┐
-  │ @sdk-generator  │────►│ Generated SDK    │ ← billing config baked in as constants
-  │ generateTypeScript│   │ (zero-dep,       │
-  │ (--with-billing) │    │  native fetch)   │
-  └─────────────────┘     └──────────────────┘
+                          CLI Entry (apps/cli/src/index.ts)
+                                   │
+                         ┌─────────┴─────────┐
+                         │  case "negotiate"  │
+                         └─────────┬─────────┘
+                                   │
+                         ┌─────────▼─────────┐
+                         │  negotiate.ts     │  ← NEW: extracted from index.ts
+                         │  (command handler) │      includes interactive flow
+                         └─────────┬─────────┘
+                                   │
+              ┌────────────────────┼────────────────────┐
+              │                    │                    │
+     ┌────────▼────────┐  ┌───────▼───────┐  ┌─────────▼─────────┐
+     │  negotiateSchema │  │ matchManifest │  │  Post-Negotiation │
+     │  (LLM generate)  │  │ (validate)    │  │  Routing          │
+     └─────────────────┘  └───────────────┘  │  - connect         │
+              │                    │           │  - sdk generate    │
+              ▼                    ▼           │  - evolve          │
+     ┌─────────────────┐  ┌───────────────┐   │  - save & exit     │
+     │  Schema Editor  │  │ Lock Save     │   └───────────────────┘
+     │  (interactive)  │  │ LockStorage   │
+     └─────────────────┘  └───────────────┘
 ```
 
-## Key Architectural Principles Applied
+### Interactive Mode Data Flow
 
-1. **Billing wraps, never modifies.** Connector, SDK-generator, and CLI each remain unchanged in their core responsibility. Billing is added as a wrapper layer.
-2. **Billing does not import observability.** Circular dependency is prevented by keeping billing independent, using callbacks for events, and letting the caller wire them together.
-3. **SDK zero-dependency preserved.** Billing config is compiled into the generated SDK as inline constants, never as an `@synapse-router/*` import.
-4. **Connector thinness preserved.** The connector's `connect()` function receives no billing hooks. A higher-order wrapper adds billing before/after.
-5. **Billing state lives caller-side.** QuotaManager is instantiated by the caller (CLI session or SDK runtime), not by connector or sdk-generator.
+```
+synapse negotiate --intent chat [--provider openai] [--interactive]
+  │
+  ├── 1. Parse args
+  │     --interactive flag or missing critical args -> enter interactive
+  │
+  ├── 2. Provider Selection (if not specified)
+  │     └── listAvailableProviders() -> promptSelectProvider()
+  │
+  ├── 3. Intent Selection (if not specified)
+  │     └── findMatchingFeature() -> show features -> promptSelectIntent()
+  │
+  ├── 4. Schema Negotiation (LLM)
+  │     ├── negotiateSchema({task, goal}) -> {schema, schema_id}
+  │     ├── showFeatureInfo() -- provider's declared fields + required marks
+  │     └── showNegotiatedSchema() -- LLM-proposed schema
+  │
+  ├── 5. [NEW] Interactive Schema Editing
+  │     ├── LOOP:
+  │     │   ├── showSchemaTable(schema) -- fields with type/required marks
+  │     │   ├── promptEditAction() -> add/remove/toggle/validate/done
+  │     │   ├── addField(name, type, required) -> add to schema
+  │     │   ├── removeField(name) -> remove from schema
+  │     │   ├── toggleRequired(name) -> flip required flag
+  │     │   ├── validate() -> run matchManifest(), show mismatches
+  │     │   └── done -> exit loop
+  │     └── editedSchema, editedSchemaId (re-hash after edits)
+  │
+  ├── 6. Final Validation
+  │     ├── loadManifestFromPack(packDir) -> constraints
+  │     ├── matchManifest(editedSchema, mergedConstraints) -> result
+  │     ├── if invalid: show buildSuggestions(), offer "edit again" or "force save"
+  │     └── runMockTest(editedSchema, packDir, providerId) -> optional
+  │
+  ├── 7. Save Result
+  │     ├── Save Schema Lock (from provider card, unchanged)
+  │     └── [Optional] Save negotiation memo (negotiated schema + user edits)
+  │
+  └── 8. [NEW] Post-Negotiation Routing
+        ├── Option A: "Test with connect"
+        │     └── delegate to connect handler with provider/intent/lock
+        ├── Option B: "Generate SDK"
+        │     └── delegate to sdk generate or evolve
+        ├── Option C: "Save negotiation memo"
+        └── Option D: "Exit"
+```
+
+### Non-Interactive Mode (unchanged)
+
+When `--interactive` is NOT specified, `synapse negotiate --intent X --provider Y` runs exactly the same fully automated pipeline it does today. The extracted `handleNegotiateCommand()` delegates to the same `negotiateAndVerify()` pipeline. Zero behavioral change.
 
 ## Component Boundaries
 
-### Current State (no billing integration)
+### Current State (no interactive negotiation)
 
-| Package | Responsibility | Public API |
-|---------|---------------|------------|
-| `@synapse-router/connector` | Thin HTTP: mapInput + callProvider + mapOutput | `connect(params): ConnectResult` |
-| `@synapse-router/billing` | Pricing, quotas, fallback (standalone) | `Billing.preCall()`, `Billing.postCall()` |
-| `@synapse-router/sdk-generator` | Template-based code generation | `generateTypeScript(packData): GeneratedFile[]` |
-| `@synapse-router/observability` | Trace/spans, redaction, routing wrappers | `wrapBilling(fn, attrs)`, `wrapConnect(fn, attrs)` |
-| `apps/cli` | Commander-based CLI | `synapse connect`, `synapse sdk generate`, `synapse evolve` |
+| Package | Responsibility | Public API Used by Negotiate |
+|---------|---------------|---------------------------|
+| `@synapse-router/negotiator` | Schema negotiation + verification | `negotiateSchema()`, `negotiateAndVerify()`, `matchManifest()`, `loadManifestFromPack()`, `runMockTest()`, `buildSuggestions()` |
+| `@synapse-router/lock` | Schema Lock caching | `getOrCreateLock()`, `LockStorage`, `buildLockFromProviderCard()` |
+| `@synapse-router/vault` | API key storage | `createVault().getKey("negotiator-llm")` |
+| `@synapse-router/connector` | Thin HTTP connection | Not used by negotiate (used by connect) |
+| `@synapse-router/sdk-generator` | Code generation | Not directly used by negotiate (used by evolve/sdk) |
+| `apps/cli` | CLI entry + all command handlers | `negotiate()` inline function at lines 678-986 |
+| `@synapse-router/core` | Shared types | `Schema`, `ProviderCard`, `hashSchema()`, `normalizeSchema()`, `validateSchema()` |
 
-### After Billing Integration
+### After Interactive Negotiation
 
 | Package | What Changes | How |
 |---------|-------------|-----|
-| `@synapse-router/connector` | **Unchanged** | No hooks added. Billing wraps externally. |
-| `@synapse-router/billing` | **+New exports** | `createBillingConnector()`, `syncBillingConfig()`, pricing from ProviderFeature.limits |
-| `@synapse-router/sdk-generator` | **+Option** | `--with-billing` flag; generates `billingConfig` constants + optional BillingTracker class |
-| `@synapse-router/observability` | **Unchanged** | `wrapBilling()` already decoupled; billing never imports observability |
-| `apps/cli` | **+New command** | `synapse billing config|show|status`; `synapse connect` auto-reads billing config |
-
-## Detailed Architecture Decisions
-
-### Decision 1: Connector Integration -- Wrapper Pattern
-
-**Decision:** Billing wraps AROUND connector, never inside.
-
-`@synapse-router/billing/src/connector.ts` (new file):
-
-```typescript
-import { connect as rawConnect, type ConnectParams, type ConnectResult } from '@synapse-router/connector';
-import { Billing } from './billing.js';
-import type { BillingConfig } from './types.js';
-
-export interface BillingConnectorConfig {
-  billing: BillingConfig;
-  // Optional callbacks for observability wiring
-  onPreCall?: (params: PreCallParams, result: PreCallResult) => void;
-  onPostCall?: (params: PostCallParams, result: PostCallResult) => void;
-  onAlert?: (alert: BillingAlert) => void;
-}
-
-/**
- * Creates a billing-aware connector by wrapping the raw connect function.
- * The caller provides a BillingConfig (pricing + quotas + fallback).
- * Returns an async function matching ConnectParams → ConnectResult signature,
- * transparent to the consumer.
- */
-export function createBillingConnector(config: BillingConnectorConfig) {
-  const billing = new Billing(config.billing);
-
-  return async function billingConnect(params: ConnectParams): Promise<ConnectResult> {
-    // 1. Pre-call: estimate cost, check quotas
-    const preCallResult = await billing.preCall({
-      lock: params.lock,
-      estimatedInputTokens: estimateTokens(params.input),
-      estimatedQuantity: 1,
-    });
-    config.onPreCall?.({ lock: params.lock, ... }, preCallResult);
-
-    if (!preCallResult.allowed) {
-      throw new BillingBlockedError(preCallResult);
-    }
-
-    // 2. Actual call (delegate to raw connector)
-    const result = await rawConnect(params);
-
-    // 3. Post-call: calculate actual cost, consume quotas
-    const postCallResult = await billing.postCall({
-      lock: params.lock,
-      result,
-      estimatedCost: preCallResult.estimatedCost,
-    });
-    config.onPostCall?.({ lock: params.lock, result }, postCallResult);
-
-    if (postCallResult.alerts.length > 0) {
-      for (const alert of postCallResult.alerts) {
-        config.onAlert?.(alert);
-      }
-    }
-
-    return result;
-  };
-}
-```
-
-**Rationale:**
-- Connector remains thin (no business logic)
-- Billing is optional -- callers who don't want billing use raw `connect()`
-- The wrapper matches the same `(params) => Promise<Result>` signature for drop-in replacement
-- Callbacks let the caller wire in observability without billing knowing about it
-
-**What this means for files:**
-- New: `packages/billing/src/connector.ts` (billing-aware connector factory)
-- New: `packages/billing/src/errors.ts` (BillingBlockedError type)
-- Modified: `packages/billing/src/index.ts` (add new exports)
-- Unchanged: `packages/connector/src/` (zero modifications)
-
-### Decision 2: SDK Generation -- Inline with Optional Flag
-
-**Decision:** Billing code is generated INLINE in the SDK when `--with-billing` is specified. The default (no flag) produces the current zero-billing SDK.
-
-**Generated file structure with `--with-billing`:**
-
-```
-<output-dir>/
-├── openai/
-│   ├── index.ts           # unchanged; re-exports client + types
-│   ├── client.ts          # MODIFIED: adds optional billing param to constructor
-│   ├── billing.ts         # NEW: baked-in billing config constants + BillingTracker class
-│   ├── types.ts           # unchanged
-│   ├── chat.ts            # unchanged
-│   └── README.md          # unchanged
-├── synapse.json           # MODIFIED: includes billing: true in metadata
-```
-
-**Generated `client.ts` constructor and method (billing-aware version):**
-
-```typescript
-export class OpenaiClient {
-  private baseUrl: string;
-  private apiKey: string;
-  private billing?: BillingTracker;
-
-  constructor(options: {
-    baseUrl?: string;
-    apiKey: string;
-    billing?: BillingTracker;  // NEW: optional billing tracker
-  }) {
-    this.baseUrl = options.baseUrl ?? 'https://api.openai.com/v1';
-    this.apiKey = options.apiKey;
-    this.billing = options.billing;
-  }
-
-  async chatCompletions(input: ChatCompletionsInput): Promise<ChatCompletionsOutput> {
-    // Billing pre-call (if enabled)
-    this.billing?.preCall({ featureId: 'chat_post_v1_chat_completions', input });
-
-    const url = `${this.baseUrl}/chat/completions`;
-    const response = await fetch(url, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${this.apiKey}` },
-      body: JSON.stringify(input),
-    });
-
-    // (error handling unchanged)
-    const result = await response.json() as ChatCompletionsOutput;
-
-    // Billing post-call (if enabled)
-    this.billing?.postCall({ featureId: 'chat_post_v1_chat_completions', usage: result.usage });
-
-    return result;
-  }
-}
-```
-
-**Generated `billing.ts`:**
-
-```typescript
-// Auto-generated by @synapse-router/sdk-generator --with-billing
-// DO NOT EDIT. Regenerate with: synapse evolve --with-billing
-
-export interface BillingEvent {
-  featureId: string;
-  timestamp: string;
-  estimatedTokens?: number;
-  actualTokens?: number;
-  cost: number;
-}
-
-export interface BillingTrackerOptions {
-  onUsage?: (event: BillingEvent) => void;
-  maxCost?: number;
-  maxTokens?: number;
-}
-
-/**
- * Inline billing tracker. Zero external dependencies.
- * Pricing config is baked in as constants at generation time.
- */
-export class BillingTracker {
-  private options: BillingTrackerOptions;
-  private totalCost = 0;
-  private totalTokens = 0;
-
-  // Baked-in pricing: { feature_id → { strategy, inputPrice, outputPrice, unit } }
-  static readonly PRICING = { ... } as const;
-
-  constructor(options?: BillingTrackerOptions) {
-    this.options = options ?? {};
-  }
-
-  preCall(params: { featureId: string; input?: unknown }): void {
-    if (this.options.maxCost && this.totalCost >= this.options.maxCost) {
-      throw new Error('Billing limit exceeded');
-    }
-  }
-
-  postCall(params: { featureId: string; usage?: { input_tokens?: number; output_tokens?: number } }): void {
-    const pricing = (this.constructor as typeof BillingTracker).PRICING[params.featureId];
-    if (!pricing) return;
-
-    const inputTokens = params.usage?.input_tokens ?? 0;
-    const outputTokens = params.usage?.output_tokens ?? 0;
-    const cost = (inputTokens * pricing.inputPrice + outputTokens * pricing.outputPrice) / 1000;
-
-    this.totalCost += cost;
-    this.totalTokens += inputTokens + outputTokens;
-
-    this.options.onUsage?.({
-      featureId: params.featureId,
-      timestamp: new Date().toISOString(),
-      actualTokens: inputTokens + outputTokens,
-      cost,
-    });
-  }
-
-  getStats() { return { totalCost: this.totalCost, totalTokens: this.totalTokens }; }
-}
-```
-
-**SDK Generator changes:**
-
-| File | Change |
-|------|--------|
-| `sdk-generator/src/index.ts` | Add `SdkGenerateOptions.billing` flag |
-| `sdk-generator/src/typescript.ts` | New `--with-billing` mode: generates `billing.ts`, modifies `client.ts` constructor |
-| `sdk-generator/src/python.ts` | Similar change for Python (lower priority) |
-
-**Rationale:**
-- SDK zero-dependency is preserved (BillingTracker is pure TypeScript, no imports)
-- Billing is optional: `new OpenaiClient({ apiKey, billing: new BillingTracker() })`
-- Pricing config is baked in at generation time (dev-time determination)
-- Callers who don't need billing get the same pure SDK as before
-
-**Constraint check:**
-- "SDK must NOT import @synapse-router/*" -- PASS. BillingTracker is generated inline.
-- "Runtime = pure code SDK, no LLM" -- PASS. BillingTracker is deterministic arithmetic.
-- "Runtime zero token cost" -- PASS. No external calls in BillingTracker.
-
-### Decision 3: CLI Billing Command
-
-**Decision:** `synapse billing` is a new top-level command for configuration, with `synapse connect` auto-reading billing config from `.synapse/config.json`.
-
-**Command structure:**
-
-```
-synapse billing                     → show help
-synapse billing init                → interactive: set up billing for a provider
-synapse billing config              → show current billing config
-synapse billing config set <key> <value>  → set pricing/quota values
-synapse billing status              → show current quota state (session)
-synapse billing show <provider>     → show billing config for a provider
-```
-
-**Config format (`.synapse/config.json` extension):**
-
-```json
-{
-  "providers": {
-    "openai": {
-      "base_url": "https://api.openai.com/v1",
-      "billing": {
-        "pricing": { "source": "pack" },
-        "quotas": [
-          { "id": "cost-monthly", "type": "cost", "limit": 100, "period": "month", "threshold": 0.8 }
-        ],
-        "fallback": { "strategy": "reject" }
-      }
-    }
-  }
-}
-```
-
-**Changes to existing commands:**
-
-- `synapse connect` -- NEW behavior: reads `config.providers[provider].billing` and auto-wraps the connector with `createBillingConnector()` if billing config is present. Silent if no billing config.
-
-**What this means for files:**
-
-| File | Change |
-|------|--------|
-| `apps/cli/src/commands/billing.ts` | NEW: `synapse billing` command handler |
-| `apps/cli/src/index.ts` | ADD: `case "billing"` to command switch; add to help text |
-| `apps/cli/src/commands/connect.ts` | MODIFY: after resolving lock, check for billing config and wrap connector |
-
-**Rationale:**
-- Billing config is project-level (not per-connect), so it should be managed separately
-- `synapse connect` auto-picks it up for a seamless dev experience
-- Separate `billing` command keeps `connect` focused on its core job
-
-### Decision 4: Data Flow -- Billing State Location
-
-**Decision:** Billing state lives at the CALLER level, not in connector or SDK scope. Two distinct lifecycles:
-
-**Mode A: CLI Connect (development/debugging)**
-
-```
-synapse connect
-  │
-  ├── Load config → extract providers[openai].billing
-  ├── Create Billing instance (ephemeral, in-memory QuotaManager)
-  ├── Create billingConnect = createBillingConnector(connect, config)
-  │
-  ├── billingConnect(lock, input, connection)
-  │   ├── billing.preCall()    ← checks in-memory quotas
-  │   ├── connect()            ← actual HTTP call
-  │   └── billing.postCall()   ← consumes in-memory quotas
-  │
-  └── Billing instance GC'd after command exits
-```
-
-**Mode B: Generated SDK (production deployment)**
-
-```
-User code
-  │
-  ├── const billing = new BillingTracker({ onUsage: emitToTelemetry })
-  ├── const client = new OpenaiClient({ apiKey, billing })
-  │
-  ├── client.chatCompletions({...})
-  │   ├── billing.preCall()    ← checks inline limits
-  │   ├── fetch()              ← native HTTP
-  │   └── billing.postCall()   ← tracks cost, emits onUsage callback
-  │
-  ├── billing.getStats()       ← query during or after
-  └── client.chatCompletions({...})
-```
-
-**State persistence:**
-- CLI mode: in-memory only (per session). For persistent quotas, use `synapse billing status` during a long-running dev server.
-- SDK mode: BillingTracker accepts an `onUsage` callback for external persistence (file, Redis, telemetry pipe). The tracker itself is stateless between method calls except for optional cumulative counters.
-
-**What this means for files:**
-
-| Component | State Location | Lifetime | Persistence |
-|-----------|---------------|----------|-------------|
-| CLI connect | CLI scope (Billing instance) | Per command | None (in-memory) |
-| Generated SDK | BillingTracker instance | Per client instance | Optional (onUsage callback) |
-| evol utility | Not affected | N/A | N/A |
-
-### Decision 5: Billing vs Observability -- No Circular Dependencies
-
-**Decision:** Billing does NOT import observability. Observability wraps billing calls from outside.
-
-**Current dependency graph (no cycle):**
-
-```
-billing (standalone, no @synapse-router deps)
-    ↑ used by (no import)
-observability (provides wrapBilling as a generic wrapper)
-    ↑ imports from callers
-CLI / API Server (imports both billing and observability)
-```
-
-**After integration (preserved):**
-
-```
-billing
-    ↑ (callbacks, no imports from observability)
-CLI / API Server
-    │ imports observability → wrapBilling(billing.preCall, attrs)
-    │ imports billing → billing.preCall(), billing.postCall()
-    ▼
-observability
-```
-
-**How observability wires in (in CLI/API caller code):**
-
-```typescript
-import { createTracer } from '@synapse-router/observability';
-import { wrapBilling } from '@synapse-router/observability/router';
-import { Billing } from '@synapse-router/billing';
-import { createBillingConnector } from '@synapse-router/billing/connector';
-
-const tracer = createTracer();
-const billing = new Billing(config);
-
-// Option A: observability wraps specific billing calls
-const trace = tracer.trace('connect');
-const preCallResult = await wrapBilling(
-  trace,
-  () => billing.preCall({ lock, estimatedInputTokens: 1000 }),
-  { provider: 'openai', feature_id: 'chat' }
-);
-
-// Option B: observability wraps through connector callbacks
-const billingConnect = createBillingConnector({
-  billing: config,
-  onPreCall: (_, result) => {
-    wrapBilling(trace, () => Promise.resolve(result), {
-      provider: lock.provider,
-      feature_id: lock.feature_id,
-      estimated_cost: result.estimatedCost,
-    });
-  },
-  onAlert: (alert) => {
-    tracer.trace('billing-alert').span('billing').start({ alert }).end();
-  },
-});
-```
-
-**If billing needs to emit events for telemetry (future need):**
-
-Use a callback/emitter pattern rather than importing observability:
-
-```typescript
-// billing -- no observability import
-this.config.onAlert?.(alert);  // optional callback
-
-// caller wires it up
-new Billing({
-  ...config,
-  onAlert: (alert) => {
-    tracer.trace('billing')
-      .span('alert')
-      .start({ alert })
-      .end();
-  },
-});
-```
-
-**Constraint check:**
-- Billing never imports @synapse-router/observability -- PASS
-- Circular dependency impossible by construction -- PASS
-
-## Files: New vs Modified
-
-### New Files
-
-| File | Purpose | Size Estimate |
-|------|---------|---------------|
-| `packages/billing/src/connector.ts` | Billing-aware connector factory | ~50 lines |
-| `packages/billing/src/errors.ts` | BillingBlockedError, BillingConfigError | ~30 lines |
-| `apps/cli/src/commands/billing.ts` | `synapse billing` command handler | ~150 lines |
-| `sdk-generator/src/billing.ts` | BillingTracker template generation | ~80 lines |
-
-### Modified Files
-
-| File | Change Type | Scope |
-|------|-------------|-------|
-| `packages/billing/src/index.ts` | Add exports | +3 export lines |
-| `packages/billing/src/types.ts` | Add callback types (optional) | +5 lines |
-| `packages/sdk-generator/src/index.ts` | Add `billing` option to `SdkGenerateOptions` | +2 lines |
-| `packages/sdk-generator/src/typescript.ts` | New `--with-billing` generation path | ~+60 lines |
-| `packages/sdk-generator/src/python.ts` | Python billing support (P2) | ~+50 lines |
-| `apps/cli/src/index.ts` | Add billing command routing + help text | ~+15 lines |
-| `apps/cli/src/commands/connect.ts` | Auto-read billing config, wrap connector | ~+30 lines |
+| `@synapse-router/negotiator` | **+New exports** | `SchemaEditor` class for programmatic field manipulation; optionally `NegotiationMemo` types |
+| `@synapse-router/lock` | **No change needed** | Existing `getOrCreateLock()` handles lock creation; interactive mode always passes `--no-cache` to force fresh lock |
+| `apps/cli/src/index.ts` | **MODIFY** | Replace inline negotiate with import from `commands/negotiate.ts` |
+| `apps/cli/src/commands/negotiate.ts` | **NEW** | Extracted negotiate handler + interactive flow + post-negotiation routing |
+| `apps/cli/src/commands/connect.ts` | **MODIFY** | Add light integration: accept `--lock` flag to skip lock resolution when called from negotiate |
+| `apps/cli/src/commands/sdk.ts` | **MODIFY** | Add light integration: accept provider/pack context from negotiate |
+| `apps/cli/src/utils/prompt.ts` | **+New file** | Shared interactive prompt utilities (extracted from duplicate readline patterns in setup.ts, connect.ts, billing.ts) |
 
 ### Unchanged Files (Confirmed)
 
 | Package | Why Unchanged |
 |---------|---------------|
-| `packages/connector/src/*` | Wrapper pattern keeps connector pure |
-| `packages/observability/src/*` | Already decoupled from billing |
-| `packages/observability/src/router/billing.ts` | Already generic (wrapBilling takes any function) |
-| `packages/core/src/*` | No new types needed (ProviderFeature.limits suffices) |
-| `packages/router/src/*` | Unrelated to billing |
-| `packages/lock/src/*` | Unrelated to billing |
-| `packages/vault/src/*` | Unrelated to billing |
-| `packs/*/provider-card.json` | Pricing data already in ProviderFeature.pricing/limits |
+| `packages/connector/src/*` | Negotiation doesn't touch connection layer |
+| `packages/observability/src/*` | Unrelated |
+| `packages/router/src/*` | Unrelated to negotiation UX |
+| `packages/vault/src/*` | Already provides key access; no changes needed |
+| `packages/sdk-generator/src/*` | Downstream consumer; negotiate only triggers it, doesn't change it |
+| `packages/core/src/*` | Shared types already sufficient |
+| `packs/*/` | Provider pack format unchanged |
+
+## Architectural Patterns
+
+### Pattern 1: Extracted Command Handler
+
+**What:** Each CLI command lives in its own file under `apps/cli/src/commands/<name>.ts` with a standard surface: `handleXCommand()`, `printXHelp()`, `parseXArgs()`. The main `index.ts` switch statement becomes a thin router.
+
+**Current state:** Negotiate is the only major command still inline. All others (connect.ts, evolve.ts, sdk.ts, billing.ts, setup.ts, lock.ts, pack.ts, route.ts, etc.) already follow this pattern.
+
+**When to use:** Any CLI command with more than ~50 lines of logic.
+
+**Trade-offs:**
+- Pro: Testable in isolation. Clean git diffs. Parallel development.
+- Pro: Matches existing convention (14 out of 15 commands already extracted).
+- Con: One extra import line in index.ts.
+
+**Implementation:**
+
+```typescript
+// apps/cli/src/commands/negotiate.ts (NEW -- extracted from index.ts lines 678-986)
+export interface NegotiateOptions {
+  intent?: string;
+  provider?: string;
+  /**
+   * If true, enter interactive mode for field-level schema editing
+   * after LLM negotiation. Auto-enabled when no --provider specified.
+   */
+  interactive?: boolean;
+  schemaFile?: string;
+  noCache?: boolean;
+  format?: "json" | "table";
+}
+
+export async function handleNegotiateCommand(rawArgs: string[]): Promise<void> { ... }
+export function printNegotiateHelp(): void { ... }
+export function parseNegotiateArgs(argv: string[]): NegotiateOptions { ... }
+```
+
+**Changes to index.ts:**
+```typescript
+// REMOVE these from apps/cli/src/index.ts:
+//   - negotiate() function (lines 678-986)
+//   - printNegotiateHelp() function (lines 232-260)
+//
+// ADD to imports:
+import { handleNegotiateCommand, printNegotiateHelp } from "./commands/negotiate.js";
+//
+// UPDATE case "negotiate":
+case "negotiate":
+  if (flags.has("help") || args.includes("--help") || args.includes("-h")) {
+    printNegotiateHelp();
+  } else {
+    await handleNegotiateCommand(rawArgs);
+  }
+  break;
+```
+
+### Pattern 2: Schema Editing with Versioned Copy
+
+**What:** The negotiated schema is treated as immutable; user edits create a new copy with a re-computed hash. This preserves the existing `hashSchema()` + `schema_id` contract and makes "reset to LLM proposal" easy.
+
+**When to use:** Any user-in-the-loop schema manipulation.
+
+**Trade-offs:**
+- Pro: Clean separation between "LLM proposed" and "user edited". Easy undo.
+- Pro: schema_id always reflects the actual schema being used.
+- Con: Slightly more memory (two schema objects). Negligible for our schema sizes (max 10 fields, depth 2).
+
+```typescript
+// packages/negotiator/src/schema-editor.ts -- new exports
+export interface SchemaFieldEdit {
+  action: "add" | "remove" | "toggle_required";
+  field?: { name: string; type: string; required: boolean };
+  fieldName?: string;
+}
+
+/**
+ * Apply an edit to a schema and return a new schema with re-computed hash.
+ * The original schema is not mutated.
+ */
+export function editSchema(
+  schema: Schema,
+  edit: SchemaFieldEdit
+): { schema: Schema; schema_id: string } {
+  const fields =
+    edit.action === "add" && edit.field
+      ? [...schema.fields, edit.field]
+      : edit.action === "remove" && edit.fieldName
+        ? schema.fields.filter((f) => f.name !== edit.fieldName)
+        : edit.action === "toggle_required" && edit.fieldName
+          ? schema.fields.map((f) =>
+              f.name === edit.fieldName
+                ? { ...f, required: !f.required }
+                : f
+            )
+          : schema.fields;
+
+  const newSchema: Schema = { ...schema, fields };
+  return {
+    schema: newSchema,
+    schema_id: hashSchema(normalizeSchema(newSchema)),
+  };
+}
+
+/**
+ * Validate that a proposed field edit would produce a valid schema
+ * against the given manifest constraints. Returns warnings without
+ * executing the edit.
+ */
+export function validateFieldEdit(
+  schema: Schema,
+  edit: SchemaFieldEdit,
+  constraints: ManifestConstraint
+): string[] {
+  const warnings: string[] = [];
+  if (edit.action === "add" && edit.field) {
+    if (schema.fields.some((f) => f.name === edit.field!.name)) {
+      warnings.push(`Field "${edit.field.name}" already exists`);
+    }
+    if (edit.field.required) {
+      const expectedType = constraints.type?.[edit.field.name];
+      if (expectedType && edit.field.type !== expectedType) {
+        warnings.push(`Expected type "${expectedType}" for "${edit.field.name}", got "${edit.field.type}"`);
+      }
+    }
+  }
+  if (edit.action === "remove" && edit.fieldName) {
+    const isRequired = constraints.required?.includes(edit.fieldName);
+    if (isRequired) {
+      warnings.push(`Field "${edit.fieldName}" is required by provider manifest`);
+    }
+  }
+  return warnings;
+}
+```
+
+### Pattern 3: Flow Builder for Post-Negotiation Routing
+
+**What:** After interactive negotiation completes, the user is presented with a menu of next-step actions. Each action:
+1. Collects any missing parameters (e.g., input JSON for connect)
+2. Delegates to the appropriate command handler (connect / sdk generate / evolve)
+3. Returns to the menu on completion
+
+**When to use:** Workflow commands that naturally flow into other commands.
+
+**Trade-offs:**
+- Pro: Increases completion rate. Users don't have to remember commands.
+- Pro: Can guide users toward next logical steps.
+- Con: Creates cross-command coupling. Menus must handle cancellation gracefully.
+
+```typescript
+// Inside negotiate.ts -- post-negotiation routing
+
+interface NegotiationSession {
+  provider: string;
+  intent: string;
+  packDir: string;
+  lock: SchemaLock;
+  editedSchema?: Schema;
+  feature: ProviderFeature;
+}
+
+type NextAction = "connect" | "sdk" | "evolve" | "save" | "exit";
+
+async function promptNextAction(): Promise<NextAction> {
+  const map: Record<string, NextAction> = {
+    "Test with connect (make an API call)": "connect",
+    "Generate zero-dependency SDK": "sdk",
+    "Generate SDK via evolve (batch)": "evolve",
+    "Save result only": "save",
+    "Exit": "exit",
+  };
+  const selected = await promptSelect("What would you like to do next?", Object.keys(map));
+  return map[selected] ?? "exit";
+}
+
+async function routeToConnect(session: NegotiationSession): Promise<void> {
+  const input = await promptJson("Enter input JSON");
+  await handleConnectCommand([
+    session.provider,
+    session.intent,
+    "--input", JSON.stringify(input),
+    "--lock", session.lock.lock_id,
+  ]);
+}
+
+async function routeToSdk(session: NegotiationSession): Promise<void> {
+  await handleSdkCommand([
+    "generate",
+    "--pack", session.packDir,
+    "--lang", "typescript",
+    "--output", `./${session.provider}-sdk`,
+    "--provider", session.provider,
+  ]);
+}
+```
+
+## Integration Points
+
+### External Services
+
+| Service | Integration Pattern | Notes |
+|---------|---------------------|-------|
+| LLM API (OpenAI-compatible) | Used by `negotiateSchema()` for initial schema generation | Key stored in vault as `negotiator-llm`. Also available via `OPENAI_API_KEY` env. In interactive mode, user is warned if no LLM key is found; stub schema generation still works. |
+| Registry | Fire-and-forget verification submission; optional pack update check | Interactive negotiation submits verification but does not block on Registry. Unchanged. |
+
+### Internal Boundaries
+
+| Boundary | Communication | Notes |
+|----------|---------------|-------|
+| `negotiate.ts` <-> `@synapse-router/negotiator` | Direct function calls | `negotiateSchema()`, `matchManifest()`, `loadManifestFromPack()`, `runMockTest()`, `buildSuggestions()`. Interactive mode calls these separately rather than going through monolithic `negotiateAndVerify()`. |
+| `negotiate.ts` <-> `@synapse-router/lock` | `getOrCreateLock()` / `LockStorage` | Lock is saved after negotiation. In interactive mode, lock is always created fresh (bypasses cache by passing intent + provider that may differ from cache key). |
+| `negotiate.ts` <-> `connect.ts` | CLI-level delegation via `handleConnectCommand()` | After negotiation, "Test with connect" re-invokes connect handler with pre-filled provider/intent/lock. |
+| `negotiate.ts` <-> `sdk.ts` | CLI-level delegation via `handleSdkCommand()` | After negotiation, "Generate SDK" re-invokes sdk handler with pre-filled pack/provider. |
+| `negotiate.ts` <-> `@synapse-router/vault` | `createVault().getKey()` | Read LLM API key for schema generation. Same as current behavior. |
+| `negotiate.ts` <-> `apps/cli/src/utils/prompt.ts` | Shared prompt functions | `prompt()`, `promptSelect()`, `promptJson()`, `promptConfirm()` for interactive input. |
+
+## Files: New vs Modified
+
+### New Files
+
+| File | Purpose | Line Estimate | Depends On |
+|------|---------|---------------|------------|
+| `apps/cli/src/commands/negotiate.ts` | Extracted negotiate command: arg parsing, interactive flow, post-negotiation routing | ~400 lines | `@synapse-router/negotiator`, `@synapse-router/lock`, `apps/cli/src/utils/prompt.ts` |
+| `apps/cli/src/utils/prompt.ts` | Shared interactive prompt utilities (extract from setup.ts, connect.ts, billing.ts) | ~80 lines | `node:readline` |
+| `packages/negotiator/src/schema-editor.ts` | Programmatic schema manipulation: `editSchema()`, `validateFieldEdit()` | ~80 lines | `@synapse-router/core` (hashSchema, normalizeSchema, validateSchema) |
+
+### Modified Files
+
+| File | Change Type | Scope |
+|------|-------------|-------|
+| `apps/cli/src/index.ts` | Remove inline negotiate code | Delete `negotiate()` function (lines 678-986) and `printNegotiateHelp()` (lines 232-260). Replace `case "negotiate"` with `handleNegotiateCommand(rawArgs)`. Add import for `handleNegotiateCommand`/`printNegotiateHelp`. |
+| `apps/cli/src/commands/connect.ts` | Add cross-command integration path | Accept `--lock <lock_id>` argument to skip lock resolution when called from negotiate. Currently the connect command has its own `--lock` flag; verify existing path works for this use case. |
+| `apps/cli/src/commands/sdk.ts` | Add cross-command integration path | Accept provider/pack passed from negotiate context. Currently the sdk command requires `--pack` explicitly; add convenience passthrough from negotiate session. |
+| `apps/cli/src/commands/setup.ts` | Refactor to use shared prompts | Replace inline readline helpers with imports from `apps/cli/src/utils/prompt.ts`. |
+| `apps/cli/src/commands/billing.ts` | Refactor to use shared prompts | Same refactoring as setup.ts. |
+| `packages/negotiator/src/index.ts` | Add new exports | Export `editSchema`, `validateFieldEdit`, `SchemaFieldEdit` from `schema-editor.ts`. |
 
 ## Build Order
 
 ```
-Phase 1: Connector wrapper
-  packages/billing/src/connector.ts        (NEW)
-  packages/billing/src/errors.ts           (NEW)
-  packages/billing/src/index.ts             (MODIFY)
-  └── No cross-package deps beyond existing
+Phase A: Refactor -- Extract negotiate from index.ts
+=====================================================
+  apps/cli/src/commands/negotiate.ts        (NEW -- extract from index.ts)
+  apps/cli/src/index.ts                     (MODIFY -- remove inline negotiate, add import)
+  Explanation: Pure refactor. Zero behavioral change. The existing negotiate()
+  function moves verbatim into the new file. index.ts get a thin import + switch case.
+  Risk: None. All existing tests pass unchanged.
 
-Phase 2: SDK generation
-  packages/sdk-generator/src/billing.ts     (NEW)
-  packages/sdk-generator/src/typescript.ts  (MODIFY)
-  packages/sdk-generator/src/index.ts       (MODIFY)
-  └── Depends on Phase 1 for types, but only reads billing config shape
+Phase B: Infrastructure -- Shared prompt utilities
+=====================================================
+  apps/cli/src/utils/prompt.ts              (NEW -- shared prompt helpers)
+  apps/cli/src/commands/setup.ts            (MODIFY -- use shared prompts)
+  apps/cli/src/commands/connect.ts          (MODIFY -- use shared prompts)
+  apps/cli/src/commands/billing.ts          (MODIFY -- use shared prompts)
+  Explanation: Extracts duplicate readline patterns (prompt/promptSelect/promptJson/promptConfirm)
+  from setup.ts, connect.ts, billing.ts. Reduces ~50 lines of duplicated code.
+  Risk: If shared prompts have different behavior, existing flows break. Must test:
+    - prompt() should return empty string for blank input (same as existing)
+    - promptSelect() should default to index 0 on invalid input
+    - promptJson() should return {} on invalid JSON
 
-Phase 3: CLI billing command
-  apps/cli/src/commands/billing.ts          (NEW)
-  apps/cli/src/index.ts                     (MODIFY)
-  apps/cli/src/commands/connect.ts          (MODIFY)
-  └── Depends on Phase 1 for createBillingConnector
+Phase C: Schema Editor -- Negotiator extension
+=====================================================
+  packages/negotiator/src/schema-editor.ts  (NEW)
+  packages/negotiator/src/index.ts          (MODIFY -- add exports)
+  Explanation: Pure functions for field manipulation. No side effects, no CLI deps.
+  Add unit tests:
+    - addField: schema has new field, schema_id changes
+    - removeField: field removed, schema_id changes
+    - toggleRequired: field flips required flag
+    - validateFieldEdit: warns on duplicate field name, warns on removing required field
+    - editSchema: original schema is not mutated (immutability)
+  Risk: None. Pure functions with no external deps beyond @synapse-router/core.
 
-Phase 4: Python SDK billing (optional, lower priority)
-  packages/sdk-generator/src/python.ts      (MODIFY)
+Phase D: Interactive Flow -- Main feature
+=====================================================
+  apps/cli/src/commands/negotiate.ts        (MODIFY -- add interactive editing loop)
+  Explanation: Adds the schema editing loop after LLM negotiation (step 5 in data flow):
+    1. Display schema table with fields
+    2. Loop: prompt action -> edit -> re-display
+    3. Validate against manifest on "done"
+    4. Offer "force save" if mismatches remain
+  This is the core user-facing change of v5.0.
+  Risk: Moderate. The interactive loop must handle edge cases:
+    - Empty schema (all fields removed) -> should the lock still be saved?
+    - Field with name collision -> prevent or warn
+    - LLM returned stub schema -> show low-confidence warning
+
+Phase E: Post-Negotiation Routing
+=====================================================
+  apps/cli/src/commands/negotiate.ts        (MODIFY -- add routing menu)
+  apps/cli/src/commands/connect.ts          (MODIFY -- accept --lock passthrough)
+  apps/cli/src/commands/sdk.ts              (MODIFY -- accept provider/pack passthrough)
+  Explanation: After negotiation + editing, offer next-step menu.
+  connect.ts change: verify --lock <id> flag already exists; test that calling
+    connect with --lock bypasses getOrCreateLock and uses the provided lock directly.
+  sdk.ts change: add --provider and --pack passthrough that pre-fills from
+    negotiate context. Currently sdk requires explicit --pack and --provider;
+    make them accept from negotiate session.
+  Risk: Low. Connect already has --lock flag. Sdk changes are additive.
+
+Phase F: Help text + Documentation
+=====================================================
+  apps/cli/src/commands/negotiate.ts        (MODIFY -- update help)
+  apps/cli/src/index.ts                     (MODIFY -- update top-level help)
+  Explanation: Add --interactive flag to help text, update examples.
+  Risk: None.
 ```
-
-## Scaling Considerations
-
-| Concern | At dev/test (CLI connect) | At production (generated SDK) |
-|---------|--------------------------|-------------------------------|
-| Quota state lifetime | Per-command (ephemeral) | Per-client-instance (long-lived) |
-| Quota storage | In-memory only | via `onUsage` callback to persistent store |
-| Pricing lookup | From billing config | Baked-in as constants |
-| Concurrency | N/A (single connect) | BillingTracker works per-client; shared state needs external store |
-| Multi-tenant | N/A | Wrap BillingTracker creation per tenant |
 
 ## Anti-Patterns
 
-### Anti-Pattern 1: Adding billing hooks INSIDE connector
+### Anti-Pattern 1: Schema Editing Inside Negotiator's Pipeline
 
-**What:** Adding `onBefore`/`onAfter` callbacks or optional billing params to `connect()` itself.
+**What:** Modifying `negotiateAndVerify()` to add interactive callbacks or mutation hooks inside the existing pipeline.
 
-**Why wrong:** Violates "connector is thin" principle. Makes every connector caller pay the complexity cost even if they don't use billing. Creates coupling between connector and billing types.
+**Why wrong:** The existing `negotiateAndVerify()` is a fully automated pipeline designed for headless/CI use. Adding interactive branches creates conditional complexity, makes the API harder to reason about, and forces every consumer (CLI, API, MCP server) to handle interactive state they may not want.
 
-**Do instead:** Use the wrapper pattern. `createBillingConnector(connect, config)` returns a function with the same signature. Connector remains pure.
+**Do instead:** Keep `negotiateAndVerify()` as-is for automated use. Build interactive negotiation as a CLI-level orchestration that calls the lower-level primitives (`negotiateSchema()` + `matchManifest()` + `runMockTest()`) separately with user input between steps.
 
-### Anti-Pattern 2: Importing billing package from generated SDK
+### Anti-Pattern 2: Storing the Full Negotiated Schema Inside the Lock
 
-**What:** Generated SDK does `import { BillingTracker } from '@synapse-router/billing'`.
+**What:** Adding `negotiated_schema` or `user_edits` fields to the `SchemaLock` interface, storing the agent-side schema inside provider-side lock persistence.
 
-**Why wrong:** Violates SDK zero-dependency constraint. Generated SDK cannot depend on any @synapse-router/* package by design.
+**Why wrong:** SchemaLock is a cache of the **provider's** canonical schema (intent, feature, field_mappings, connection). Mixing agent-side schemas conflates two concerns. The lock has a specific responsibility: enabling deterministic connect calls without re-negotiation. Adding agent schema data bloats it and creates confusion about what the lock represents.
 
-**Do instead:** Generate the BillingTracker class inline with baked-in constants. The generated code is self-contained TypeScript, zero imports beyond native fetch.
+**Do instead:** Store user's negotiated/edited schema in a separate location:
+- Negotiation memo system (listed as active feature in PROJECT.md): `~/.synapse/memos/<intent>_<provider>_<timestamp>.md`
+- Or a lightweight JSON record: `~/.synapse/negotiations/<schema_id>.json`
+- The lock stays pure provider-side data.
 
-### Anti-Pattern 3: Billing importing observability for trace emission
+### Anti-Pattern 3: Modal/Long-Running Interactive State in the Negotiator Package
 
-**What:** Adding `import { createBillingSpan } from '@synapse-router/observability/router'` inside billing package.
+**What:** Adding interactive prompt calls (`readline.question()`) inside `@synapse-router/negotiator` or `@synapse-router/lock` packages.
 
-**Why wrong:** Creates a circular dependency path: observability's own `wrapBilling` already references billing span concepts, and if billing imports observability, you get observability → billing → observability. Also violates separation of concerns (billing should not know about tracing).
+**Why wrong:** Package code should be testable and usable from any consumer (CLI, API server, MCP server, programmatic use). Interactive prompts are a CLI-only concern.
 
-**Do instead:** Use callback pattern. Billing accepts optional `onAlert`, `onPreCall`, `onPostCall` callbacks. The caller (CLI/API) wires observable behavior into these callbacks. Billing stays pure.
+**Do instead:** Keep all `readline`/prompt code in `apps/cli/src/`. The negotiator package exports pure data transformation functions (`editSchema()`, `validateFieldEdit()`). The CLI calls these and wraps them with prompts.
 
-### Anti-Pattern 4: Passing billing config via CLI connect flags
+### Anti-Pattern 4: Caching the Interactive Lock
 
-**What:** `synapse connect --billing-config ./billing.json --quota-limit 100`.
+**What:** When `getOrCreateLock()` is called during interactive negotiation, caching the result so subsequent `synapse connect` calls reuse the cached lock without the user knowing.
 
-**Why wrong:** Billing config is project-level setup, not per-call. Passing it as connect flags adds noise and encourages ad-hoc billing that isn't reproducible.
+**Why wrong:** Lock caching is useful for automated flows but harmful in interactive negotiation: if the user edits the schema, the cached lock still reflects the provider's canonical schema (not the edits). Next connect call would silently use the wrong lock.
 
-**Do instead:** Manage billing config via `synapse billing init` (stored in `.synapse/config.json`). `synapse connect` reads it automatically. For test overrides, `--billing-config` is acceptable but discouraged.
+**Do instead:** In interactive mode, always create the lock fresh (pass `--no-cache` semantics). The lock itself is still the provider's canonical schema (it should not store user edits), but the user's field selections are captured in a separate memo.
+
+### Anti-Pattern 5: Adding a New Top-Level Command
+
+**What:** Adding `synapse interact` or a new top-level command specifically for interactive negotiation.
+
+**Why wrong:** The `synapse negotiate` command already exists in the help system and has documented behavior. Adding a second interactive command fragments the UX. The `--interactive` flag is the standard pattern (like `--json` for output format).
+
+**Do instead:** Extend the existing `synapse negotiate` command with an `--interactive` flag. The default behavior (`--intent --provider` without `--interactive`) stays exactly as it is today. Interactive mode auto-activates when `--provider` is not specified (same pattern as `synapse connect` which degrades to interactive when args are missing).
+
+## Scaling Considerations
+
+| Concern | At single-user dev | At team/multi-project | Notes |
+|---------|-------------------|----------------------|-------|
+| Negotiation memo storage | `~/.synapse/memos/` or `.synapse/memos/` | Checked into git (markdown) | Memos are text files, git-friendly. |
+| Lock cache invalidation | Unchanged -- existing `getOrCreateLock()` version check | Same -- version check is field-level | Interactive mode always creates fresh lock, never reads cache. |
+| Post-negotiation routing | CLI inline delegation | Same -- no server component | Routing is CLI-local, no distributed state. |
+| Shared prompt utilities | In `apps/cli/src/utils/prompt.ts` | Same | No cross-project sharing needed. |
 
 ## Sources
 
-- Codebase reading: `packages/connector/src/index.ts`, `packages/billing/src/billing.ts`, `packages/billing/src/types.ts`, `packages/billing/src/quota.ts`
-- Codebase reading: `packages/sdk-generator/src/typescript.ts`, `packages/sdk-generator/src/generator.ts`
-- Codebase reading: `apps/cli/src/commands/connect.ts`, `apps/cli/src/commands/sdk.ts`, `apps/cli/src/index.ts`
-- Codebase reading: `packages/observability/src/router/billing.ts`, `packages/observability/src/router/types.ts`
-- Constraint documentation: `CLAUDE.md` (architectural principles, SDK zero-dependency, connector thinness)
-- Confidence: HIGH for all findings -- all assertions verified against actual source code in the repository at `/Users/jkin/workspace/qise-tech/synapse-router/packages/` and `/Users/jkin/workspace/qise-tech/synapse-router/apps/`.
+- Codebase reading: `apps/cli/src/index.ts` lines 232-260 (printNegotiateHelp) and lines 678-986 (negotiate function body) -- the exact code to be extracted
+- Codebase reading: `packages/negotiator/src/index.ts` (negotiateSchema, createDefaultLLMClient, exports) -- publicly available functions the interactive flow will call separately
+- Codebase reading: `packages/negotiator/src/verifier.ts` (negotiateAndVerify pipeline) -- the monolithic pipeline we are NOT modifying
+- Codebase reading: `packages/negotiator/src/manifest.ts` (loadManifestFromPack, matchManifest, buildSuggestions) -- lower-level primitives the interactive flow will use
+- Codebase reading: `packages/negotiator/src/retry.ts` (retryWithFeedback with structured error feedback) -- automated retry logic, irrelevant for interactive mode
+- Codebase reading: `packages/lock/src/lock.ts` (getOrCreateLock, buildLockFromProviderCard, computeCacheKey) -- lock creation and caching
+- Codebase reading: `apps/cli/src/commands/connect.ts` (pattern for command extraction, interactive prompts, billing integration) -- model for how negotiate.ts should be structured
+- Codebase reading: `apps/cli/src/commands/setup.ts` (existing interactive prompt pattern) -- source of duplicate readline patterns to unify
+- Codebase reading: `apps/cli/src/utils/config.ts` (config utility pattern) -- model for shared utility module in apps/cli/src/utils/
+- Codebase reading: `apps/cli/src/commands/sdk.ts` (sdk command structure) -- downstream consumer for post-negotiation routing
+- CONSTRAINT: PROJECT.md (v5.0 interactive negotiation user journey, "协商记忆" active feature) -- requirements this architecture serves
+- CONSTRAINT: CLAUDE.md (architecture principles: CLI is primary interface, negotiate develops incrementally, SDK zero dependency) -- design constraints
+- Confidence: HIGH -- all findings verified against actual source code in this repository.
+
+---
+*Architecture research for: Synapse Router v5.0 interactive negotiation integration*
+*Researched: 2026-05-25*

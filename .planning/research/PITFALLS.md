@@ -1,489 +1,628 @@
-# Pitfalls Research: Docusaurus Documentation Site + Playground UI Upgrade
+# Pitfalls Research: v5.0 Interactive Negotiation & Experience Optimization
 
-**Domain:** Adding a documentation site (Docusaurus) and upgrading an existing Playground UI (React + Vite) in an existing TypeScript monorepo (pnpm workspaces, 15 packages, 4 apps, ~57k LOC)
-**Researched:** 2026-05-21
-**Confidence:** HIGH (based on codebase analysis of existing playground, Docusaurus official docs v3.10.1, @uiw/react-codemirror, Vite v8 config)
+**Domain:** Adding interactive Schema negotiation flow, command simplification, and streamlined user journey to an existing TypeScript CLI tool (20 commands, manual arg parsing, zero TTY detection, LLM-powered negotiation pipeline with deterministic stub fallback)
+**Researched:** 2026-05-25
+**Confidence:** HIGH (based on codebase analysis of CLI, negotiator, connect/setup patterns, pack.ts `--yes` flag pattern, and CLI test suite; plus WebSearch research on interactive CLI pitfalls, TTY detection patterns, and AI-agent-friendly CLI design principles)
+
+---
 
 ## Critical Pitfalls
 
-### Pitfall 1: Bundler Conflict -- Docusaurus (webpack) vs Playground (Vite 8) in Same Monorepo Build Pipeline
+### Pitfall 1: No TTY Detection — Interactive Prompts Hang in CI, Pipes, and AI Agents
 
 **What goes wrong:**
-The monorepo currently uses Vite for all front-end builds (playground via `@vitejs/plugin-react` + `@tailwindcss/vite`). Docusaurus v3 uses webpack under the hood, NOT Vite. Adding Docusaurus means the monorepo now has two bundlers with different behaviors:
+The CLI has zero `isTTY` checks anywhere. `connect.ts`, `setup.ts`, `billing.ts`, `evolve.ts`, and future `negotiate.ts` all unconditionally create `readline.createInterface({ input: process.stdin, ... })` and call `rl.question()`. When stdin is piped (`echo '{}' | synapse negotiate`), closed (`synapse negotiate ... < /dev/null`), or forwarded through a pseudo-TTY from an AI coding agent, these calls hang indefinitely waiting for input that will never arrive. The process does not exit. CI pipelines hang. Shell scripts hang. AI agents freeze.
 
-- **CI build time doubles** -- `pnpm build -r` runs both webpack (docs) and Vite (playground), each with its own warm-up, cache, and dependency graph resolution
-- **Cache directories diverge** -- `node_modules/.cache/webpack` vs `node_modules/.cache/vite`, no shared caching
-- **Resolve behavior differs** -- webpack and Vite resolve tsconfig paths differently. A `@alias` that works in the Vite-powered playground may not resolve in Docusaurus, causing build failures only in CI
-- **CSS processing differs** -- Docusaurus uses its own Infima CSS framework + PostCSS. The playground uses TailwindCSS 4. Custom `@theme` directives and `@import "tailwindcss"` from playground styles have NO effect in Docusaurus pages. Attempting to share Tailwind components between playground and docs will create confusion
-- **`tsconfig.json` expectations differ** -- Playground uses `"moduleResolution": "bundler"` (Vite-native). Docusaurus uses its own `@docusaurus/tsconfig` which extends a base config. Running `pnpm typecheck -r` may produce false positives or require merging tsconfigs
+Existing test suite (`index.test.ts`) confirms current practice: all commands are tested via `spawnSync` which bypasses stdin — meaning none of the TTY-conditional code paths are exercised in tests. When interactive prompts are added to `synapse negotiate`, this gap becomes a silent CI breaker.
+
+Additionally, the current negotiator stub fallback (when no LLM key is configured) returns a hardcoded `{ fields: [{ name: "input", type: "string", required: true }] }` -- the negotiator package itself contains no TTY awareness, but the CLI that invokes it has no guard against presenting a useless stub result as a successful negotiation.
 
 **Why it happens:**
-The project already has React 19 + Vite 8 working. It is natural to assume Docusaurus, being a React-based static site generator, would integrate smoothly. But Docusaurus has never adopted Vite -- it runs on webpack (with Rspack being evaluated in the experimental `experimental_faster` mode since v3.10). Adding webpack to a Vite-only monorepo introduces a systemic build divergence.
+- The existing CLI was designed for developers running commands interactively. TTY detection was never a requirement.
+- `readline` in Node.js is deceptively simple: a 10-line prompt function works perfectly in a terminal. The failure mode only appears in non-TTY contexts.
+- The codebase has three separate interactive patterns (`setup.ts` custom prompt, `connect.ts` inline readline, `evolve.ts` readline) — none guard with TTY checks.
+- AI agents are a new consumption pattern; the CLI was not designed with agent consumption in mind.
+- The existing `--yes` flag in `pack.ts` and `evolve.ts` is an ad-hoc solution that only covers confirmation prompts, not the full interactive flow.
 
 **How to avoid:**
-Three strategies, in order of preference:
-
-1. **Isolate Docusaurus build from the monorepo shared build pipeline.** Do NOT add Docusaurus build to the root `pnpm build` command. Instead, create a separate `build:docs` npm script at the root. Keep `pnpm build` as the playground + packages build. This prevents CI slowdown and avoids confusing failures.
-
-   ```json
-   // Root package.json
-   {
-     "scripts": {
-       "build": "pnpm -r build",           // playground + packages (Vite + tsc)
-       "build:docs": "pnpm --filter @synapse-router/docs build", // Docusaurus (webpack)
-       "ci": "pnpm build && pnpm build:docs && pnpm test"
-     }
-   }
-   ```
-
-2. **Do NOT share CSS/Tailwind between docs and playground.** Docusaurus has its own Infima CSS framework. Adding Tailwind to Docusaurus (community approach via postcss + tailwindcss plugin) adds 200KB+ to the docs bundle. Keep playground components isolated from docs. If you need reusable UI components, extract them into a `packages/ui/` package that both can import, but expect different CSS behaviors.
-
-3. **If bundler unification matters** -- wait for Docusaurus v4 (Rspack-based) expected in late 2026, or experiment with `experimental_faster` in Docusaurus v3.10.x which enables Rspack. But do NOT attempt this in v4.0 milestone -- the `experimental_faster` flag is still explicitly labeled as experimental with known issues.
-
-**Warning signs:**
-- CI build time jumps from ~30s to >60s after adding docs
-- `pnpm build -r` failing with webpack errors that do not reproduce locally in `pnpm dev`
-- Import resolution failing in Docusaurus but working in playground (different module resolution behavior)
-- CSS styles from playground components "leaking" into docs site or vice versa
-- `pnpm typecheck -r` showing errors in docs but not playground
-
-**Phase to address:**
-Phase 1 (docs site scaffolding) -- before any content is written. The build isolation decision must be made in the initial scaffolding.
-
----
-
-### Pitfall 2: API Reference Docs Going Stale -- TypeDoc-Version-Drift Cycle
-
-**What goes wrong:**
-The documentation site ships with hand-written API reference pages that describe `@synapse-router/core`, `@synapse-router/negotiator`, `@synapse-router/router`, etc. Three months later, a developer adds a new public method, renames a type, or deprecates a parameter. The hand-written docs never get updated. Users start filing issues: "Your docs say `negotiate()` returns `NegotiationResult` but it actually returns `NegotiateResult`."
-
-With 15 packages and ~57k LOC of TypeScript, manual API documentation is not sustainably maintainable.
-
-**Why it happens:**
-Three compounding factors:
-1. **Manual documentation is inherently disconnected from code.** There is no compile-time check that `docs/api/core-types.md` matches `packages/core/src/index.ts`. A PR that changes types has no automated requirement to update docs.
-2. **The `docusaurus-plugin-typedoc` pipeline is not trivial to set up.** It requires: `typedoc` + `typedoc-plugin-markdown` + `docusaurus-plugin-typedoc` + `typedoc-docusaurus-theme` as dependencies, plus per-package TypeDoc configuration, plus sidebars integration. This setup friction encourages deferring it.
-3. **Generated docs are ugly by default.** The first `docusaurus-plugin-typedoc` output is often too verbose, includes private members, uses cryptic type signatures, and has no narrative structure. Developers see the output and decide "hand-written is better" -- which is correct in the short term but unsustainable in the long term.
-
-**How to avoid:**
-Implement TypeDoc generation from DAY ONE, even if the initial output is ugly:
-
-1. **Scaffold the typedoc pipeline immediately.** Do NOT defer it to "after we write the hand-written docs." It is much harder to add later when there is already content "in the way."
-
-   ```bash
-   pnpm --filter @synapse-router/docs add -D typedoc typedoc-plugin-markdown docusaurus-plugin-typedoc typedoc-docusaurus-theme
-   ```
-
-2. **Start with one package.** Configure TypeDoc for `@synapse-router/core` only (the smallest, most stable package). Get the generated output into a Docusaurus sidebar. Accept that it looks imperfect. Iterate on configuration from there.
-
-3. **Use these typedoc options from the start:**
-   ```json
-   {
-     "plugin": ["typedoc-plugin-markdown", "typedoc-docusaurus-theme"],
-     "entryPoints": ["../../packages/core/src/index.ts"],
-     "tsconfig": "../../packages/core/tsconfig.json",
-     "excludePrivate": true,
-     "excludeProtected": true,
-     "excludeInternal": true,
-     "hideGenerator": true,
-     "sort": ["source-order"],
-     "readme": "none"
-   }
-   ```
-
-4. **Establish a CI gate:** Add a CI check that compares the generated API docs against the committed ones. If they differ (meaning code changed but docs were not regenerated), the build fails.
-
-5. **Hybrid approach:** Use generated docs for API references (types, functions, classes) and hand-written guides for tutorials, explanations, and getting-started content. The boundary is clear: if it is in a `src/index.ts` export, it is auto-generated. If it is a narrative, it is hand-written.
-
-**Warning signs:**
-- "API Reference" section in the docs is a single hand-written `.md` file (no TypeDoc integration)
-- `/docs/api/` directory contains `.md` files named after packages (manual content that will drift)
-- PRs that change public types but have no corresponding docs changes
-- GitHub issues asking "why does the docs say X but the code returns Y"
-- The `docusaurus-plugin-typedoc` devDependency is NOT in `apps/docs/package.json`
-
-**Phase to address:**
-Phase 1 (docs scaffolding). TypeDoc configuration is part of initial setup, not a Phase 2 "enhancement."
-
----
-
-### Pitfall 3: Docusaurus v4 Breaking Change Migration Pain
-
-**What goes wrong:**
-Docusaurus v4 is actively being planned (umbrella issue #11719, opened Feb 2026 by maintainer slorber). Confirmed breaking changes include:
-- Node 24+ required
-- React Router v7+ (breaking route behavior changes)
-- Rspack v2 as default bundler (webpack configs break)
-- `experimental_faster` becomes stable DEFAULT (may break custom webpack configs)
-- `configureWebpack` deprecated in favor of `configureBundler`
-- TypeScript strict mode becomes default
-- CSS Cascade Layers enabled by default (may break custom Infima overrides)
-
-If the v4.0 milestone builds on Docusaurus v3, and v4 drops within 3-6 months (typical Docusaurus major release cadence), the team faces a full migration during another milestone.
-
-**Why it happens:**
-Docusaurus v3 is the current stable (v3.10.1 as of April 2026). The v4 umbrella was opened only 3 months ago. It is easy to assume v3 will be stable for years, but the maintainer explicitly states the goal is "to keep the release relatively small, to make it easy to adopt" -- implying v4 is not far off.
-
-**How to avoid:**
-1. **Minimize Docusaurus v3 customizations.** Every custom webpack plugin, every `configureWebpack` call, every swizzled theme component is a migration liability. Use only what Docusaurus provides out of the box:
-   - Use `@docusaurus/preset-classic` with standard plugins (docs, blog, pages)
-   - Do NOT swizzle theme components unless absolutely necessary
-   - Do NOT add custom webpack plugins -- prefer Docusaurus-native configuration
-   - Use `@site` alias (Docusaurus-builtin) rather than custom resolve aliases
-
-2. **Lock Docusaurus version.** Pin `docusaurus` and all `@docusaurus/*` packages to a specific minor version (e.g., `^3.10.0` not `^3.x.x`). Use `pnpm update` consciously.
-
-3. **Watch the v4 umbrella.** Check issue #11719 before starting. If v4 is imminent (e.g., RC released), start on v4 directly.
-
-4. **Plan migration budget.** Accept that a Docusaurus v3-to-v4 migration will happen. Budget 1-2 days in a future milestone. It is not a reason to avoid Docusaurus -- but it IS a reason to keep the v3 setup minimal.
-
-**Warning signs:**
-- `docusaurus.config.ts` contains custom webpack plugin declarations
-- swizzled theme components in `src/theme/` (each is a migration burden)
-- Docusaurus version is pinned to `^3.0.0` (too permissive, may auto-upgrade to breaking v4 minor)
-- CI uses `configureWebpack` for monorepo path resolution
-- No plan for React Router v7 migration
-
-**Phase to address:**
-Phase 1 (architecture decision). The "minimal customization" policy must be established before any custom plugin is added.
-
----
-
-### Pitfall 4: CodeMirror Multiple-Instance Performance Collapse in Playground
-
-**What goes wrong:**
-The upgraded playground will have 3+ CodeMirror instances on the same page:
-1. **SchemaEditor** (main editor, always visible) -- already exists
-2. **MockTestSection** (collapsible, second editor) -- already exists
-3. **TabRawJson** (read-only, raw response viewer) -- currently plain `<pre>`, may be upgraded to CodeMirror
-4. **TabTypeScript** / **TabPython** (read-only, SDK code display) -- currently plain text, may be upgraded
-
-Each CodeMirror `EditorView` instance:
-- Creates a full editor state with syntax tree
-- Registers DOM event listeners (keyboard, mouse, scroll)
-- Maintains a decoration set for lint errors, line numbers, selection
-- Runs the syntax tree re-parser on every keystroke in editable instances
-
-With 3-4 visible instances, the page has multiple editor instances competing for memory (~2-5MB each), CPU (syntax re-parsing), and DOM nodes (~50-100 each).
-
-The existing `useCodeMirror.ts` hook also has a subtle fragility: the `useEffect` dependency array is `[options.container, options.editable]`. When `editable` changes, the ENTIRE editor is destroyed and recreated, dropping undo history and cursor position.
-
-**Why it happens:**
-The current playground was built as a minimal debug tool. Multiple editors were not a concern. The upgrade (adding read-only CodeMirror for SDK tabs, adding syntax highlighting for raw JSON) naturally pushes toward more instances. Each editor seems simple in isolation, but the aggregate impact is not visible until all tabs are populated with content.
-
-**How to avoid:**
-1. **Differentiate editable vs read-only editors.** Read-only editors do NOT need the full `basicSetup`. Use minimal extensions:
-   ```typescript
-   const readOnlyView = new EditorView({
-     doc: content,
-     extensions: [
-       EditorView.editable.of(false),
-       syntaxHighlighting(defaultHighlightStyle),
-     ],
-   });
-   ```
-
-2. **Use tab-switching to MOUNT/DESTROY (not hide/show).** For tabs, destroy the editor when the tab is hidden and recreate when shown. Lazy-init pattern:
-   ```typescript
-   useEffect(() => {
-     if (!containerRef.current || initialized) return;
-     viewRef.current = new EditorView({...});
-     setInitialized(true);
-     return () => {
-       viewRef.current?.destroy();
-       viewRef.current = null;
-     };
-   }, [activeTab === 'raw']);
-   ```
-
-3. **Keep TabRawJson and TabTypeScript as plain `<pre>` unless there is an explicit need for syntax highlighting.** The spec says "CodeMirror for raw JSON" but plain `<pre>` with `JSON.stringify(..., null, 2)` handles 95% of use cases. Only add CodeMirror if users actually need interactive features (fold, search, jump to line).
-
-4. **Profile before optimizing.** If all 4 editors load in under 200ms combined, this is a non-issue for the MVP.
-
-**Warning signs:**
-- Playground page load time exceeds 2 seconds
-- Switching between tabs with CodeMirror instances causes visible lag or frozen frames
-- `window.performance.memory.usedJSHeapSize` grows continuously as user switches between tabs
-- Console warnings: "Long task took XXX ms"
-
-**Phase to address:**
-Phase 2 (Playground upgrade: tab enhancement). CodeMirror performance consideration should be part of the tab redesign, not retrofitted later.
-
----
-
-### Pitfall 5: Playground API Endpoint Hardcoding -- Production Build Breaks
-
-**What goes wrong:**
-The existing `lib/api.ts` hardcodes `baseUrl: "http://localhost:3000"`:
+1. **Create a single shared `isInteractive()` function** used by every command that can prompt:
 
 ```typescript
-export function createApiClient(config: ApiConfig = { baseUrl: "http://localhost:3000" }) {
+// In src/utils/tty.ts
+function isInteractive(): boolean {
+  // TTY check: stdin and stdout must be TTYs
+  if (!process.stdin.isTTY || !process.stdout.isTTY) return false;
+  // CI environment check: even with pseudo-TTY, skip prompts in CI
+  // Known CI/agent env vars: CI, GITHUB_ACTIONS, GITLAB_CI, CODE_X, CLAUDE_CODE
+  if (process.env.CI || process.env.GITHUB_ACTIONS || process.env.GITLAB_CI) return false;
+  // Explicit opt-out has highest priority
+  return true;
+}
 ```
 
-This works in dev mode (user runs API server on port 3000 and Vite on port 5173). However, the current `vite.config.ts` has NO proxy configuration -- the API client constructs full URLs: `fetch(\`${config.baseUrl}/negotiate\`)`. The `vite.config.ts` only has `server: { port: 5173 }`.
+2. **Guard every interactive prompt** with this check. If `!isInteractive()`, fail fast with:
+   - A clear error message explaining what was needed
+   - The flag to provide it non-interactively (e.g., `--yes`, `--format json`, `--input '...'`)
+   - Exit code 1 (not 0 — see openclaw/crestodian bug #73646)
 
-In **production build** (`pnpm build --filter @synapse-router/playground`), Vite generates static files. The API client STILL tries to fetch `http://localhost:3000`, which does not exist in production. The playground appears broken with no clear error -- just failed fetch requests.
+3. **Add `--no-interactive` / `--yes` flags globally** to every command that prompts. This gives explicit opt-out for both human and agent users.
+
+4. **Update the test suite.** At minimum, add tests that pipe stdin and verify non-zero exit codes for interactive commands:
+```typescript
+it("exits with error when stdin is piped", () => {
+  const result = spawnSync("node", [bin, "negotiate", "--intent", "chat", "--provider", "openai"], {
+    input: "", // closed stdin
+    encoding: "utf8",
+  });
+  assert.notStrictEqual(result.status, 0);
+  assert.ok(result.stderr.includes("--format json") || result.stderr.includes("non-interactive"));
+});
+```
+
+5. **Detect stub negotiation results.** If the negotiation was performed without an LLM key (stub mode), the output will be the meaningless hardcoded stub schema. Surface this clearly:
+   - "Negotiation used deterministic stub (no LLM key configured)"
+   - "Configure an LLM key with: synapse vault set negotiator-llm <your-key>"
+   - "Or set --llm-api-key for one-time use"
+
+**Warning signs:**
+- `process.stdin` and `process.stdout` are accessed directly in command handlers without any `isTTY` guard
+- A new readline interface is allocated without checking TTY first
+- Test file (`index.test.ts`) has no tests with piped/closed stdin for interactive commands
+- The `setup.ts` and `connect.ts` prompt functions are copy-pasted (they are) rather than unified
+- PR review shows `rl.question(...)` inside a command handler without a preceding TTY check
+- `process.env` references to CI-related variables are absent from the CLI
+
+**Phase to address:**
+Phase 1 (scaffold interactive negotiation experience). The shared TTY detection utility must be in place BEFORE any interactive prompts are added to `synapse negotiate`. Retrofitting TTY detection after interactive code is written is possible but error-prone.
+
+---
+
+### Pitfall 2: Monolithic `index.ts` Becomes Untenable With Multi-Step Interactive Flow
+
+**What goes wrong:**
+The `negotiate()` function is a 300+ line function living directly in the main CLI entry file (`index.ts`, currently 1248 lines total). It contains:
+- Flag parsing for negotiate-specific options
+- Provider pack discovery (shared logic duplicated from connect.ts)
+- LLM key loading from vault
+- Manual `NegotiateAndVerifyInput` construction
+- Formatted table output (40+ lines of `console.log`)
+- Format flag conditional (json vs table)
+- Lock auto-save logic
+- Error handling for ContractVerificationError
+- Legacy schema file fallback mode
+
+Every other command (connect, setup, billing, evolve, pack, smoke, etc.) has been extracted to its own file in `src/commands/`. The negotiate function is the notable exception, and it is the command that will grow the most in v5.0: interactive field editing, multi-step confirmation, diff preview, user schema customization, inline help prompts.
+
+Adding interactive prompts inline makes the file balloon to 1600+ lines. Testing becomes harder (no separate module to mock). The function accumulates state for both the interactive flow AND the command-line flow in the same scope, creating branch complexity.
 
 **Why it happens:**
-During development, the developer always has the API server running on localhost:3000. The production build path is never tested. This is the classic "works on my machine" anti-pattern. The spec (section 9.4) mentions "Vite proxy" but was never implemented.
+- The negotiate function started small (schema file matching mode) and grew organically as `--intent + --provider` mode was added.
+- There was never a specific refactor ticket to extract it into `src/commands/negotiate.ts`.
+- The function is "working" so it stays where it is. Adding interactive features feels like extension rather than extraction.
+- The other command files all follow the same pattern (`handleXCommand(argv) + printXHelp()`), making the extraction pattern well-understood.
 
 **How to avoid:**
-1. **Implement Vite proxy for development.** Add proxy configuration so the playground uses relative paths:
+1. **Extract negotiate into `src/commands/negotiate.ts` BEFORE adding interactive flow.** Follow the existing pattern:
+   - Export `handleNegotiateCommand(argv: string[])` 
+   - Export `printNegotiateHelp()`
+   - Move all negotiate-specific imports from `index.ts` to the new file
+
+2. **Split the handler into phases that can be unit-tested:**
    ```typescript
-   export default defineConfig({
-     plugins: [react(), tailwindcss()],
-     server: {
-       port: 5173,
-       proxy: { "/api": { target: "http://localhost:3000", changeOrigin: true } },
-     },
-   });
-   ```
-   Update `api.ts` to use `/api` prefix:
-   ```typescript
-   export function createApiClient(config: ApiConfig = { baseUrl: "/api" }) {
-   ```
-
-2. **For production, the playground is NOT a standalone deployable.** It requires the API server. Document this clearly. Show error state in the UI: "Cannot connect to API server at {baseUrl}."
-
-3. **Make the base URL configurable via environment variable:**
-   ```typescript
-   const API_BASE_URL = import.meta.env.VITE_API_BASE_URL ?? "/api";
-   ```
-
-**Warning signs:**
-- Production build shows empty playground with no data
-- Browser console shows `Failed to fetch http://localhost:3000/...` on production
-- PR has no changes to `vite.config.ts` regarding proxy
-- API client uses absolute `localhost` URLs with no environment variable fallback
-- No error UI element for API connection failures
-
-**Phase to address:**
-Phase 1 (playground infrastructure). Fix the API client before any UI enhancement, or all new features will be broken in production.
-
----
-
-### Pitfall 6: Docs Code Snippets That Reference Internal Types and Break
-
-**What goes wrong:**
-The documentation site includes TypeScript code examples that import from `@synapse-router/*` packages. These snippets are:
-1. **Not type-checked** -- Docusaurus processes them as Markdown + MDX. No TypeScript compiler pass runs over code blocks in `.md` files.
-2. **Not importable in user code as-is** -- Users copy-paste snippets. If the snippet shows `import { Router } from '@synapse-router/router'` but the user needs to install that package separately, the snippet creates confusion.
-3. **Stale as code evolves** -- The `CLAUDE.md` contains extensive CLI reference. The docs will replicate this information. When CLI flags change, CLAUDE.md gets updated but the docs do not.
-
-**Why it happens:**
-Doc authors write code examples by copy-pasting from working source code. This is natural and efficient. But the copy-paste loses the binding to the actual codebase. Without a mechanism to "link" code examples to their source, they drift independently.
-
-**How to avoid:**
-1. **Use Docusaurus code block import from source.** Instead of inlining TypeScript, use MDX `import` + `raw-loader` to embed actual source files. This way, code snippets update when the source changes. However, use this SELECTIVELY -- importing entire files creates verbose docs.
-
-2. **For CLI examples, create a script that generates them from actual CLI help output.** Or use a snapshot test ensuring CLI help text matches docs.
-
-3. **Prefer "conceptual" snippets over exact code.** The API reference (auto-generated via TypeDoc) has exact signatures. The guide/tutorial has patterns. This creates a clean separation.
-
-4. **Document version policy.** State clearly: "Tutorial code examples are verified at release time. For exact type signatures, see the auto-generated API reference."
-
-**Warning signs:**
-- Doc PRs that update code formatting but not semantics
-- GitHub issues: "Your example says `import` from X but that module does not export that function"
-- Docs example uses a type name that `git grep` cannot find in any source file
-- No CI check that validates TypeScript code blocks in docs
-
-**Phase to address:**
-Phase 1 (docs content creation). Establish the snippet sourcing strategy before writing the first tutorial.
-
----
-
-### Pitfall 7: Playground State Management Performance -- Context Re-render Cascade
-
-**What goes wrong:**
-The current playground uses a single `AppState` context with `useReducer`. Every state change dispatches a new state object. All context consumers re-render because React Context does not do selective re-rendering -- any consumer of `AppStateContext` re-renders when ANY field in the state changes.
-
-With the current components consuming `AppState` (ProviderSelector, SchemaEditor, MockTestSection, ActionBar, ResponseViewer, all Tab components, StatusBar), a single keystroke in Schema Editor dispatches `UPDATE_SCHEMA`, causing ALL components to re-render. That is 10+ unnecessary re-renders per keystroke.
-
-The existing code already splits context into `AppStateContext` and `AppDispatchContext` (good practice), but the state value itself is not split. As the playground grows (more features, more state fields), this re-render overhead becomes visible as input lag in the Schema Editor.
-
-**Why it happens:**
-For a minimal debug tool with simple state (~20 fields), a single context is fine. The playground upgrade plan (more tabs, more features, connection status, responsive layout state) will add more state fields. Each new field makes the re-render cascade worse.
-
-**How to avoid:**
-Three strategies, from simplest to most robust:
-
-1. **Split state into multiple contexts (recommended for this phase).** Create separate contexts for different domains:
-   ```typescript
-   // ProviderContext -- providers, selectedProviderId
-   // SchemaContext -- schema, schemaValid
-   // ExecutionContext -- negotiationResult, executionResult, timing
-   // UIContext -- activeTab, status, panelWidths
-   // LogContext -- logs, errors
-   ```
-   Components subscribe only to the contexts they need. SchemaEditor uses only `SchemaContext`. This eliminates 90% of unnecessary re-renders.
-
-2. **Use `React.memo` on leaf components.** Wrap `ProviderCard`, tab components, etc. with `React.memo`. This helps less than context splitting since context always creates new object references.
-
-3. **Worst case: switch to Zustand or Jotai.** These atomic state libraries subscribe at the field level. Most performant but adds a dependency. Defer unless profiling proves it necessary.
-
-**Warning signs:**
-- Typing in Schema Editor feels sluggish on a modern machine (M-series Mac)
-- React DevTools "Profiler" shows 10+ components re-rendering on a single keystroke
-- Flame graph shows `AppStateContext.Provider` as a re-render bottleneck
-- Tab switching feels slow (each tab mount triggers cascade re-renders)
-
-**Phase to address:**
-Phase 2 (Playground upgrade: state management). Refactor context before adding new features that depend on state.
-
----
-
-### Pitfall 8: Playground Scope Creep -- Debug Tool Turning Into Admin Console
-
-**What goes wrong:**
-The playground starts as a Schema negotiation debug tool (three panels: select provider, edit schema, view response). During the upgrade, features creep in: mock test history, API key configuration UI, billing usage display, provider performance comparison, schema library, saved test scenarios.
-
-Before long, the playground becomes a 50-component mini-portal. The original purpose ("quickly test a Schema against a Provider") is buried under nav bars and settings panels. Development time on the playground approaches time spent on core library features.
-
-This is particularly dangerous because the playground is a "visible" deliverable. There is pressure to make it polished and feature-rich. The speculation that it might become a demo tool, onboarding tool, QA tool, and sales tool all at once is never formally rejected.
-
-**Why it happens:**
-The playground sits at the intersection of multiple user needs:
-- **Pack developers** want to see raw negotiation internals
-- **Agent integrators** want to test schemas quickly
-- **Project contributors** want a debugging dashboard
-- **Potential users** evaluate the project through the playground
-
-Everyone wants "one more feature." The spec (playground-ui-spec.md) explicitly lists non-goals ("no API Server graphical replacement", "no production monitoring dashboard") but these boundaries are easy to cross during implementation.
-
-**How to avoid:**
-1. **Enforce the non-goals list as a code review gate.** Every playground PR must be checked: "Does this implement a non-goal?" Mock test history? Yes (it is debugging). API Key management UI? No (that is vault module's job). Billing dashboard? Absolutely not (there is `synapse billing status` for that).
-
-2. **Define a "stop adding features" threshold.** The playground has 15 components. Set a hard limit (e.g., 25 components). When the limit is reached, no new features -- only refinements.
-
-3. **Write acceptance criteria for each feature before implementation.** One sentence format: "User: [persona]. Goal: [single action]. Success: [observable outcome]." If a feature cannot be described in one sentence, it is too complex.
-
-4. **The playground is NOT the onboarding experience.** The getting-started guide (in Docusaurus) is where new users learn. The playground is for people who already understand the concepts and need to test.
-
-5. **Track playground LOC growth.** If playground code grows faster than core library code across milestones, that is a red flag.
-
-**Warning signs:**
-- Playground PR title says "Add [feature] page" (pages = app, not tool)
-- Playground imports routing libraries (react-router)
-- Playground has user authentication or login screen
-- Playground LOC exceeds 5000 (currently ~1500 across 15 files)
-- PR adds a "Settings" page or "Preferences" panel
-- Developer says "while we are at it, let us also add..."
-
-**Phase to address:**
-Phase 1 (playground requirements). The scope definition must be explicit in the requirements doc before any implementation.
-
----
-
-### Pitfall 9: Documentation Site and Playground Competing for the Same Release
-
-**What goes wrong:**
-The v4.0 milestone defines two major deliverables: the documentation site (apps/docs/) AND the playground upgrade (apps/playground/). These are fundamentally different work streams:
-- **Docs site:** Content-driven. Requires writing, reviewing, structuring information. Risk is "under-scoped" (looks done but has no real content).
-- **Playground:** Engineering-driven. Requires React components, state management, API integration. Risk is "over-scoped" (keeps growing in scope).
-
-When both are in the same milestone, one inevitably gets 80% of the attention while the other stalls. Documentation gets deprioritized because "code is more important." The milestone completion depends on BOTH being done, creating a dependency bottleneck.
-
-**Why it happens:**
-Both are "front-end" deliverables that naturally group together in milestone planning. The assumption is: "phase 13 = docs, phase 14 = playground, combine into one milestone." But they require different skills (technical writing vs. React engineering), different review cycles (content review vs. code review), and different quality criteria (information accuracy vs. interaction polish).
-
-**How to avoid:**
-1. **Treat them as parallel, independent phases, not sequential.** Do not block one on the other. The milestone is complete when EITHER ships. The other follows in a subsequent milestone.
-
-2. **Assign different reviewers.** Docs should be reviewed by someone who uses the product. Playground should be reviewed by core engineers. Do not have the same person approve both.
-
-3. **Set separate done-dates.** If the milestone timeline is 3 weeks: docs by week 2, playground by week 3. Docs team does not wait for playground feature freeze.
-
-4. **If resources are limited, prioritize docs.** A documentation site with good content but basic design is valuable. A playground with beautiful UI but no docs to explain how to use the product has limited reach.
-
-**Warning signs:**
-- Milestone tracking shows one workstream at 90% and the other at 20%
-- PRs are all playground features, no doc PRs
-- "Docs content" is a single issue that nobody is assigned to
-- The milestone slips multiple times because "we need to finish the playground first"
-- The docs site ships with placeholder "TODO" content
-
-**Phase to address:**
-Phase 1 (milestone planning). Separate the two workstreams in the milestone definition. Establish parallel execution from day one.
-
----
-
-### Pitfall 10: Custom Resizable Panels Edge Cases -- Layout Breakage
-
-**What goes wrong:**
-The playground's three-panel layout uses hand-written resizable panels (`App.tsx` and `ResizablePanel.tsx`). The implementation attaches global `mousemove` and `mouseup` event listeners to `document`. Edge cases:
-
-1. **Mouse leaves the browser window during drag.** `mouseup` never fires on `document`. The panel remains in "dragging" state with `user-select: none` on body. User must click again to "release."
-
-2. **Touch devices.** The playground targets 1440px+, but trackpads generate `touchmove` events, not `mousemove`. The divider is entirely non-functional on touch devices.
-
-3. **Content overflow.** When center panel is resized to minimum (400px) and Schema Editor has long lines, CodeMirror does not reflow. Inconsistently applied overflow causes some panels to clip content while others scroll.
-
-4. **Iframe boundaries.** If the playground is embedded in an iframe, mousemove events do not fire outside the iframe.
-
-**Why it happens:**
-Hand-written resizable panels seem simple -- just track mouse position and update CSS grid columns. The edge cases only appear in specific environments. The developer always tests on their own machine.
-
-**How to avoid:**
-1. **Add `mouseleave` fallback.** Listen for `mouseleave` on `document.documentElement` to cancel the drag.
-
-2. **Add touch event support.** Handle both mouse and touch events using `touch.clientX` instead of `e.clientX`.
-
-3. **Consider `react-resizable-panels` for production quality.** The spec rejects this library ("simple drag does not need full library") but the cost of handling all edge cases manually often exceeds the library size (~5KB gzipped). Either accept the edge cases as documented constraints OR use the library. Half-measures create a worse experience than choosing either extreme.
-
-4. **Apply consistent overflow behavior.** All panels should use `overflow-hidden` at panel level and `overflow-auto` at content level.
-
-**Warning signs:**
-- User reports: "dragging the divider stops working if I move my mouse too fast"
-- User reports: "the divider does nothing on my laptop trackpad"
-- Code review: global event listeners are attached but never cleaned up on `mouseleave` or `blur`
-- Playground layout breaks on window resize after divider drag
-
-**Phase to address:**
-Phase 2 (Playground upgrade: layout enhancement). Edge cases should be addressed as part of the layout rework.
-
----
-
-### Pitfall 11: Docusaurus TailwindCSS Conflict with Infima
-
-**What goes wrong:**
-If TailwindCSS is added to Docusaurus (commonly via `docusaurus-tailwindcss-loader` or PostCSS plugin), the Tailwind preflight (CSS reset) conflicts with Docusaurus' built-in Infima styles:
-
-- Tailwind's `@layer base` reset sets `box-sizing: border-box`, `margin: 0` on all elements. Infima has its own reset. The two fight.
-- Heading sizes become unpredictable (Infima h1 vs Tailwind reset)
-- Button styles double-apply (Tailwind `.btn` vs Infima `.button`)
-- Spacing utilities conflict (Infima `--ifm-spacing` vs Tailwind `p-4`)
-- Code block styling breaks (Infima code theme vs Tailwind `font-mono`)
-
-**Why it happens:**
-The developer is used to Tailwind for the playground and wants the same utility classes in Docusaurus custom pages. Adding Tailwind PostCSS to Docusaurus is a well-known community pattern. It works initially, then subtle style conflicts appear as more content is added.
-
-**How to avoid:**
-1. **Do NOT add TailwindCSS to Docusaurus.** Docusaurus' Infima is designed for content-heavy documentation sites. Use Docusaurus' built-in `customCss` option for minor customizations.
-
-2. **If you MUST use Tailwind (e.g., for a custom homepage):**
-   - Scope Tailwind to a specific `@layer` and only apply within a specific CSS class container
-   - Use `corePlugins: { preflight: false }` in Tailwind config to disable the reset
-   - Test every Docusaurus component (headings, tables, code blocks, admonitions, nav) for style regressions
-   - This is HIGH maintenance -- expect breakage on every Docusaurus upgrade
-
-3. **Use Infima CSS variables for theming instead:**
-   ```css
-   :root {
-     --ifm-color-primary: #2563eb;
-     --ifm-color-primary-dark: #1d4ed8;
-     --ifm-navbar-background-color: #0f172a;
+   // negotiate.ts
+   export async function handleNegotiateCommand(argv: string[]): Promise<void> {
+     const options = parseNegotiateArgs(argv);
+     if (!isInteractive() && !options.provider && !options.intent) {
+       console.error("Error: --intent and --provider required in non-interactive mode");
+       process.exit(1);
+     }
+     const state = await gatherOptionsInteractively(options);
+     const result = await runNegotiation(state);
+     if (state.format === "json") outputJson(result);
+     else outputTable(result);
+     await saveLock(result);
    }
    ```
 
+3. **Extract shared pack discovery logic.** Both `index.ts` and `connect.ts` have near-identical `findPacksDir()` and `loadProviderCard()` functions. Extract these into a shared utility before the negotiate extraction multiplies the duplication.
+
 **Warning signs:**
-- `docusaurus.config.ts` imports `tailwindcss` PostCSS plugin
-- `apps/docs/package.json` has `tailwindcss` as a dependency
-- Custom Docusaurus pages use `class="text-blue-400"` (Tailwind classes in Docusaurus context)
-- A Docusaurus upgrade breaks the layout (sign of CSS dependency conflict)
+- `index.ts` line count exceeds 1300 after adding interactive features
+- New prompt helpers written inside the negotiate function rather than extracted
+- The negotiate function uses local variables from the parent `index.ts` scope (currently it does not — it is fully self-contained)
+- PR comment: "Maybe we should extract this to its own file in a follow-up"
+- Test file adds tests for negotiate but they import from `index.ts` rather than a standalone module
 
 **Phase to address:**
-Phase 1 (docs scaffolding). The CSS strategy must be decided when creating `apps/docs/`.
+Phase 1 (scaffold interactive negotiation experience). Extraction is a prerequisite, not a follow-up. Do interactive flow in the extracted file, not in the monolithic function.
+
+---
+
+### Pitfall 3: LLM Stub Mode Produces Meaningless Output That Confuses Users
+
+**What goes wrong:**
+When no LLM API key is configured, the negotiator falls back to a deterministic stub that always returns:
+```json
+{
+  "name": "negotiated-schema",
+  "fields": [{ "name": "input", "type": "string", "required": true }]
+}
+```
+
+The current CLI output presents this result identically to a real LLM-based negotiation — same table formatting, same `Schema ID: ...`, same "Verification: passed" message. A user who runs `synapse negotiate --intent chat --provider openai` for the first time will see a valid-looking output with a generated SDK, save a Schema Lock, and only later realize the schema is completely generic and useless.
+
+With v5.0's interactive flow, this becomes more dangerous: the interactive wizard might present this stub schema to the user for customization. The user spends time editing a meaningless template instead of getting a meaningful AI-generated starting point.
+
+**Why it happens:**
+- The stub was designed as a development convenience so the pipeline could run without external dependencies. It was never intended for user-facing output.
+- The `createDefaultLLMClient()` function returns a stub that silently degrades with no user-facing warning.
+- The `negotiate()` function in CLI checks for a vault key (`negotiator-llm`) but falls to stub silently without any console.warn about the degradation.
+- A first-time user has no reason to know they need a separate LLM key for negotiation — the concept of "negotiator-llm" as a distinct key name is unintuitive.
+
+**How to avoid:**
+1. **Detect stub output at the CLI layer.** Before rendering any result, check if the schema matches the stub signature (single `input` field, `string` type, required). If so, warn prominently:
+   ```typescript
+   if (result.schema.fields.length === 1 &&
+       result.schema.fields[0].name === "input" &&
+       result.schema.fields[0].type === "string") {
+     console.warn("\nWarning: Negotiation used deterministic fallback (no LLM key configured).");
+     console.warn("The resulting schema is a placeholder, not a meaningful negotiation.");
+     console.warn("To configure an LLM key for real negotiation:");
+     console.warn("  synapse vault set negotiator-llm <your-api-key>");
+   }
+   ```
+
+2. **Surface the LLM provider used in the output.** The `NegotiationResult.schema` sometimes includes `llm_provider` in the current code but it is not consistently surfaced. Always show:
+   ```
+   LLM:          <provider> | <model> (or "deterministic stub" if no LLM)
+   ```
+
+3. **In interactive mode, check for LLM key first.** Before entering the interactive flow, check if a negotiator-llm key exists in the vault. If not, offer to configure one:
+   - "No LLM key configured for negotiation. This means the schema will be generated using a basic deterministic fallback."
+   - "1) Configure API key now  2) Continue with fallback  3) Cancel"
+   - This is the single most impactful UX improvement for first-time users.
+
+4. **Rethink the key name.** `negotiator-llm` is unintuitive. Consider `SYNAPSE_NEGOTIATOR_API_KEY` env var or a config path like `config negotiator.apiKey`. The vault key name should be documented in the interactive flow itself.
+
+5. **Provide a meaningful non-LLM fallback.** The current stub is too minimal. A better stub could reverse-map from the provider's DSL-defined schema to generate a meaningful template even without an LLM:
+   - Read the provider's `pack/<provider>/dsl/*.json` files
+   - Extract required fields and their types
+   - Generate a schema template from the Pack definition itself
+
+**Warning signs:**
+- New user runs `synapse negotiate --intent chat --provider openai` and sees a valid-looking 1-field schema
+- No mention of "deterministic" or "stub" in the output
+- User edits a meaningless schema in interactive mode, saves a lock, and only discovers the issue later
+- The `NegotiateAndVerifyInput` has `llmOptions: undefined` but no warning is surfaced
+- CLI test for negotiate always passes because the stub is deterministic (tests never validate against real LLM output)
+
+**Phase to address:**
+Phase 1 (scaffold interactive negotiation experience). The stub detection and warning must be in the initial interactive flow, not added as a follow-up. The interactive mode should handle "no LLM key" as a first-class state, not as an invisible fallback.
+
+---
+
+### Pitfall 4: Interactive Flow Becomes Blocking, Non-Skippable, and Confusing
+
+**What goes wrong:**
+The planned interactive negotiate flow for v5.0 has multiple steps: show input/output formats, indicate required fields, let user customize fields, confirm, generate SDK, suggest next steps. If each step blocks on user input, the flow becomes a multi-minute guided tour that users cannot skip or fast-forward through.
+
+This is particularly dangerous for:
+- **Experienced users** who know what they want and just need `--intent chat --provider openai --format json`
+- **Scripting/AI** contexts where no human is present
+- **Quick exploration** where the user wants to see if something works, not learn the full flow
+
+The `connect.ts` already demonstrates a real example of this: the billing interactive prompt (`"Enable billing tracking? [Y/n]"`) blocks even when the user has already passed `--with-billing` or `--no-billing`. This is a minor issue now but would become a major one in a multi-step negotiate flow.
+
+**Why it happens:**
+- Developer's natural inclination: "The user is in interactive mode, so every decision needs user input."
+- Failure to distinguish between "decisions the user MUST make" vs "decisions that have sensible defaults"
+- No design principle for skippable steps — every prompt is equally blocking
+- The v5.0 spec describes the ideal flow without explicitly defining what is skippable
+
+**How to avoid:**
+1. **Design for progressive disclosure, not linear wizard.** Each prompt should be skippable:
+
+   ```
+   Step 1: Review input fields for "chat" intent on "openai" (Press Enter to accept)
+     - messages: array (required)
+     - model: string (optional, "deepseek-chat")
+   
+   > [Enter to accept, or type field name to edit, or "done"]
+   ```
+
+   Users who want defaults press Enter three times and are done. Users who want granular control can edit each field.
+
+2. **Classify every prompt into a tier:**
+
+   | Tier | Behavior | Example |
+   |------|----------|---------|
+   | **Required** | Must answer, cannot proceed without | Provider selection when none specified |
+   | **Recommended** | Has sensible default, press Enter to skip | Field acceptance, billing config |
+   | **Contextual** | Only shown when relevant | LLM key setup on first run |
+   | **Confirmation** | `--yes` flag can skip | Schema Lock overwrite warning |
+
+3. **Implement `--yes` flag for all prompts.** Pattern from `pack.ts` and `evolve.ts`: when `--yes` is set, use all defaults without prompting. This is the "I know what I'm doing" escape hatch.
+
+4. **Implement `--dry-run` for negotiation.** Show what the negotiation result would look like without saving the lock. Let the user inspect the output, then re-run without `--dry-run` to save.
+
+5. **Detect previous knowledge.** If the user has already run `synapse setup`, the interactive negotiate flow should skip "configure your first provider" and assume context is known. Store `config.setup_completed` or check for existing vault keys.
+
+6. **Keep the imperative path fully functional.** The command `synapse negotiate --intent chat --provider openai --format json` should produce JSON output with zero interaction, just as it does today.
+
+**Warning signs:**
+- Interactive mode has no "skip" or "done" option — every step blocks
+- Pressing Enter on a required prompt causes an error instead of using a sensible default
+- `--yes` flag is not documented in `--help` for negotiate
+- Interactive flow takes more than 30 seconds for a knowledgeable user
+- PR adds `rl.question(...)` without checking if all info was already provided via flags
+- User needs to press Ctrl+C to escape the flow
+
+**Phase to address:**
+Phase 1 (interactive flow design). The skippable/blocking classification must be part of the initial interactive flow design, not a Phase 2 optimization. Every prompt should have `[default]` shown and an empty answer = accept default.
+
+---
+
+### Pitfall 5: Command Structure Fragmenting — Users Can't Find the Right Command
+
+**What goes wrong:**
+The CLI currently has 20 top-level commands: `connect, smoke, setup, config, billing, provider, generate, vault, negotiate, lock, sdk, pack, evolve, route, init, watchdog, profile, export, import, help`. The v5.0 plan adds interactive features across multiple commands:
+- `synapse negotiate` gets interactive field editing
+- `synapse evolve` already has `--tune` that re-negotiates
+- `synapse connect` already has interactive provider/intent selection
+- `synapse setup` is an interactive wizard
+
+A new user has no way to know:
+- Should I run `synapse setup` or `synapse negotiate` first?
+- Which command generates the SDK: `synapse sdk generate` or `synapse evolve`?
+- Is `synapse connect` the same as using the generated SDK?
+- Why does `synapse evolve` also negotiate?
+
+The "negotiation memory" system (markdown-based, part of v5.0 plan) adds another layer: if the user's prior negotiation choices are stored, how do they know where to find them? Which command reads the memory?
+
+Each new command or interactive mode increases the "surface area" the user must understand. With 20 commands already, adding more sub-modes within commands without consolidating first will make the CLI feel like a sprawling tool rather than a focused developer utility.
+
+**Why it happens:**
+- Each capability was added independently with its own command (`synapse billing`, `synapse lock`, `synapse pack`). This was correct for modularity.
+- The "interactive" layer is being added on top without consolidating the underlying commands.
+- No explicit decision on which commands should be "user-facing" vs "power-user/low-level" — all 20 appear equally in `--help`.
+- The existing help output lists all 20 commands in alphabetical order with no grouping, making it impossible to distinguish entry points from utilities.
+
+**How to avoid:**
+1. **Group `--help` output into categories.** Current flat list of 20 commands is already overwhelming. Categorize:
+
+   ```
+   Getting Started:
+     setup         Interactive first-time setup wizard
+   
+   Core Workflow:
+     negotiate     Run schema negotiation (interactive)
+     evolve        Generate zero-dependency SDK
+     connect       Connect to a provider and execute
+   
+   Provider Management:
+     provider      List and inspect provider packs
+     pack          Manage provider packs from Registry
+   
+   Configuration:
+     config        Manage settings
+     vault         Manage API keys
+     billing       Manage billing configuration
+   
+   Advanced:
+     lock          Manage Schema Locks
+     sdk           Generate SDK from single Pack (low-level)
+     route         Route to best provider (scoring)
+     ...
+   ```
+
+2. **Establish a clear "user journey" hierarchy:**
+   - **Entry commands** (`setup`, `negotiate`, `evolve`, `connect`) — these are what users should use day-to-day
+   - **Utility commands** (`pack`, `vault`, `billing`, `config`) — these support the entry commands
+   - **Advanced commands** (`lock`, `sdk`, `route`, `smoke`, `watchdog`, `profile`, `export`, `import`) — niche or debugging use cases
+
+3. **Consider merging `sdk generate` into `evolve`.** The `evolve` command already does what `sdk generate` does but with Pack discovery, Profile injection, and strategy tuning. Having both creates confusion. Either make `evolve` the primary and hide `sdk` from help, or cross-document them clearly.
+
+4. **Negotiate should be the entry point for interactive work.** If a user runs `synapse negotiate` interactively, the command should:
+   - Check if LLM key is configured (if not, offer to set up)
+   - Detect if packs are installed (if not, suggest `synapse pack add`)
+   - Guide the user through the negotiation flow
+   - End with next-step suggestions: "Generate SDK: `synapse evolve` | Test the connection: `synapse connect <provider> <intent>`"
+   
+   This makes `synapse negotiate` the "hub" command and reduces the need for users to memorize the full command tree.
+
+5. **Add `synapse quickstart` or `synapse tutorial` as a guided tour.** Instead of making `negotiate` handle both exploration AND production use, provide a separate learning path.
+
+**Warning signs:**
+- `--help` output exceeds 40 lines (it already does — currently ~50+ lines)
+- New commands or flags added without corresponding help group restructuring
+- PR adds a user-facing feature to a command whose name does not clearly communicate its purpose
+- Users ask "what's the difference between `evolve` and `sdk generate`?" repeatedly
+- Interactive mode in `negotiate` duplicates functionality from `setup` without cross-linking
+
+**Phase to address:**
+Phase 1 (help system restructuring). The help grouping should be done BEFORE the interactive negotiate flow is designed, so the renamed/reorganized commands have consistent interactive behavior. However, command merging is Phase 2 — the help grouping is a quick structural change that informs everything else.
+
+---
+
+### Pitfall 6: Negotiation Memory / Schema Lock Becomes a "Write-Only" Black Hole
+
+**What goes wrong:**
+The v5.0 plan introduces "negotiation memory" (markdown files storing negotiation history). Combined with the existing Schema Lock system (immutable locks stored in `~/.synapse/schemas/`), the project now has two persistence layers:
+
+1. **Schema Lock** (`getOrCreateLock`) — binary-ish JSON, auto-created, immutable, stored at `~/.synapse/schemas/`
+2. **Negotiation Memory** (markdown) — human-readable, manually reviewed, stored at `.synapse/negotiations/`
+
+Users can generate locks via `synapse negotiate`, view them via `synapse lock list`, and see outdated ones via `synapse lock outdated`. But:
+- Which lock corresponds to which negotiation session?
+- How does a user clean up orphaned locks from testing?
+- How does a user roll back to a previous negotiation choice?
+- How does a user know what they chose last week and why?
+
+When "negotiation memory" is opaque, users stop trusting it. They delete everything and start over, defeating the purpose of versioned, persistent negotiation.
+
+**Why it happens:**
+- Schema Lock was designed as a technical artifact (like `package-lock.json`), not a user-facing history.
+- The "negotiation memory" came as a separate feature requirement without considering how it relates to existing lock storage.
+- No unified "show me what conclusions were made during negotiation" command exists.
+- The current UX has no way to view the reasoning behind a lock — just the lock's field mappings.
+
+**How to avoid:**
+1. **Link negotiation memory to Schema Lock.** Each lock should reference its negotiation session ID or markdown file path. The counterpart: `synapse lock show <id>` should include a link to the negotiation memory doc.
+
+2. **Add `synapse negotiate --history` or `synapse negotiate --show <session>`** to view past negotiation sessions and their resulting locks.
+
+3. **Make lock deletion safe and discoverable.** Currently `synapse lock remove` exists but is not mentioned in the negotiate help. After each interactive negotiation, show:
+   ```
+   Lock saved: chat_openai_abc123 (cached)
+   View lock:       synapse lock show chat_openai_abc123
+   List all locks:  synapse lock list
+   Remove this:     synapse lock remove chat_openai_abc123
+   ```
+
+4. **Implement lock diffing.** When a user re-negotiates and the result differs from an existing lock, show a diff:
+   ```
+   Schema Lock changed:
+     + field: max_tokens (number)
+     - field: temperature (number, was optional)
+   Save new lock? [Y/n]:
+   ```
+
+5. **Document the "reset to clean slate" path.** If a user wants to clear all negotiation state, the path should be:
+   ```
+   synapse lock remove --all    # Clear all locks
+   # or, for nuclear option:
+   rm -rf ~/.synapse/schemas/   # Clear locks and verification cache
+   ```
+   Document this in `--help` or in a troubleshooting guide.
+
+**Warning signs:**
+- User asks: "I ran negotiate last week and picked some fields, how do I see what I picked?"
+- User runs `synapse lock list` and sees locks with no context they can understand
+- PR adds negotiation memory but does not modify `synapse lock show` to display the link
+- `synapse lock outdated` produces results but the user has no way to understand what changed
+- No command to compare two locks or view a lock's history
+
+**Phase to address:**
+Phase 2 (negotiation memory integration). The first phase of interactive negotiate should NOT include memory persistence — it should succeed at the basic interactive flow first. Phase 2 adds the memory link and lock diffing.
+
+---
+
+### Pitfall 7: Interactive Field Editing Has No "Preview Diff" or Undo
+
+**What goes wrong:**
+The interactive negotiate flow allows users to customize fields: add fields, remove fields, rename fields, change required/optional status. Once the user confirms:
+1. A new Schema Lock is created
+2. The negotiation is marked as "resolved"
+3. The SDK is generated from this lock
+
+If the user makes a mistake — accidentally removes a required field, adds a duplicate, changes a type — there is no undo. The lock is written. The previous lock is overwritten (or becomes stale). The user cannot easily see what changed between their previous state and the new state.
+
+This is especially dangerous because:
+- The interactive mode makes editing feel low-stakes (just typing)
+- The Schema Lock is immutable by design (no `synapse lock edit` exists)
+- Reverting requires running `synapse lock migrate` (an advanced command most users won't discover)
+- There is no "are you sure?" summary before the lock is written
+
+**Why it happens:**
+- Schema Lock immutability was a deliberate design choice (similar to `package-lock.json`). It prevents silent drift. But it also prevents easy rollback.
+- The interactive editing flow is designed as "steps with confirmation" but the final confirmation step lacks a diff preview.
+- No existing infrastructure for diffing two Schema Locks exists.
+- The codebase has `matchManifest` for comparing schemas to manifests, but no `diffLocks` utility.
+
+**How to avoid:**
+1. **Implement a `diffLocks` utility** before interactive editing ships:
+   ```typescript
+   function diffLocks(old: SchemaLock, updated: Partial<SchemaLock>): LockDiff {
+     // Returns added/removed/changed fields
+   }
+   ```
+
+2. **In the interactive flow, after all edits, show a diff preview:**
+   ```
+   ---- Changes to Schema Lock --------------------------
+     + messages[].role: string (required)
+     - max_tokens: number
+     ~ model: string -> "deepseek-chat" (default changed)
+   
+   Accept these changes? [Y/n]:
+   ```
+
+3. **Save to a new lock ID instead of overwriting.** The existing `getOrCreateLock` already handles this: it creates a new lock when the schema changes. But the CLI auto-saves without asking. Add a confirmation step before writing, with `--yes` to auto-confirm.
+
+4. **Keep the last 3 locks per (intent, provider) pair.** This gives users an escape hatch: `synapse lock list` shows recent locks and their timestamps. `synapse lock show <lock-id>` shows details.
+
+5. **If the old lock was cached (not user-modified), warn before overwriting.** There is a meaningful difference between "the previous lock was auto-generated" vs "the previous lock was manually customized in interactive mode."
+
+**Warning signs:**
+- Interactive field editing flow ends immediately with "Lock saved" — no diff preview
+- User modifies fields, accidentally breaks something, and cannot revert
+- No utility function exists to compare two Schema Locks
+- The `getOrCreateLock` is called with no user-facing summary of what will change
+- User must manually delete `~/.synapse/schemas/` to recover from a bad lock
+
+**Phase to address:**
+Phase 2 (field customization in interactive flow). The initial interactive flow should focus on "review and accept" (read-only). Field editing comes in Phase 2, and diff preview MUST be part of that Phase 2, not an afterthought.
+
+---
+
+### Pitfall 8: `negotiator-llm` Key Discovery Failure — Users Can't Configure the Negotiator
+
+**What goes wrong:**
+To use the real LLM-based negotiation, users must:
+1. Store an API key with the name `negotiator-llm`: `synapse vault set negotiator-llm <key>`
+2. Know that this key is DIFFERENT from the provider API key (e.g., `synapse vault set deepseek <key>`)
+3. Optionally configure model and baseUrl: `synapse config set negotiator.model gpt-4o` / `synapse config set negotiator.baseUrl ...`
+
+These steps are not discoverable. The existing `negotiate` function's help output does not mention the LLM key requirement. When the user runs `synapse negotiate --intent chat --provider openai`, it works (with stub output) — giving no indication that a better result is available.
+
+With v5.0's interactive mode, this becomes a critical failure: the interactive flow should be the place where users discover and configure the negotiator, but if the setup path is undocumented, they will never find it.
+
+The vault key name `negotiator-llm` is also confusing: it is not a provider name, not a recognizable service. Users naturally try `synapse vault set negotiator`, `synapse vault set llm`, or just skip vault entirely and assume the OPENAI_API_KEY env var (which the negotiator DOES check in `createDefaultLLMClient()` but the CLI does not surface).
+
+**Why it happens:**
+- The negotiation pipeline was designed to be gracefully degradable (no key = stub). This is technically correct but UX-harmful.
+- The vault key name was chosen for internal clarity ("this is the LLM key for the negotiator") without considering user discoverability.
+- The CLI help text focuses on the "what" (flags) rather than the "prerequisites" (setup steps).
+- The `setup` command only configures provider keys, not the negotiator key.
+
+**How to avoid:**
+1. **In the interactive negotiate flow, check for the LLM key FIRST.** Before any negotiation step, check vault and env var. If no key, offer to configure now or continue with stub.
+
+2. **Consolidate key sourcing.** The negotiator should check in order:
+   1. Explicit `--negotiator-api-key` flag (new flag for negotiate command)
+   2. `config.negotiator.apiKey` (from config)
+   3. Vault key `negotiator-llm`
+   4. `OPENAI_API_KEY` env var
+   5. Provider's own vault key as fallback (if it is an OpenAI-compatible provider)
+   
+   This gives users multiple paths to configure without needing to memorize `negotiator-llm`.
+
+3. **Add `--negotiator-api-key` and `--negotiator-model` flags to `synapse negotiate`.** This enables CI/scripting use without vault setup.
+
+4. **Update `synapse setup` to optionally configure the negotiator key.** After setting up the provider, ask: "Do you also want to configure an LLM key for schema negotiation? This enables AI-powered negotiation." This makes the negotiator LLM key a first-class setup concern.
+
+5. **Document the LLM requirement in `--help`:**
+   ```
+   Prerequisites:
+     An LLM API key for schema negotiation.
+     Configure: synapse vault set negotiator-llm <your-key>
+     Or set env: OPENAI_API_KEY=...
+   ```
+
+**Warning signs:**
+- User runs `synapse negotiate` interactively, gets a stub output, and does not realize a better result is possible
+- No mention of "LLM key" or "negotiation key" in the interactive flow
+- The vault key name `negotiator-llm` appears only in source code, not in help text or docs
+- `synapse setup` completes without mentioning the negotiator configuration
+- Users store their provider key and expect the negotiator to use it (reasonable assumption, currently wrong)
+
+**Phase to address:**
+Phase 1 (LLM key discovery). The interactive flow MUST surface the LLM key requirement from the first interaction. If this waits until Phase 2, users will form the incorrect expectation that the stub output is the product's full capability.
+
+---
+
+### Pitfall 9: Interactive Help Becomes a Separate, Unmaintained Documentation Surface
+
+**What goes wrong:**
+The interactive negotiation flow includes in-context help text: field descriptions, type explanations, next-step suggestions, prerequisite checks. This help text is hardcoded as `console.log()` strings within the command handler. When the underlying system changes (new field types, renamed intents, changed configuration paths), the help text goes stale because:
+- It is invisible to automated documentation generation (no TypeDoc, no extracted strings)
+- It is mixed with business logic — changing behavior may produce incorrect help text
+- The help text is duplicated from `--help` output and the docs site, creating three independent surfaces to maintain
+
+**Why it happens:**
+- In interactive mode, in-context help is critically important (users cannot see `--help` while in a prompt)
+- The quickest way to add help text is `console.log("...")`
+- The project has no documentation extraction or i18n infrastructure
+- The existing `--help` system (one `printXHelp()` function per command) is already separate from the docs site content
+
+**How to avoid:**
+1. **Extract help text into a single source of truth.** Define help content as data, not inline strings:
+   ```typescript
+   const NEGOTIATE_HELP = {
+     prerequisites: "An LLM API key for schema negotiation. Configure with: synapse vault set negotiator-llm <key>",
+     fieldDescription: (field: FieldDef) =>
+       `${field.name}: ${field.type}${field.required ? " (required)" : " (optional)"}`,
+     nextSteps: (provider: string, intent: string) => [
+       `Test:  synapse connect ${provider} ${intent}`,
+       `Generate SDK: synapse evolve --provider ${provider}`,
+     ],
+   } as const;
+   ```
+
+2. **Share strings between `printNegotiateHelp()` and interactive flow.** Both should reference the same help content. If a flag changes, both surfaces update automatically.
+
+3. **Audit existing help text for single-sourcing gaps.** The current `printNegotiateHelp()` function (index.ts lines 232-258) has useful information about the negotiator's capabilities. The interactive flow should reference the same information rather than rephrasing it.
+
+4. **Consider using the `help` command as the backup for in-context help.** In interactive mode, if the user types `help` or `?`, show the command's `--help` output. This creates continuity between interactive and non-interactive modes.
+
+**Warning signs:**
+- Interactive flow prints "see synapse X --help for more info" — the user is in the middle of an interactive flow, they cannot see help output
+- Help text in interactive mode mentions a flag or option that no longer exists
+- PR that adds a new flag to `synapse negotiate` does not update the interactive help text
+- Hardcoded strings contain provider names or intent names that could become stale
+- The `--help` output and interactive help text disagree on the number of steps or available options
+
+**Phase to address:**
+Phase 2 (help text consolidation). The initial interactive flow can use inline strings, but they must be extracted into a shared structure before the milestone ships. Phase 1 should design the string extraction pattern; Phase 2 implements it for all commands.
+
+---
+
+### Pitfall 10: Schema Lock Auto-Save Becomes Silent — Users Lose Control of Persistence
+
+**What goes wrong:**
+The current `synapse negotiate --intent chat --provider openai` flow auto-saves a Schema Lock to `~/.synapse/schemas/` without asking. It prints:
+```
+  Lock:         chat_openai_abc123 (created)
+```
+
+This happens regardless of:
+- Whether the user wants this lock saved
+- Whether a previous lock with the same (intent, provider) exists and will be shadowed
+- Whether the negotiated schema is actually useful (stub case)
+- Whether the user ran negotiate just to explore
+
+With v5.0's interactive mode, this auto-save behavior is even worse: the user spent time in an interactive flow, made choices, and THEIR lock is auto-saved. But if the user was "just looking," the auto-save creates friction (they need to manually `synapse lock remove` later). If the user was experimenting, each experiment creates a new lock (the immutable design generates unique lock IDs), and the old lock becomes orphaned — never deleted, never updated, just... there.
+
+**Why it happens:**
+- The auto-save was designed for the SDK generation pipeline (`synapse evolve` reads locks). Making it opt-in would break the pipeline flow.
+- The current flow treats negotiation and saving as inseparable: "you negotiated, so a lock was created."
+- No distinction is made between "exploratory negotiation" (user testing what happens) and "committed negotiation" (user finalized a choice).
+
+**How to avoid:**
+1. **Add `--dry-run` flag to `synapse negotiate`.** When set, run the full negotiation pipeline, render output, but do NOT save the lock. This lets users explore without side effects:
+   ```
+   synapse negotiate --intent chat --provider openai --dry-run
+   ```
+
+2. **In interactive mode, ask before saving:**
+   ```
+   ---- Negotiation Complete ----------------------------
+   Schema: chat_response (4 fields)
+   Provider: openai
+   
+   Save this Schema Lock? [Y/n]:
+   ```
+
+3. **Distinguish "created" vs "overwrites existing" in the save prompt.** If a lock already exists for the same (intent, provider) pair, show:
+   ```
+   ---- Existing Lock Found ------------------------------
+   Old: chat_openai_def456 (created 2026-05-20)
+   New: chat_openai_ghi789 (current negotiation)
+   
+   Overwrite existing lock? [y/N]:
+   ```
+
+4. **Add `--no-save` flag** as the non-interactive equivalent of answering "n" to the save prompt. This makes scripting deterministic.
+
+**Warning signs:**
+- `synapse negotiate --intent chat --provider openai` writes files without asking
+- `synapse lock list` shows multiple locks for the same (intent, provider) with similar timestamps
+- User asks "how do I stop locks from being created?" or "which lock is active?"
+- No way to run negotiate in "read-only" mode
+- The `--dry-run` flag is absent from negotiate (it exists in evolve.ts already as a pattern)
+
+**Phase to address:**
+Phase 1 (auto-save control). The `--dry-run` flag and save confirmation are part of the initial interactive flow. Deferring this creates a persistence model that treats all negotiations as equally committed.
 
 ---
 
@@ -491,109 +630,116 @@ Phase 1 (docs scaffolding). The CSS strategy must be decided when creating `apps
 
 | Shortcut | Immediate Benefit | Long-term Cost | When Acceptable |
 |----------|-------------------|----------------|-----------------|
-| Hand-written API docs (no TypeDoc) | Faster initial docs -- no plugin setup cost | Every API change requires manual doc update; docs go stale | NEVER. TypeDoc setup takes 1 hour and pays for itself after first API change. |
-| Single AppState context (no split) | Simple state model, one file to maintain | Re-render cascade degrades UX as playground grows | For MVP only (< 15 components). Must be split before adding more features. |
-| No Vite proxy for API (hardcoded localhost) | Zero config, works immediately in dev | Production builds are broken | NEVER for deployable apps. Acceptable only for local-only dev tools. |
-| Docusaurus default theme (no customization) | Zero CSS work, looks professional | Site looks generic | For MVP. Add custom branding later. Do NOT start with custom themes. |
-| Inline code examples in docs | Easy to write, no tooling needed | Examples go stale silently | For tutorial/conceptual content ONLY. Never for API reference. |
-| Relying on `docusaurus clear` for build issues | Quick fix | Masks underlying config problems | Acceptable during development. Must have reproducible builds in CI. |
-| Playground components without `React.memo` | Faster to write | Unnecessary re-renders on state change | For leaf components. Profile first. |
+| Negotiate in `index.ts` (no extracted command file) | Fast to iterate, no import refactoring | 300+ lines in a 1250-line file; hard to test; extraction becomes riskier as features grow | NEVER. Extraction must precede interactive features. |
+| Readline inline (no shared TTY helper) | Fast prototyping, no abstraction overhead | Every interactive command needs its own TTY guard; one missed guard = CI hang | For single interactive command ONLY. Must extract before second command adds prompts. |
+| Inline help strings (no extraction) | Fast to write, no string management | Three help surfaces (CLI help, interactive help, docs site) diverge | For MVP interactive flow. Must extract before milestone ships. |
+| Stub negotiation output (no warning) | Works without API key, simple to test | Users get meaningless schemas without realizing it | NEVER for user-facing output. Acceptable for development-only environments. |
+| Auto-save lock without confirmation | Simple pipeline (negotiate to always save) | Users lose control of persistence; exploratory runs create orphaned locks | For batch/CI mode only. NEVER for interactive mode. |
+| `negotiator-llm` as undiscoverable key name | Clean separation from provider keys | Users do not know to configure it; first-run experience is stub-by-default | Acceptable temporarily IF the interactive flow surfaces and automates the setup. |
+| ad-hoc pack discovery in multiple files | No shared module needed initially | Three copies of `findPacksDir` + `loadProviderCard` (index.ts, connect.ts, index.ts negotiate) | Acceptable before command extraction. Extract during negotiate.ts creation. |
+| Process stdout.write suppression for hidden input | Works for password entry in setup.ts | Fragile pattern; may break in non-standard terminals | For setup.ts only (sensitive input). Do not replicate in negotiate.ts. |
 
 ## Integration Gotchas
 
 | Integration | Common Mistake | Correct Approach |
 |-------------|----------------|------------------|
-| Docusaurus + pnpm monorepo | Using `create-docusaurus` inside existing monorepo (creates conflicting config) | Scaffold manually: create `apps/docs/`, install via pnpm workspace, configure `docusaurus.config.ts` from scratch |
-| Docusaurus + workspace packages | Importing from `@synapse-router/*` in MDX without the packages as dependencies | Add workspace packages as explicit dependencies: `"@synapse-router/core": "workspace:*"` |
-| docusaurus-plugin-typedoc + monorepo | Pointing `entryPoint` to `packages/core/src/index.ts` with wrong relative path | Use `../../packages/core/src/index.ts`. Must specify `tsconfig` explicitly. |
-| Playground + API server in CI | Building playground without API server running | Add CI step: start API server, build playground, kill API server |
-| Vite + CodeMirror dynamic imports | Importing CodeMirror synchronously, adding ~300KB to initial bundle | Use dynamic imports for tab-based editors. Only SchemaEditor needs eager loading. |
-| Docusaurus + analytics | Adding tracking during initial setup | Add analytics only when site has measurable traffic. Not a Phase 1 requirement. |
+| Negotiate + vault (`negotiator-llm` key) | Assuming provider key works for negotiation | Check vault key `negotiator-llm` explicitly; fall back to provider key or env var |
+| Negotiate + Schema Lock (auto-save) | Auto-saving every negotiation result | Add `--dry-run` flag; confirm in interactive mode |
+| Interactive flow + non-TTY (CI/pipe) | Adding prompts without TTY guard | Always check `isInteractive()` before any prompt |
+| Interactive flow + Shell piping | Piping answers fails on prompt order changes | Support input via `--input`, `--format json`, not stdin pipe for multi-step |
+| Help text + docs site | Keeping three copies of help content (CLI help, interactive help, docs) | Extract help content to shared definitions; auto-generate docs from source |
+| Negotiation memory + Schema Lock | Two persistence layers with no cross-reference | Each lock stores session ID; `lock show` includes memory link |
+| `synapse evolve` + `synapse negotiate` | Both command and interactive flow do negotiation, confusing users | `negotiate` = interactive exploration; `evolve` = batch production generation. Document clearly. |
+| Lock diffing + interactive editing | No lock diff utility before editing goes in | Implement `diffLocks` before the first interactive field edit |
 
 ## Performance Traps
 
 | Trap | Symptoms | Prevention | When It Breaks |
 |------|----------|------------|----------------|
-| Multiple CodeMirror instances (3+) | Page load > 2s, tab switch lag | Lazy-init editors per tab; use `<pre>` for read-only | 4+ instances on mid-range machine |
-| Single context re-render cascade | Input lag in Schema Editor | Split context into domains before adding more features | 30+ state fields, 15+ components |
-| Docusaurus webpack build on every CI run | CI build time 2x longer | Isolate docs build into separate CI job | On every PR CI run |
-| Docusaurus with many versioned docs | Build time proportional to versions | Keep versions < 3. Archive old versions. | 5+ versions |
-| `pnpm build -r` with both Vite and webpack | Memory spikes | Run builds sequentially in CI | CI runners < 4GB RAM |
+| Interactive prompts in CI/pipe | CLI hangs forever waiting for stdin | TTY guard + fail-fast with non-zero exit | First non-TTY usage |
+| Multi-step interactive flow (5+ steps) | User abandons workflow; repeated `synapse negotiate` runs | Every step must be skippable via `--yes` + sensible defaults | User expects quick answer |
+| Stub negotiation on first run | User sees meaningless schema, assumes tool is broken | Flag stub output prominently + guide to LLM key setup | First user interaction |
+| Many orphaned Schema Locks | `synapse lock list` shows 20+ locks with no context | Auto-save confirmation; periodic cleanup suggestion | After 5+ exploratory negotiate runs |
+| `process.stdout.write` suppression for hidden input | Password input breaks in VS Code terminal or tmux | Test hidden input in all target terminal environments | Non-standard terminal environments |
 
 ## Security Mistakes
 
 | Mistake | Risk | Prevention |
 |---------|------|------------|
-| Exposing API server URL in playground build | Users discover internal endpoints | Use Vite proxy with relative paths |
-| Storing API keys in playground state or localStorage | Key exfiltration via XSS | Playground should never handle API keys. Keys managed via `synapse vault`. |
-| Docs site leaking internal architecture | Competitors learn system boundaries | Review content before publication. Use user-facing names in URLs. |
-| Docusaurus build output containing source maps | Source maps expose TypeScript internals | Ensure production mode. Check `build/` for `.map` files. |
+| Exposing API key in interactive negotiation output | Key appears in terminal scrollback or CI logs | Always redact keys in output; confirm before showing any keys |
+| Printing LLM negotiation prompts to console | Sensitive user intent data in logs | Negotiation prompts are debug-level; never log to stdout in normal mode |
+| Interactive password input breaks in CI (no TTY) | User thinks they entered a key but it was not captured | TTY guard prevents non-TTY interactive input entirely |
+| Schema Lock files containing field mappings that leak internal logic | If `~/.synapse/` is committed to Git by accident | Add `~/.synapse/` to `.gitignore` in `synapse init`; warn in lock output |
+| Storing LLM key under the name `negotiator-llm` | Users may store their primary provider key here instead of the intended LLM key | Validate key prefix or format; suggest distinct provisioning |
 
 ## UX Pitfalls
 
 | Pitfall | User Impact | Better Approach |
 |---------|-------------|-----------------|
-| Playground loads empty with no explanation | User assumes the tool is broken | Show skeleton loaders and help text |
-| API connection failure is silent | User gets no feedback on failed fetch | Add connection indicator in StatusBar |
-| CodeMirror has no copy/paste affordances | User types JSON manually | Show placeholder: "Paste your Agent Schema here..." |
-| Docs search returns no results | User leaves, cannot find what they need | Configure Algolia DocSearch from day one (free for open source) |
-| Docs shows unversioned "latest" | User reads feature removed in current version | Use versioning for major releases. Show version badge. |
-| Playground tabs have no empty state | Blank white space | Each tab: "Run Negotiate to see formatted results" |
-| Responsive breakage at 1024-1440px | Content clipped or overlapping | Test at every common resolution. Implement spec's responsive rules. |
+| Interactive flow has no progress indicator | User does not know how many steps remain | Show "Step 2/4: Review fields" header |
+| Interactive flow requires typing JSON in a readline prompt | Error-prone; one syntax error and user must restart | Accept JSON from `--input` flag; use a file path; validate and retry |
+| `Ctrl+C` leaves CLI in inconsistent state (lock partially saved) | Partial writes; confusion on re-run | Handle SIGINT: cleanup partial state, print "Cancelled" message |
+| Interactive field editor shows raw type names (`string`, `enum`) | Non-technical users do not know what types mean | Show descriptive labels: "Text", "Choice from list", "Number" |
+| Help text says "press Enter to accept default" but some steps have no default | User stuck on a required prompt | Every step must have a sensible default or a clear "exit"/"skip" path |
+| `synapse negotiate` without any arguments enters interactive mode | Scripting user gets stuck | Without TTY: fail with "use --intent and --provider". With TTY: enter interactive mode. |
+| Interactive mode shows all providers when no provider selected | Overwhelming for 15+ installed packs | Filter by intent first, then show matching providers only |
 
 ## "Looks Done But Is Not" Checklist
 
-- [ ] **API reference generation**: TypeDoc + docusaurus-plugin-typedoc is NOT configured in `apps/docs/` -- verify typedoc plugins are devDependencies and configured
-- [ ] **Production API proxy**: Playground `vite.config.ts` has NO proxy configuration -- verify `/api` proxy is configured
-- [ ] **Responsive layout**: Playground has NO responsive behavior below 1440px -- verify spec layouts are implemented
-- [ ] **Context splitting**: AppState is still a single context -- verify it is split or profile-verified as non-bottleneck
-- [ ] **CodeMirror lazy-init**: Tab-based CodeMirror instances eagerly initialized -- verify lazy-init + destroy-on-hide
-- [ ] **Playground scope boundaries**: Non-goal features being added -- verify non-goals list is enforced in code review
-- [ ] **Docs build isolation**: Root `pnpm build` does NOT trigger Docusaurus build -- verify separate build script
-- [ ] **Tailwind in Docusaurus**: `apps/docs/` has tailwindcss as dependency -- verify Docusaurus uses Infima only
-- [ ] **CLI docs from source**: CLI examples are hand-written -- verify a mechanism keeps them in sync
-- [ ] **Code snippet validation**: TS code blocks not type-checked -- verify CI step or documented policy
+- [ ] **TTY detection**: No shared `isInteractive()` helper exists — verify one is created and used by every interactive prompt
+- [ ] **Command extraction**: `negotiate()` is still in `index.ts` — verify extracted to `src/commands/negotiate.ts` with `handleNegotiateCommand(argv)` and `printNegotiateHelp()`
+- [ ] **Stub detection**: No `llm_provider` or "deterministic stub" label in negotiate output — verify stub output is clearly flagged
+- [ ] **LLM key discovery**: No mention of `negotiator-llm` in interactive flow help — verify first-run detection and guided setup
+- [ ] **`--yes` flag**: No `--yes` flag exists for `synapse negotiate` — verify it exists and bypasses all confirmations
+- [ ] **`--dry-run` flag**: No `--dry-run` prevents lock auto-save — verify it exists for exploratory runs
+- [ ] **Help grouping**: CLI help still shows 20 commands in flat alphabetical list — verify grouped by category
+- [ ] **Lock diff preview**: No lock diff shown before overwrite — verify diff is displayed in interactive mode
+- [ ] **Auto-save confirmation**: Schema Lock auto-saved without asking in interactive mode — verify confirmation prompt exists
+- [ ] **Non-blocking flow**: Interactive flow has steps that block without defaults — verify every prompt has `[default]` and empty-Enter accepts default
+- [ ] **Ctrl+C handling**: SIGINT is unhandled in interactive mode — verify cleanup handler on interrupt
 
 ## Recovery Strategies
 
 | Pitfall | Recovery Cost | Recovery Steps |
 |---------|---------------|----------------|
-| Stale hand-written API docs | HIGH -- each package needs audit | 1. Implement TypeDoc. 2. Generate full output. 3. Replace hand-written pages. 4. Add CI gate. |
-| Production playground broken (localhost) | MEDIUM -- one file change | 1. Add Vite proxy. 2. Change api.ts to relative URLs. 3. Test production build. |
-| CodeMirror performance issues | HIGH -- may require state re-architecture | 1. Profile. 2. If re-render: split context. 3. If editor: lazy-init + destroy. |
-| Docusaurus v3 to v4 migration | MEDIUM -- 1-2 days planned | 1. Run migration tool. 2. Update config. 3. Regenerate TypeDoc. 4. Update CI. |
-| Playground scope creep | HIGH -- hard to remove features | 1. Feature audit. 2. Label core vs creep. 3. Move creep features to experimental. |
+| Interactive prompts hang in CI (no TTY guard) | LOW — add TTY guard to each prompt site | 1. Create `isInteractive()` helper. 2. Guard every `rl.question()` call. 3. Fail with actionable message + non-zero exit. |
+| Stub lock saved as real lock | LOW — detect and remove | 1. `synapse lock remove <id>`. 2. Configure LLM key. 3. Re-negotiate with `--no-cache`. |
+| Bad interactive field edit produced wrong lock | MEDIUM — need to revert | 1. `synapse lock list` to see recent locks. 2. `synapse lock show <previous-id>` to verify. 3. If no previous, re-negotiate. 4. Lock diff during negotiation would have prevented this. |
+| Orphaned lock accumulation | LOW — cleanup | 1. `synapse lock list` to audit. 2. `synapse lock remove <id>` for each unwanted lock. 3. Periodically: `rm -rf ~/.synapse/schemas/` and regenerate. |
+| User cannot find the right command | MEDIUM — restructure help | 1. Group help output. 2. Add cross-references between related commands. 3. Consider merging `sdk` into `evolve`. |
+| Interactive help text gone stale | MEDIUM — audit all strings | 1. Extract strings to shared definitions. 2. Add CI check: help text vs current flags. 3. Verify interactive flow references extracted, not inline, strings. |
 
 ## Pitfall-to-Phase Mapping
 
 | Pitfall | Prevention Phase | Verification |
 |---------|------------------|--------------|
-| P1: Bundler conflict (webpack vs Vite) | Phase 1 (docs scaffolding) | Root `pnpm build` does NOT include docs; docs has own `build:docs` script |
-| P2: API docs going stale | Phase 1 (docs scaffolding) | TypeDoc plugins installed and configured for at least `@synapse-router/core` |
-| P3: Docusaurus v4 migration pain | Phase 1 (architecture decision) | No custom webpack plugins, no swizzled components |
-| P4: CodeMirror multi-instance performance | Phase 2 (playground tab enhancement) | Read-only tabs use `<pre>` not CodeMirror; editors lazy-init |
-| P5: API endpoint hardcoding in production | Phase 1 (playground infrastructure) | `api.ts` uses relative `/api` prefix; proxy configured; production build tested |
-| P6: Docs code snippets out of sync | Phase 1 (docs content creation) | Snippet sourcing strategy documented; TypeDoc API reference separate |
-| P7: Context re-render cascade | Phase 2 (playground state management) | AppState context split or profile-verified under threshold |
-| P8: Playground scope creep | Phase 1 (requirements definition) | Non-goals enforced in code review; component cap set |
-| P9: Docs and playground competing | Phase 1 (milestone planning) | Two workstreams parallel, not sequential; different reviewers |
-| P10: Custom resizable panel edge cases | Phase 2 (playground layout) | Mouseleave, touch, overflow handled; or using library |
-| P11: Tailwind conflict with Infima | Phase 1 (docs scaffolding) | Docusaurus does NOT have tailwindcss dependency |
+| P1: No TTY detection | Phase 1 (scaffold) | `isInteractive()` helper exists; every interactive prompt guarded; CI tests with piped stdin |
+| P2: Monolithic index.ts | Phase 1 (scaffold) | `negotiate` function extracted to `src/commands/negotiate.ts`; shared pack discovery extracted |
+| P3: LLM stub output confusion | Phase 1 (scaffold) | Stub output is flagged; interactive flow guides LLM key setup; non-LLM fallback improved |
+| P4: Blocking non-skippable flow | Phase 1 (interactive flow design) | Every prompt has default; `--yes` bypasses all; `--dry-run` works; imperative path preserved |
+| P5: Command structure fragmentation | Phase 1 (help system) | Help grouped; cross-references between commands; negotiate as "hub" command |
+| P6: Negotiation memory as black hole | Phase 2 (memory integration) | Lock references session; `lock show` includes memory link; lock diffing exists |
+| P7: No preview/undo for field editing | Phase 2 (field customization) | `diffLocks` utility exists; diff preview shown; save confirmation with changes summary |
+| P8: `negotiator-llm` key discovery failure | Phase 1 (LLM key discovery) | Interactive flow detects missing key; offers to configure; multiple key sourcing paths |
+| P9: Stale interactive help text | Phase 2 (help consolidation) | Help strings extracted to shared definitions; help sources verified against flag set |
+| P10: Silent auto-save of locks | Phase 1 (auto-save control) | `--dry-run` flag exists; save confirmation in interactive mode; `--no-save` flag exists |
 
 ## Sources
 
-- **Docusaurus v3.10.x official documentation**: `https://docusaurus.io/docs/installation` -- Installation guide, monorepo notes, React prerequisites. v3.7.0+ supports React 19. (HIGH confidence)
-- **Docusaurus v4 umbrella issue**: `https://github.com/facebook/docusaurus/issues/11719` -- slorber's v4 planning. Filed Feb 2026. (HIGH confidence)
-- **Docusaurus React 19 support**: v3.7.0 release (2025-01-03): "feat: Add React 19 support to Docusaurus v3." (HIGH confidence)
-- **docusaurus-plugin-typedoc**: `https://typedoc-plugin-markdown.org/plugins/docusaurus` -- TypeDoc + Docusaurus integration for generated API docs. (MEDIUM confidence -- from README)
-- **Codebase analysis -- current playground**: `apps/playground/src/` -- 15 components, single context, custom panels, CodeMirror. (HIGH confidence)
-- **Codebase analysis -- API client**: `apps/playground/src/lib/api.ts` -- Hardcoded `localhost:3000`. (HIGH confidence)
-- **Playground UI spec**: `knowledge/05-UIUX设计/playground-ui-spec.md` -- Design spec v0.1.0. (HIGH confidence)
-- **Docusaurus versioning pitfalls**: `https://docusaurus.io/docs/versioning` -- Avoid unless necessary; <10 versions recommended. (HIGH confidence)
-- **Docusaurus deployment pitfalls**: `https://docusaurus.io/docs/deployment` -- Netlify Pretty URLs, GitHub Pages `.nojekyll`. (HIGH confidence)
-- **Docusaurus search**: `https://docusaurus.io/docs/search` -- Algolia DocSearch recommended; common index issues. (HIGH confidence)
-- **Docusaurus i18n**: `https://docusaurus.io/docs/i18n/introduction` -- Designed to be added later. (HIGH confidence)
+- **clig.dev — Command Line Interface Guidelines**: https://clig.dev -- Industry-standard CLI design principles. (HIGH confidence)
+- **PatternFly CLI Handbook**: https://www.patternfly.org/developer-resources/cli-handbook/ -- Accessibility and UX patterns for CLI tools. (HIGH confidence)
+- **10 Agent-Friendly CLI Design Principles (Eric Zakariasson, Cursor)**: https://en.theblockbeats.news/flash/338249 -- Eliminate interactive prompts for AI agents; prefer flag-passing; fail fast with actionable errors. (HIGH confidence)
+- **dotnet/dev-proxy TTY detection fix**: https://github.com/dotnet/dev-proxy/issues/1536 -- Interactive prompts hanging CI when no TTY detected. (LOW confidence -- single source, but matches multiple project patterns)
+- **openclaw/crestodian non-TTY exit code bug**: https://github.com/openclaw/openclaw/issues/73646 -- Exiting with code 0 on non-TTY error, breaking CI pipelines. (MEDIUM confidence -- verified via PR #74059 fix)
+- **git-std TTY detection**: https://github.com/driftsys/git-std/issues/201 -- Guard interactive prompts with TTY check; fail with actionable error messages. (MEDIUM confidence)
+- **proofkit CI env var detection**: https://github.com/proofsh/proofkit/issues/185 -- Combined TTY + CI env var detection for robust interactive mode determination. (MEDIUM confidence)
+- **Codebase analysis -- current CLI**: `apps/cli/src/index.ts` (1248 lines), `apps/cli/src/commands/connect.ts` (795 lines, readline interactive patterns), `apps/cli/src/commands/setup.ts` (313 lines, readline + hidden input patterns), `apps/cli/src/commands/pack.ts` (existing `--yes` flag), `apps/cli/src/index.test.ts` (253 lines, no TTY tests). (HIGH confidence)
+- **Codebase analysis -- negotiator stub**: `packages/negotiator/src/index.ts` -- `createDefaultLLMClient()` returns stub `{ name: "negotiated-schema", fields: [{ name: "input", type: "string", required: true }] }`. (HIGH confidence)
+- **Codebase analysis -- negotiate function**: `apps/cli/src/index.ts` lines 678-986 -- 308-line function with flag parsing, pack discovery, LLM key loading, pipeline execution, formatted output, lock auto-save, and error handling. (HIGH confidence)
+- **Node.js readline pitfalls**: `node:readline` keeps the process alive; `createInterface` creates a duplex stream; must call `rl.close()`. (HIGH confidence -- Node.js documentation)
+- **Bun readline close bug**: https://github.com/oven-sh/bun/issues/3604 -- `rl.close()` may not properly terminate the stream in Bun. (MEDIUM confidence)
+- **Breakdown of TTY detection in pseudo-TTY environments (VS Code, AI agents)**: https://github.com/anthropics/claude-code/issues/13528 -- VS Code integrated terminal has pseudo-TTY limitations. (MEDIUM confidence)
 
 ---
-*Pitfalls research for: Docusaurus documentation site (apps/docs/) + Playground UI upgrade (apps/playground/) -- v4.0 Documentation & Playground milestone*
-*Researched: 2026-05-21*
+*Pitfalls research for: v5.0 Interactive Negotiation & Experience Optimization -- adding interactive Schema negotiation flow, command simplification, and streamlined user journey*
+*Researched: 2026-05-25*

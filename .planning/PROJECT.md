@@ -14,14 +14,14 @@
 
 **"开发时协商，运行时无感"** — 协商阶段可以复杂、可以调用 LLM、可以探索，因为它是离线的、一次性的。运行时只有纯代码逻辑的 SDK，确定性、零 Token 成本、零 LLM 意外。
 
-## Current Milestone: v4.0 Documentation & Playground
+## Current Milestone: v5.0 交互式协商与体验优化
 
-**Goal:** 为开发者提供完整的文档站点和用户测试验证站点，提升开发者体验和项目可发现性。
+**Goal:** 让 `synapse negotiate` 成为真正的交互式协商工具，用户参与协定输入输出格式；精简命令体系，降低使用成本；更新文档站点和 Playground。
 
-**Target features:**
-- `apps/docs/` — VitePress/Docusaurus 文档站点，覆盖 CLI 参考、Schema 协商、Provider 路由、Billing 集成
-- `apps/playground/` 增强 — 从基础调试界面升级为用户测试验证站点
-- 文档与代码版本绑定，CI/CD 自动构建发布
+**用户旅程：**
+1. **安装包** → 安装成功后提示可运行协商命令
+2. **协商命令** → 交互式流程：展示同一 intent 的输入输出格式，标明必须字段，用户自定义增减字段，完成后提示下一步（connect 测试 / 生成零依赖 SDK / @synapse-router/sdk 接入）
+3. **使用 SDK** → 生成的零依赖 SDK 包或 @synapse-router/sdk 接入示例
 
 ## Requirements
 

@@ -8,7 +8,8 @@
 - ✅ **v2.0 Offline Evolution** — Phases 6-7 (shipped)
 - ✅ **v2.1 Billing Integration** — Phases 8-10 (shipped 2026-05-19)
 - ✅ **v3.0 AI Agent Skill Distribution** — Phases 11-12 (shipped 2026-05-21)
-- 📋 **v4.0 Documentation & Playground** — Phases 13-15 (planned)
+- 📋 **v4.0 Documentation & Playground** — Phases 13-16 (in progress)
+- 📋 **v5.0 交互式协商与体验优化** — Phases 17-20 (planned)
 
 ## Phase Details
 
@@ -181,9 +182,64 @@ Plans:
   5. `--no-cache` 跳过缓存强制重新协商
 **Plans**: TBD
 
+### Phase 17: CLI Infrastructure
+**Goal**: CLI command infrastructure is extracted and shared, interactive prompt utilities exist independently of index.ts
+**Depends on**: Phase 16 (Negotiator CLI Integration provides the negotiate pipeline before adding interactive flow)
+**Requirements**: CLI-INFRA-01, CLI-INFRA-02, CLI-INFRA-03, CLI-INFRA-04, CLI-INFRA-05, CLI-INFRA-06
+**Success Criteria** (what must be TRUE):
+  1. `negotiate()` extracted from `apps/cli/src/index.ts` to `apps/cli/src/commands/negotiate.ts` following existing command pattern
+  2. `apps/cli/src/utils/prompts.ts` exists with `@inquirer/prompts` wrappers for all prompt types
+  3. `apps/cli/src/utils/tty.ts` exists with `isInteractive()` checking stdin/stdout TTY + CI env vars + `--no-interactive` flag
+  4. CLI supports `--yes` (skip all prompts), `--dry-run` (preview no save), `--no-save` (don't save Lock) global flags
+  5. `findPacksDir()` and `loadProviderCard()` extracted from index.ts to shared utility
+  6. `setup.ts`, `connect.ts`, `billing.ts` migrated from local prompt calls to shared `utils/prompts.ts`
+  7. All existing tests pass without modification
+**Plans**: TBD
+
+### Phase 18: Interactive Negotiation
+**Goal**: Developers can run `synapse negotiate` interactively to review schemas, customize fields, and route post-negotiation
+**Depends on**: Phase 17 (shared prompts and TTY detection required for interactive flow)
+**Requirements**: NEGO-01, NEGO-02, NEGO-03, NEGO-04, NEGO-05, NEGO-06, NEGO-07, NEGO-08, NEGO-09, NEGO-10
+**Success Criteria** (what must be TRUE):
+  1. `synapse negotiate` (no flags) starts interactive flow: select intent -> select provider -> review schema -> confirm
+  2. Input/output schema fields displayed with required/optional marking and field constraints
+  3. User can toggle optional fields on/off with multi-select prompt, supporting batch operations
+  4. LLM API Key discovered from vault/config/env before negotiation; if no key found, user guided to configure one
+  5. Stub output clearly marked when using deterministic stub (no LLM key) with visible warning
+  6. Lock diff preview shown before save, comparing new Lock with existing Lock (if any)
+  7. Post-negotiation menu offers: test connect / generate SDK / view @synapse-router/sdk integration / exit
+  8. `--intent X --provider Y` (non-interactive mode) preserves existing behavior unchanged
+  9. SIGINT/SIGTERM handled gracefully: partial state cleaned up, no orphan Lock files
+  10. Prompts classified as required/recommended/contextual/confirmation; Enter accepts default value
+**Plans**: TBD
+
+### Phase 19: Command Simplification
+**Goal**: CLI help output is organized, command duplication is reduced, help text is shared with docs site
+**Depends on**: Nothing (can be done independently)
+**Requirements**: CMD-01, CMD-02, CMD-03
+**Success Criteria** (what must be TRUE):
+  1. `--help` output organized into 5 categories: Getting Started, Core Workflow, Provider Management, Configuration, Advanced
+  2. Command merging feasibility evaluated and documented for: provider->pack, smoke->connect, init->setup, profile->config, export/import->config
+  3. Help text definitions extracted to shared location that stays in sync with docs site
+**Plans**: TBD
+
+### Phase 20: Docs + Playground Updates
+**Goal**: Documentation is updated for v5.0 changes, Playground has SDK preview and schema presets
+**Depends on**: Phase 18 (negotiate interactive flow must exist before documenting it), Phase 19 (command simplification must be final before updating CLI reference)
+**Requirements**: DOCS-01, DOCS-02, DOCS-03, PLAY-06, PLAY-07, PLAY-08
+**Success Criteria** (what must be TRUE):
+  1. `negotiate` command doc updated with interactive negotiation flow description
+  2. "User Journey" doc created: install -> negotiate -> connect/evolve/sdk integration
+  3. CLI command reference updated to reflect any command simplifications from Phase 19
+  4. Playground auto-preview shows generated SDK code when Schema changes (debounced)
+  5. Playground has 3 built-in schema presets (Chat, Text-to-Image, Embedding) + localStorage custom presets
+  6. Playground shows estimated billing cost for current Schema
+**Plans**: TBD
+**UI hint**: yes
+
 ## Progress
 
-**Execution Order:** Phase 1 -> Phase 2 -> Phase 3 -> Phase 4 -> Phase 5 -> Phase 6 -> Phase 7 -> Phase 8 -> Phase 9 -> Phase 10 -> Phase 11 -> Phase 12 -> Phase 13 -> Phase 14 -> Phase 15 -> Phase 16
+**Execution Order:** Phase 1 -> Phase 2 -> Phase 3 -> Phase 4 -> Phase 5 -> Phase 6 -> Phase 7 -> Phase 8 -> Phase 9 -> Phase 10 -> Phase 11 -> Phase 12 -> Phase 13 -> Phase 14 -> Phase 15 -> Phase 16 -> Phase 17 -> Phase 18 -> Phase 19 -> Phase 20
 
 | Phase | Milestone | Plans Complete | Status | Completed |
 |-------|-----------|----------------|--------|-----------|
@@ -202,7 +258,11 @@ Plans:
 | 13. Docs Scaffold + Playground Infra | v4.0 | 0/0 | Planned | - |
 | 14. Documentation Site Content | v4.0 | 0/0 | Planned | - |
 | 15. Playground Core UI Upgrade | v4.0 | 0/2 | Planned | - |
-| 16. Negotiator CLI Integration | v4.0 | 1/1 | Complete    | 2026-05-25 |
+| 16. Negotiator CLI Integration | v4.0 | 1/1 | Complete | 2026-05-25 |
+| 17. CLI Infrastructure | v5.0 | 0/0 | Planned | - |
+| 18. Interactive Negotiation | v5.0 | 0/0 | Planned | - |
+| 19. Command Simplification | v5.0 | 0/0 | Planned | - |
+| 20. Docs + Playground Updates | v5.0 | 0/0 | Planned | - |
 
 ## Post-Roadmap Enhancement: Router Package Rewrite (2026-05-09)
 
