@@ -4,7 +4,7 @@
 import { readdir, readFile, writeFile, mkdir } from "node:fs/promises";
 import { join, dirname } from "node:path";
 import { homedir } from "node:os";
-import { fileURLToPath } from "node:url";
+import { findPacksDir, loadProviderCard, USER_PACKS_DIR, LOCAL_PACKS_DIR } from "./utils/packs.js";
 import { createVault } from "@synapse-router/vault";
 import { loadMergedConfig, saveGlobalConfig } from "./utils/config.js";
 import { handleGenerateCommand } from "./commands/generate.js";
@@ -26,7 +26,6 @@ import { getOrCreateLock } from "@synapse-router/lock";
 import { negotiateAndVerify, matchManifest, loadManifestFromPack } from "@synapse-router/negotiator";
 import type { NegotiateAndVerifyInput, NegotiationResult } from "@synapse-router/negotiator";
 import type { ContractVerificationError } from "@synapse-router/negotiator";
-import type { ProviderCard } from "@synapse-router/core";
 import { createRegistryClient } from "@synapse-router/registry-client";
 import { readFileSync, existsSync } from "node:fs";
 
@@ -290,66 +289,6 @@ See also:
   synapse provider list   — List available providers
   synapse connect         — Connect to a provider
 `);
-}
-
-// ---------------------------------------------------------------------------
-// Packs directory
-// ---------------------------------------------------------------------------
-
-async function findPacksDir(): Promise<string> {
-  const dir = fileURLToPath(import.meta.url); // file://...
-  const absolutePath = dir;
-  if (absolutePath.includes("/dist/")) {
-    return join(dirname(dirname(dirname(dirname(absolutePath)))), "packs"); // 4 levels up from dist/index.js
-  } else {
-    return join(dirname(dirname(dirname(absolutePath))), "packs"); // 3 levels up from src/index.ts
-  }
-}
-
-const USER_PACKS_DIR = join(homedir(), ".synapse", "packs");
-const LOCAL_PACKS_DIR = () => join(process.cwd(), ".synapse", "packs");
-
-async function loadProviderCard(
-  packsDir: string, providerId: string
-): Promise<{ card: ProviderCard; dir: string } | null> {
-  // Search priority: built-in packs/ > local .synapse/packs/ > ~/.synapse/packs/
-  for (const dir of [packsDir, LOCAL_PACKS_DIR(), USER_PACKS_DIR]) {
-    // Try namespaced format: "aliyun/qwen-image" → dir/aliyun__qwen-image/
-    if (providerId.includes("/")) {
-      const nsDirName = providerId.replace("/", "__");
-      const cardPath = join(dir, nsDirName, "provider-card.json");
-      try {
-        const content = await readFile(cardPath, "utf8");
-        return { card: JSON.parse(content) as ProviderCard, dir };
-      } catch { /* try flat fallback */ }
-    }
-    // Fallback: flat format (built-in packs or pre-namespaced installs)
-    const flatName = providerId.includes("/") ? providerId.split("/")[1] : providerId;
-    const cardPath = join(dir, flatName, "provider-card.json");
-    try {
-      const content = await readFile(cardPath, "utf8");
-      return { card: JSON.parse(content) as ProviderCard, dir };
-    } catch {
-      // Flat name not found, try scanning all subdirectories by provider.id
-      // (handles registry-installed packs with compound dir names like aliyun__qwen-image-edit)
-    }
-
-    // Scan all subdirectories for a provider-card.json with matching provider.id
-    try {
-      const entries = await readdir(dir, { withFileTypes: true });
-      for (const entry of entries) {
-        if (!entry.isDirectory() || entry.name.startsWith(".")) continue;
-        try {
-          const cardContent = await readFile(join(dir, entry.name, "provider-card.json"), "utf8");
-          const parsed = JSON.parse(cardContent) as ProviderCard;
-          if (parsed.provider?.id === providerId) {
-            return { card: parsed, dir: join(dir, entry.name) };
-          }
-        } catch { /* not a valid pack directory */ }
-      }
-    } catch { /* directory doesn't exist, try next source */ }
-  }
-  return null;
 }
 
 // ---------------------------------------------------------------------------
