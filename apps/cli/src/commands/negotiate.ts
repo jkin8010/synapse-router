@@ -12,7 +12,7 @@ import type { ProviderCard } from "@synapse-router/core";
 import { getOrCreateLock } from "@synapse-router/lock";
 import { findPacksDir, loadProviderCard, USER_PACKS_DIR, LOCAL_PACKS_DIR } from "../utils/packs.js";
 import { isInteractive } from "../utils/tty.js";
-import { promptSearch, promptSelect } from "../utils/prompts.js";
+import { promptSearch, promptSelect, promptCheckbox } from "../utils/prompts.js";
 import pc from "picocolors";
 
 // ---------------------------------------------------------------------------
@@ -111,6 +111,55 @@ async function collectProvidersForIntent(
   return providers;
 }
 
+// ---------------------------------------------------------------------------
+// Schema display and field selection helpers
+// ---------------------------------------------------------------------------
+
+/** Display feature input/output schema with picocolors formatting */
+function displayFeatureSchema(feature: any): void {
+  console.log(pc.bold(pc.cyan("\n  Feature: " + (feature.name ?? feature.id))));
+  console.log(pc.dim("  " + ((feature as any).description ?? "No description")));
+
+  // Input fields
+  console.log(pc.bold("\n  Input Fields (" + feature.input.fields.length + "):"));
+  for (const f of feature.input.fields) {
+    const marker = f.required ? pc.green("  [required]") : pc.yellow("  [optional]");
+    const typeInfo = pc.dim(" : " + f.type);
+    const enumInfo = (f as any).enum?.length ? pc.dim(" {" + (f as any).enum.join("|") + "}") : "";
+    console.log("    " + pc.bold(f.name) + typeInfo + " " + marker + enumInfo);
+  }
+
+  // Output fields
+  console.log(pc.bold("\n  Output Fields (" + feature.output.fields.length + "):"));
+  for (const f of feature.output.fields) {
+    console.log("    " + pc.bold(f.name) + pc.dim(" : " + f.type));
+  }
+}
+
+/** Build checkbox choices from feature input fields */
+function buildFieldChoices(feature: any): any[] {
+  return feature.input.fields.map((f: any) => ({
+    name: `${f.name} : ${f.type}${f.required ? " (required)" : ""}`,
+    value: f.name,
+    checked: true,
+    disabled: f.required || false,
+  }));
+}
+
+/**
+ * Show full schema table, then prompt user to select/deselect optional fields.
+ * Required fields are locked (checked + disabled).
+ */
+async function promptFieldSelection(feature: any): Promise<string[]> {
+  displayFeatureSchema(feature);
+  const choices = buildFieldChoices(feature);
+  return promptCheckbox(
+    pc.bold("Select input fields to include (required fields are locked):"),
+    choices,
+    { pageSize: 15 },
+  );
+}
+
 /** Full interactive intent + provider selection flow */
 async function runInteractiveNegotiation(
   packsDir: string,
@@ -196,6 +245,11 @@ async function runInteractiveNegotiation(
 
   // Step 5: Transition marker
   console.log(pc.dim(`\n  Provider: ${selectedProvider}  Intent: ${selectedIntent}\n`));
+
+  // ── Step 6: Schema display + field selection ────────────────────────
+  console.log(pc.bold(pc.cyan("\n  Step 2: Review Schema & Select Fields\n")));
+  const selectedFields = await promptFieldSelection(feature);
+  console.log(pc.dim("\n  Selected " + selectedFields.length + " field(s)\n"));
 }
 
 // ---------------------------------------------------------------------------

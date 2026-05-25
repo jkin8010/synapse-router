@@ -111,10 +111,15 @@ export async function promptCheckbox<T = string>(
 
   const { checkbox } = await import("@inquirer/prompts");
 
-  const checkedChoices = choices.map((c) => ({
-    ...c,
-    checked: opts?.defaults?.includes(c.value) ?? false,
-  }));
+  const checkedChoices = choices.map((c) => {
+    const choice = { ...c } as any;
+    if (opts?.defaults !== undefined) {
+      choice.checked = opts.defaults.includes(c.value);
+    } else if (choice.checked === undefined) {
+      choice.checked = false;
+    }
+    return choice;
+  });
 
   return checkbox<T>({
     message,
