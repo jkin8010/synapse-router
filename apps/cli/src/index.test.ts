@@ -121,6 +121,23 @@ describe("smoke → connect --smoke redirect", () => {
 });
 
 // ---------------------------------------------------------------------------
+// Init → setup redirect (Task 2: 19-02)
+// ---------------------------------------------------------------------------
+
+describe("init → setup redirect", () => {
+  it("synapse init --help shows deprecation notice", () => {
+    const result = runCli(["init", "--help"]);
+    assert.ok(result.stdout.includes("merged into"), `should show merge notice, got stdout: ${result.stdout}`);
+    assert.strictEqual(result.code, 0);
+  });
+
+  it("synapse init shows deprecation warning on stderr", () => {
+    const result = runCli(["init"]);
+    assert.ok(result.stderr.includes("merged into"), `stderr should contain deprecation warning, got: ${result.stderr}`);
+  });
+});
+
+// ---------------------------------------------------------------------------
 // Version
 // ---------------------------------------------------------------------------
 

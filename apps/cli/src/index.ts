@@ -632,9 +632,10 @@ async function main(): Promise<void> {
         break;
       case "init":
         if (flags.has("help") || args.includes("--help") || args.includes("-h")) {
-          printInitHelp();
+          console.log(HELP_INIT);
         } else {
-          await handleInitCommand(rawArgs);
+          console.error("Note: `synapse init` has been merged into `synapse setup`. Use that instead.");
+          await handleSetupCommand(rawArgs);
         }
         break;
       case "watchdog":
