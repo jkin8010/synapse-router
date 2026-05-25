@@ -21,3 +21,5 @@ test-dependency*
 packages/install-skill/skills/
 .synapse/
 synapse-sdk/
+synapse.json
+synapse-data.tgz
