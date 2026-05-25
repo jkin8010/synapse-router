@@ -12,7 +12,7 @@ import type { ProviderCard } from "@synapse-router/core";
 import { getOrCreateLock } from "@synapse-router/lock";
 import { findPacksDir, loadProviderCard, USER_PACKS_DIR, LOCAL_PACKS_DIR } from "../utils/packs.js";
 import { isInteractive } from "../utils/tty.js";
-import { promptSearch, promptSelect, promptCheckbox } from "../utils/prompts.js";
+import { promptSearch, promptSelect, promptCheckbox, promptConfirm } from "../utils/prompts.js";
 import pc from "picocolors";
 
 // ---------------------------------------------------------------------------
@@ -250,6 +250,209 @@ async function runInteractiveNegotiation(
   console.log(pc.bold(pc.cyan("\n  Step 2: Review Schema & Select Fields\n")));
   const selectedFields = await promptFieldSelection(feature);
   console.log(pc.dim("\n  Selected " + selectedFields.length + " field(s)\n"));
+
+  // ── Step 7: LLM Key Detection ──────────────────────────────────────
+  let llmApiKey: string | undefined;
+
+  // Check vault first (key name: "negotiator-llm")
+  try {
+    const vault = createVault({ vaultDir: join(homedir(), ".synapse", "keys") });
+    llmApiKey = (await vault.getKey("negotiator-llm")) ?? undefined;
+  } catch {
+    // Vault not initialized
+  }
+
+  // Fall back to env var
+  if (!llmApiKey) {
+    llmApiKey = process.env.OPENAI_API_KEY || undefined;
+  }
+
+  // Fall back to config
+  const mergedConfig = await loadMergedConfig();
+  if (!llmApiKey) {
+    llmApiKey = (mergedConfig as any).negotiator?.apiKey as string | undefined;
+  }
+
+  if (!llmApiKey) {
+    console.log(pc.bold(pc.yellow("\n  ⚠  No LLM API Key configured for negotiation.")));
+    console.log(pc.dim("  Without an LLM key, the schema will be generated using a deterministic stub."));
+    console.log(pc.dim("  This produces a generic placeholder, not a real negotiation result."));
+    console.log("");
+    console.log(pc.cyan("  To configure an LLM key:"));
+    console.log(pc.dim("    synapse vault set negotiator-llm <your-api-key>"));
+    console.log(pc.dim("  Or set: export OPENAI_API_KEY=<your-key>"));
+    console.log("");
+
+    const continueStub = await promptConfirm("Continue with deterministic stub?", { defaultVal: true });
+    if (!continueStub) {
+      console.log(pc.dim("\n  Negotiation cancelled.\n"));
+      process.exit(0);
+    }
+  }
+
+  // ── Step 8: Build negotiateAndVerify input ─────────────────────────
+  const input: NegotiateAndVerifyInput = {
+    task: (feature as any).description ?? `Execute ${selectedIntent} for ${selectedProvider}`,
+    goal: `Provide ${selectedIntent} functionality via ${selectedProvider}`,
+    constraints: { selectedFields },
+    providerId: selectedProvider,
+    packDir: found.dir,
+    llmOptions: llmApiKey ? {
+      apiKey: llmApiKey,
+      model: (mergedConfig as any).negotiator?.model as string | undefined,
+      baseUrl: (mergedConfig as any).negotiator?.baseUrl as string | undefined,
+    } : undefined,
+  };
+
+  // ── Step 9: Run negotiation pipeline ───────────────────────────────
+  console.log(pc.dim("\n  Running negotiation pipeline...\n"));
+  let result: NegotiationResult;
+  try {
+    result = await negotiateAndVerify(input);
+  } catch (err: unknown) {
+    // Handle ContractVerificationError with structured output
+    if (err && typeof err === "object" && "status" in err && "suggestions" in err) {
+      const cvErr = err as ContractVerificationError;
+      console.error(`Negotiation failed: ${cvErr.status}`);
+      if (cvErr.manifest_diff) {
+        console.error(`  Missing fields:    ${cvErr.manifest_diff.missing.join(", ") || "none"}`);
+        console.error(`  Extra fields:      ${cvErr.manifest_diff.extra.join(", ") || "none"}`);
+        if (cvErr.manifest_diff.type_mismatch.length > 0) {
+          for (const tm of cvErr.manifest_diff.type_mismatch) {
+            console.error(`  Type mismatch:     ${tm.field} (expected ${tm.expected}, got ${tm.actual})`);
+          }
+        }
+      }
+      if (cvErr.mock_result?.error_message) {
+        console.error(`  Mock test error:   ${cvErr.mock_result.error_message}`);
+      }
+      if (typeof cvErr.retries === "number") {
+        console.error(`  Retries:           ${cvErr.retries}`);
+      }
+      if (cvErr.suggestions.length > 0) {
+        console.error(`  Suggestions:       ${cvErr.suggestions.join("; ")}`);
+      }
+    } else {
+      const msg = err instanceof Error ? err.message : String(err ?? "Unknown error");
+      console.error(`Error: ${msg}`);
+    }
+    process.exit(1);
+  }
+
+  // ── Step 10: Display results ───────────────────────────────────────
+  await displayNegotiationResultDetails(result, feature, card, found.dir);
+
+  // Stub warning detection
+  if (
+    !llmApiKey &&
+    result.schema.fields.length === 1 &&
+    result.schema.fields[0].name === "input" &&
+    result.schema.fields[0].type === "string"
+  ) {
+    console.log(pc.bold(pc.yellow("\n  ⚠  Negotiation used deterministic stub (no LLM key configured).")));
+    console.log(pc.yellow("  The resulting schema is a generic placeholder, not a real negotiation."));
+    console.log(pc.yellow("  To get a meaningful AI-generated schema, configure an LLM key."));
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Negotiation result display helper
+// ---------------------------------------------------------------------------
+
+/** Display full negotiation results in 5 sections matching non-interactive format */
+async function displayNegotiationResultDetails(
+  result: NegotiationResult,
+  feature: any,
+  card: any,
+  providerPackDir: string,
+): Promise<void> {
+  // 1. Provider Feature
+  console.log(pc.bold(pc.cyan("\n  Provider Feature")));
+  console.log(`    Feature:     ${feature.name ?? feature.id}`);
+  console.log(`    Description: ${(feature as any).description ?? "-"}`);
+  console.log(`\n    Input fields (${feature.input.fields.length}):`);
+  for (const f of feature.input.fields) {
+    const req = f.required ? " (required)" : "";
+    const enumInfo = (f as any).enum?.length ? ` [${(f as any).enum.join(", ")}]` : "";
+    console.log(`      - ${f.name}: ${f.type}${req}${enumInfo}`);
+  }
+  console.log(`    Output fields (${feature.output.fields.length}):`);
+  for (const f of feature.output.fields) {
+    console.log(`      - ${f.name}: ${f.type}`);
+  }
+
+  // 2. Negotiated Schema
+  console.log(pc.bold(pc.cyan("\n  Negotiated Schema")));
+  console.log(`    Schema ID:   ${result.schema_id}`);
+  console.log(`    Name:        ${result.schema.name}`);
+  console.log(`    Fields:      ${result.schema.fields.length}`);
+  for (const field of result.schema.fields) {
+    const req = field.required ? " (required)" : "";
+    const enumInfo = field.type === "enum" && field.enumValues ? ` [${field.enumValues.join(", ")}]` : "";
+    console.log(`      - ${field.name}: ${field.type}${req}${enumInfo}`);
+  }
+  if (result.sdk_code) {
+    console.log(`    SDK code:     generated (${result.sdk_code.split("\n").length} lines)`);
+  }
+
+  // 3. Manifest Match (best-effort)
+  try {
+    const manifestConstraints = await loadManifestFromPack(providerPackDir);
+    const merged = manifestConstraints.reduce((acc: any, c: any) => {
+      if (c.required) acc.required = [...new Set([...(acc.required ?? []), ...c.required])];
+      if (c.type) acc.type = { ...(acc.type ?? {}), ...c.type };
+      return acc;
+    }, {});
+    if (Object.keys(merged).length > 0) {
+      const manifestMatch = matchManifest(result.schema, merged);
+      console.log(pc.bold(pc.cyan("\n  Manifest Match")));
+      console.log(`    Status:      ${manifestMatch.valid ? "passed" : "adapted"}`);
+      if (manifestMatch.missing.length > 0) {
+        console.log(`    Missing:     ${manifestMatch.missing.join(", ")}`);
+      }
+      if (manifestMatch.extra.length > 0) {
+        console.log(`    Extra:       ${manifestMatch.extra.join(", ")}`);
+      }
+      if (manifestMatch.type_mismatch.length > 0) {
+        for (const tm of manifestMatch.type_mismatch) {
+          console.log(`    Type:        ${tm.field}: expected ${tm.expected}, got ${tm.actual}`);
+        }
+      }
+    }
+  } catch { /* manifest matching is best-effort */ }
+
+  // 4. Field Mappings
+  console.log(pc.bold(pc.cyan("\n  Field Mappings")));
+  console.log(`    Count:       ${feature.field_mappings.length}`);
+  for (const fm of feature.field_mappings) {
+    const req = fm.required ? " (required)" : "";
+    const xfrm = fm.transform ? ` => transform: ${fm.transform}` : "";
+    const fb = fm.fallback !== undefined ? ` ⤷ ${JSON.stringify(fm.fallback)}` : "";
+    console.log(`    ${fm.canonical_field} ⇄ ${fm.provider_field}${req}${xfrm}${fb}`);
+  }
+
+  // 5. Example I/O
+  const exampleBody: Record<string, unknown> = {};
+  for (const fm of feature.field_mappings) {
+    if (!fm.provider_field) continue;
+    const fdef = feature.input.fields.find((f: any) => f.name === fm.provider_field);
+    exampleBody[fm.provider_field] = exampleValue(fdef ?? fm, fm);
+  }
+  const exampleOutput: Record<string, unknown> = {};
+  for (const f of feature.output.fields) {
+    exampleOutput[f.name] = exampleValue(f, null);
+  }
+  if (Object.keys(exampleBody).length > 0 || Object.keys(exampleOutput).length > 0) {
+    console.log(pc.bold(pc.cyan("\n  Example I/O")));
+    if (Object.keys(exampleBody).length > 0) {
+      console.log(`    POST ${(card as any).service?.base_url ?? "/api/v1/"}  (input example)`);
+      console.log(`    ${JSON.stringify(exampleBody, null, 4).split("\n").join("\n    ")}`);
+    }
+    if (Object.keys(exampleOutput).length > 0) {
+      console.log(`    Response (output example):`);
+      console.log(`    ${JSON.stringify(exampleOutput, null, 4).split("\n").join("\n    ")}`);
+    }
+  }
 }
 
 // ---------------------------------------------------------------------------
