@@ -121,8 +121,6 @@ async function findBuiltinPacksDir(): Promise<string | null> {
 }
 
 async function loadProviderCard(providerId: string): Promise<ProviderCard | null> {
-  const dirName = providerId.includes("/") ? providerId.replace("/", "__") : providerId;
-
   // Search all pack sources, local takes priority
   const searchDirs: string[] = [];
   const builtin = await findBuiltinPacksDir();
@@ -132,10 +130,17 @@ async function loadProviderCard(providerId: string): Promise<ProviderCard | null
 
   for (const dir of searchDirs.reverse()) {
     try {
-      const cardPath = join(dir, dirName, "provider-card.json");
-      const content = await readFile(cardPath, "utf8");
-      return JSON.parse(content) as ProviderCard;
-    } catch { /* try next */ }
+      const entries = await readdir(dir, { withFileTypes: true });
+      for (const entry of entries) {
+        if (!entry.isDirectory() || entry.name.startsWith(".")) continue;
+        const cardPath = join(dir, entry.name, "provider-card.json");
+        try {
+          const content = await readFile(cardPath, "utf8");
+          const card = JSON.parse(content) as ProviderCard;
+          if (card?.provider?.id === providerId) return card;
+        } catch { /* skip */ }
+      }
+    } catch { /* dir not found */ }
   }
   return null;
 }
