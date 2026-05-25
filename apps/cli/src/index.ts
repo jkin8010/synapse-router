@@ -7,6 +7,10 @@ import { homedir } from "node:os";
 import { findPacksDir, loadProviderCard, USER_PACKS_DIR, LOCAL_PACKS_DIR } from "./utils/packs.js";
 import { createVault } from "@synapse-router/vault";
 import { loadMergedConfig, saveGlobalConfig } from "./utils/config.js";
+import {
+  HELP_BANNER, GROUP_CORE, GROUP_CONFIG, GROUP_ADVANCED,
+  CORE_COMMANDS, CONFIG_COMMANDS, ADVANCED_COMMANDS,
+} from "./utils/help.js";
 import { handleGenerateCommand } from "./commands/generate.js";
 import { handleConnectCommand, printConnectHelp } from "./commands/connect.js";
 import { handleSmokeCommand, printSmokeHelp } from "./commands/smoke.js";
@@ -100,32 +104,19 @@ function parseArgs(argv: string[]): ParsedArgs {
 
 function printHelp(): void {
   console.log(`
-Synapse Router CLI v0.1.0 — Multi-Provider Schema Negotiation Router
+${HELP_BANNER}
 
 Usage:
   synapse <command> [subcommand] [options]
 
-Commands:
-  connect <provider> <intent>   Connect to a provider and execute a feature
-  smoke --provider <name>       Run provider smoke tests against live APIs
-  setup                         Interactive first-time setup wizard
-  config set|get|list           Manage configuration (~/.synapse/config.json)
-  billing init|config|status       Manage billing configuration and quota status
-  provider list [--remote]      List all provider packs
-  provider show <id>            Show provider details
-  generate <source>             Generate a Provider Pack from OpenAPI spec
-  vault set|list|get|remove|verify  Manage API keys
-  negotiate <schema-file>       Run schema negotiation
-  lock list|show|remove|migrate|outdated  Manage Schema Locks
-  sdk generate                  Generate SDK from Provider Pack
-  pack add|search|list|update|remove|show  Manage provider packs from Registry
-  evolve                        Generate zero-dependency SDK from all provider packs
-  route <intent>                Route to best provider using multi-dimensional scoring
-  init                          Initialize a synapse-sdk project
-  watchdog                      Monitor events and auto-create Git Issues
-  profile list|show|reset|stats  View and manage Provider Profiles
-  export [--output|--stdout]     Export .synapse/ data (tar.gz)
-  import <file> [--stdin]        Import .synapse/ data
+${GROUP_CORE}
+  ${CORE_COMMANDS.map(c => `${c.usage.padEnd(32)} ${c.desc}`).join("\n  ")}
+
+${GROUP_CONFIG}
+  ${CONFIG_COMMANDS.map(c => `${c.usage.padEnd(32)} ${c.desc}`).join("\n  ")}
+
+${GROUP_ADVANCED}
+  ${ADVANCED_COMMANDS.map(c => `${c.usage.padEnd(32)} ${c.desc}`).join("\n  ")}
 
 Getting started:
   synapse setup                 Configure your first provider
@@ -136,20 +127,18 @@ Options:
   --version, -v                 Show version
 
 Detailed help:
+  synapse setup --help          Setup wizard
+  synapse negotiate --help      Negotiate command
   synapse connect --help        Connect command options & examples
+  synapse evolve --help         Evolve SDK generation
   synapse vault --help          Vault subcommands
   synapse config --help         Config management
-  synapse billing --help          Billing management
-  synapse setup --help          Setup wizard
-  synapse generate --help       Pack generation
-  synapse sdk --help            SDK generation
-  synapse evolve --help         Evolve SDK generation
+  synapse pack --help           Pack management
+  synapse billing --help        Billing management
+  synapse lock --help           Schema Lock management
   synapse route --help          Route to best provider
-  synapse init --help           Init project setup
-  synapse watchdog --help        Watchdog monitoring
-  synapse profile --help         Profile management
-  synapse export --help          Export data
-  synapse import --help          Import data
+  synapse sdk --help            SDK generation
+  synapse provider --help       Provider packs
 `);
 }
 
