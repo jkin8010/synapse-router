@@ -98,6 +98,29 @@ describe("help", () => {
 });
 
 // ---------------------------------------------------------------------------
+// Smoke → connect --smoke redirect (Task 1: 19-02)
+// ---------------------------------------------------------------------------
+
+describe("smoke → connect --smoke redirect", () => {
+  it("synapse smoke --help shows deprecation notice", () => {
+    const result = runCli(["smoke", "--help"]);
+    assert.ok(result.stdout.includes("merged into"), `should show merge notice, got stdout: ${result.stdout}`);
+    assert.strictEqual(result.code, 0);
+  });
+
+  it("synapse smoke --provider openai shows deprecation warning on stderr", () => {
+    const result = runCli(["smoke", "--provider", "openai"]);
+    assert.ok(result.stderr.includes("merged into"), `stderr should contain deprecation warning, got: ${result.stderr}`);
+  });
+
+  it("synapse connect --help shows --smoke flag", () => {
+    const result = runCli(["connect", "--help"]);
+    assert.ok(result.stdout.includes("--smoke"), `connect help should mention --smoke, got: ${result.stdout}`);
+    assert.strictEqual(result.code, 0);
+  });
+});
+
+// ---------------------------------------------------------------------------
 // Version
 // ---------------------------------------------------------------------------
 

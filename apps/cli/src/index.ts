@@ -617,9 +617,10 @@ async function main(): Promise<void> {
         break;
       case "smoke":
         if (flags.has("help") || args.includes("--help") || args.includes("-h")) {
-          printSmokeHelp();
+          console.log(HELP_SMOKE);
         } else {
-          await handleSmokeCommand(rawArgs);
+          console.error("Note: `synapse smoke` has been merged into `synapse connect --smoke`. Use that instead.");
+          await handleConnectCommand(["--smoke", ...rawArgs]);
         }
         break;
       case "evolve":

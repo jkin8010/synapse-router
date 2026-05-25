@@ -12,6 +12,7 @@ import type { ConnectParams, ConnectResult, ConnectLock } from "@synapse-router/
 import type { ProviderCard as CoreProviderCard } from "@synapse-router/core";
 import { negotiateAndVerify } from "@synapse-router/negotiator";
 import { loadMergedConfig } from "../utils/config.js";
+import { handleSmokeCommand } from "./smoke.js";
 
 // ---------------------------------------------------------------------------
 // Types
@@ -292,6 +293,7 @@ Options:
   --format <fmt>        Output format: json | table | compact (default: json)
   --with-billing          Enable billing tracking (skip prompt)
   --no-billing            Disable billing tracking (skip prompt)
+  --smoke               Run provider smoke tests (synapse smoke replacement)
 
 Modes:
   Imperative    Full parameters provided — no interaction
@@ -428,6 +430,14 @@ function formatOutput(result: ConnectResult | Record<string, unknown>, format: "
 // ---------------------------------------------------------------------------
 
 export async function handleConnectCommand(argv: string[]): Promise<void> {
+  // If --smoke flag present, delegate to smoke command
+  if (argv.includes("--smoke")) {
+    // Remove --smoke from argv before passing to smoke handler
+    const smokeArgs = argv.filter(a => a !== "--smoke");
+    await handleSmokeCommand(smokeArgs);
+    return;
+  }
+
   const options = parseConnectArgs(argv);
 
   // Resolve packs directory — same logic as index.ts but adjusted for commands/ subdirectory
