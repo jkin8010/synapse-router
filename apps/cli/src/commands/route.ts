@@ -141,7 +141,7 @@ function readJsonSync(filePath: string): unknown {
   }
 }
 
-async function loadProvidersFromDir(dir: string): Promise<ProviderEntry[]> {
+async function loadProvidersFromDir(dir: string, source: "builtin" | "registry" | "local"): Promise<ProviderEntry[]> {
   const entries: ProviderEntry[] = [];
   try {
     const providerDirs = await readdir(dir, { withFileTypes: true });
@@ -152,7 +152,7 @@ async function loadProvidersFromDir(dir: string): Promise<ProviderEntry[]> {
         const content = await readFile(cardPath, "utf8");
         const card = JSON.parse(content);
         if (card?.provider?.id) {
-          entries.push({ card, source: dir.includes(".synapse") ? "registry" : "local" });
+          entries.push({ card, source });
         }
       } catch {
         // skip invalid pack dirs
@@ -164,20 +164,49 @@ async function loadProvidersFromDir(dir: string): Promise<ProviderEntry[]> {
   return entries;
 }
 
+async function findBuiltinPacksDir(): Promise<string | null> {
+  const cwd = process.cwd();
+  const devPath = join(cwd, "packs");
+  try {
+    await readdir(devPath);
+    return devPath;
+  } catch { /* ignore */ }
+
+  try {
+    const { fileURLToPath } = await import("node:url");
+    const dir = fileURLToPath(import.meta.url);
+    const depth = dir.includes("/dist/") ? 5 : 4;
+    const ups = new Array<string>(depth).fill("..");
+    const packsFromCli = join(dir, ...ups, "packs");
+    await readdir(packsFromCli);
+    return packsFromCli;
+  } catch { /* ignore */ }
+
+  return null;
+}
+
 async function loadAllProviders(): Promise<ProviderEntry[]> {
   const all = new Map<string, ProviderEntry>();
 
-  // Load from cwd's synpase-packs
-  const localDir = join(process.cwd(), "synapse-packs");
-  for (const entry of await loadProvidersFromDir(localDir)) {
-    all.set(entry.card.provider.id, { ...entry, source: "local" });
+  // Priority (low to high): builtin < registry < local
+  const builtinDir = await findBuiltinPacksDir();
+  if (builtinDir) {
+    for (const entry of await loadProvidersFromDir(builtinDir, "builtin")) {
+      all.set(entry.card.provider.id, entry);
+    }
   }
 
   // Load from ~/.synapse/packs
-  for (const entry of await loadProvidersFromDir(USER_PACKS_DIR)) {
+  for (const entry of await loadProvidersFromDir(USER_PACKS_DIR, "registry")) {
     if (!all.has(entry.card.provider.id)) {
-      all.set(entry.card.provider.id, { ...entry, source: "registry" });
+      all.set(entry.card.provider.id, entry);
     }
+  }
+
+  // Load from .synapse/packs (local project)
+  const localDir = join(process.cwd(), ".synapse", "packs");
+  for (const entry of await loadProvidersFromDir(localDir, "local")) {
+    all.set(entry.card.provider.id, entry); // local overrides all
   }
 
   return [...Array.from(all.values())];

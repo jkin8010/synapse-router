@@ -179,12 +179,15 @@ async function findBuiltinPacksDir(): Promise<string | null> {
     return devPath;
   } catch { /* ignore */ }
 
-  // In installed mode: try relative to node_modules
+  // In installed mode: resolve from import.meta.url
   try {
     const { fileURLToPath } = await import("node:url");
-    const cliDir = fileURLToPath(import.meta.url);
-    // apps/cli/src/commands/evolve.ts → ../../../packs
-    const packsFromCli = join(cliDir, "..", "..", "..", "..", "packs");
+    const dir = fileURLToPath(import.meta.url);
+    // From compiled dist/commands/evolve.js: 5 levels up → project root
+    // From source src/commands/evolve.ts:    4 levels up → project root
+    const depth = dir.includes("/dist/") ? 5 : 4;
+    const ups = new Array<string>(depth).fill("..");
+    const packsFromCli = join(dir, ...ups, "packs");
     await readdir(packsFromCli);
     return packsFromCli;
   } catch { /* ignore */ }
@@ -230,7 +233,7 @@ async function getAllPacks(): Promise<PackEntry[]> {
     allPacks.set(p.id, p);
   }
 
-  const localDir = join(process.cwd(), "synapse-packs");
+  const localDir = join(process.cwd(), ".synapse", "packs");
   for (const p of await discoverPacks(localDir, "local")) {
     allPacks.set(p.id, p);
   }
