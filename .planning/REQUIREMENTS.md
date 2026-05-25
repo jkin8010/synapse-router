@@ -72,9 +72,9 @@
 
 - [x] **NEGO-01**: 交互式协商流程入口 — `synapse negotiate`（无 flags）启动交互式协商流程：选择 intent → 选择 provider → 审查 Schema → 确认
 - [x] **NEGO-02**: 输入输出 Schema 展示 — 格式化显示 Pack Feature 定义的输入输出字段，标明 required/optional
-- [ ] **NEGO-03**: 字段自定义增减 — 用户可以对 optional 字段选择包含/排除，支持批量操作
-- [ ] **NEGO-04**: LLM Key 发现与引导 — 协商前检查 vault/config/env 中是否有 LLM API Key，无 key 时引导配置
-- [ ] **NEGO-05**: Stub 输出标记 — 当使用确定性 stub（无 LLM key）时，在输出中醒目提示用户这不是真正的协商
+- [x] **NEGO-03**: 字段自定义增减 — 用户可以对 optional 字段选择包含/排除，支持批量操作
+- [x] **NEGO-04**: LLM Key 发现与引导 — 协商前检查 vault/config/env 中是否有 LLM API Key，无 key 时引导配置
+- [x] **NEGO-05**: Stub 输出标记 — 当使用确定性 stub（无 LLM key）时，在输出中醒目提示用户这不是真正的协商
 - [ ] **NEGO-06**: Lock diff 预览 — 保存前显示当前 Lock 与现有 Lock（如有）的差异
 - [ ] **NEGO-07**: 协商后路由菜单 — 协商成功后提供菜单：测试 connect / 生成 SDK / 查看 @synapse-router/sdk 接入 / 退出
 - [ ] **NEGO-08**: 非交互模式保持 — `--intent X --provider Y` 保留现有行为不变
@@ -145,9 +145,9 @@
 | CLI-INFRA-06 | Phase 17 | Pending |
 | NEGO-01 | Phase 18 | Complete |
 | NEGO-02 | Phase 18 | Complete |
-| NEGO-03 | Phase 18 | Pending |
-| NEGO-04 | Phase 18 | Pending |
-| NEGO-05 | Phase 18 | Pending |
+| NEGO-03 | Phase 18 | Complete |
+| NEGO-04 | Phase 18 | Complete |
+| NEGO-05 | Phase 18 | Complete |
 | NEGO-06 | Phase 18 | Pending |
 | NEGO-07 | Phase 18 | Pending |
 | NEGO-08 | Phase 18 | Pending |

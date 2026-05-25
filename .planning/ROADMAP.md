@@ -229,7 +229,7 @@ Plans:
 
 Plans:
 - [x] 18-01-PLAN.md — Interactive mode entry point: intent collection and provider selection via promptSearch/promptSelect
-- [ ] 18-02-PLAN.md — Schema display with picocolors, field checkbox toggling, LLM key detection + stub warning, negotiateAndVerify
+- [x] 18-02-PLAN.md — Schema display with picocolors, field checkbox toggling, LLM key detection + stub warning, negotiateAndVerify
 - [ ] 18-03-PLAN.md — Lock diff preview, post-negotiation routing menu, SIGINT/SIGTERM cleanup, non-interactive preservation
 
 ### Phase 19: Command Simplification
@@ -289,7 +289,7 @@ Plans:
 | 15. Playground Core UI Upgrade | v4.0 | 0/2 | Planned | - |
 | 16. Negotiator CLI Integration | v4.0 | 1/1 | Complete | 2026-05-25 |
 | 17. CLI Infrastructure | v5.0 | 3/3 | Complete    | 2026-05-25 |
-| 18. Interactive Negotiation | v5.0 | 1/3 | In Progress|  |
+| 18. Interactive Negotiation | v5.0 | 2/3 | In Progress|  |
 | 19. Command Simplification | v5.0 | 0/0 | Planned | - |
 | 20. Docs + Playground Updates | v5.0 | 0/0 | Planned | - |
 
