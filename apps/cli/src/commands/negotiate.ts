@@ -11,6 +11,7 @@ import type { NegotiateAndVerifyInput, NegotiationResult, ContractVerificationEr
 import type { ProviderCard } from "@synapse-router/core";
 import { getOrCreateLock } from "@synapse-router/lock";
 import { findPacksDir, loadProviderCard, USER_PACKS_DIR, LOCAL_PACKS_DIR } from "../utils/packs.js";
+import { isInteractive } from "../utils/tty.js";
 
 // ---------------------------------------------------------------------------
 // Types
@@ -26,6 +27,97 @@ export interface NegotiateOptions {
   dryRun?: boolean;
   noSave?: boolean;
   noInteractive?: boolean;
+}
+
+// ---------------------------------------------------------------------------
+// Interactive mode helpers
+// ---------------------------------------------------------------------------
+
+interface ProviderForIntent {
+  providerId: string;
+  featureId: string;
+  providerName: string;
+}
+
+/**
+ * Scan all installed packs (built-in, local, user) and collect unique
+ * feature.intent values. Returns sorted alphabetically.
+ * Skips invalid/missing provider cards without crashing.
+ */
+async function collectAvailableIntents(packsDir: string): Promise<string[]> {
+  const intents = new Set<string>();
+  for (const dir of [packsDir, LOCAL_PACKS_DIR(), USER_PACKS_DIR]) {
+    let entries;
+    try {
+      entries = await readdir(dir, { withFileTypes: true });
+    } catch {
+      continue;
+    }
+    for (const entry of entries) {
+      if (!entry.isDirectory() || entry.name.startsWith(".")) continue;
+      try {
+        const cardPath = join(dir, entry.name, "provider-card.json");
+        const content = await readFile(cardPath, "utf8");
+        const card = JSON.parse(content) as ProviderCard;
+        for (const feature of card.features) {
+          if (feature.intent) intents.add(feature.intent);
+        }
+      } catch {
+        // skip invalid packs
+      }
+    }
+  }
+  return [...intents].sort();
+}
+
+/**
+ * Scan all packs and return only those that have a feature with the
+ * given intent. Each result includes providerId, featureId, and providerName.
+ */
+async function collectProvidersForIntent(
+  packsDir: string,
+  intent: string,
+): Promise<ProviderForIntent[]> {
+  const providers: ProviderForIntent[] = [];
+  for (const dir of [packsDir, LOCAL_PACKS_DIR(), USER_PACKS_DIR]) {
+    let entries;
+    try {
+      entries = await readdir(dir, { withFileTypes: true });
+    } catch {
+      continue;
+    }
+    for (const entry of entries) {
+      if (!entry.isDirectory() || entry.name.startsWith(".")) continue;
+      try {
+        const cardPath = join(dir, entry.name, "provider-card.json");
+        const content = await readFile(cardPath, "utf8");
+        const card = JSON.parse(content) as ProviderCard;
+        for (const feature of card.features) {
+          if (feature.intent === intent) {
+            providers.push({
+              providerId: card.provider.id,
+              featureId: feature.id,
+              providerName: card.provider.name,
+            });
+          }
+        }
+      } catch {
+        // skip invalid packs
+      }
+    }
+  }
+  return providers;
+}
+
+/** Stub — will be replaced in Task 2 with full interactive flow */
+async function runInteractiveNegotiation(
+  packsDir: string,
+  _configDir: string,
+  _opts: NegotiateOptions,
+): Promise<void> {
+  const intents = await collectAvailableIntents(packsDir);
+  console.log(`Found ${intents.length} available intents.`);
+  // TODO: Full implementation in Plan 02
 }
 
 // ---------------------------------------------------------------------------
@@ -131,6 +223,19 @@ export async function handleNegotiateCommand(rawArgs: string[]): Promise<void> {
 
   const packsDir = await findPacksDir();
   const configDir = join(homedir(), ".synapse");
+
+  // Interactive mode: no flags, TTY detected
+  if (!intentFlag && !providerFlag) {
+    if (isInteractive()) {
+      await runInteractiveNegotiation(packsDir, configDir, opts);
+      return;
+    }
+    console.error(
+      "Error: --intent and --provider required in non-interactive mode. " +
+      "Use --yes for defaults or run in a TTY."
+    );
+    process.exit(1);
+  }
 
   // Mode 1: --intent + --provider → negotiateAndVerify pipeline
   if (intentFlag && providerFlag) {
