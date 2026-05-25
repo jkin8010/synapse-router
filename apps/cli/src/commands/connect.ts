@@ -223,76 +223,46 @@ async function listAvailableProviders(packsDir: string): Promise<Array<{ id: str
 }
 
 // ---------------------------------------------------------------------------
-// Interactive prompts (using readline)
+// Interactive prompts (using shared utils/prompts)
 // ---------------------------------------------------------------------------
 
-async function promptSelect(label: string, options: string[]): Promise<string> {
-  const readline = await import("node:readline");
-  const rl = readline.createInterface({ input: process.stdin, output: process.stdout });
-
-  return new Promise((resolve) => {
-    console.log(`\n${label}`);
-    options.forEach((opt, i) => {
-      console.log(`  ${i + 1}. ${opt}`);
-    });
-
-    rl.question("\n  Enter number: ", (answer) => {
-      rl.close();
-      const idx = parseInt(answer.trim(), 10) - 1;
-      if (idx >= 0 && idx < options.length) {
-        resolve(options[idx]);
-      } else {
-        console.error("  Invalid selection, using first option.");
-        resolve(options[0]);
-      }
-    });
-  });
-}
-
 async function promptSelectProvider(packsDir: string): Promise<string> {
+  const { promptSelect } = await import("../utils/prompts.js");
   const providers = await listAvailableProviders(packsDir);
   if (providers.length === 0) {
-    // Fallback to common providers
     const common = ["deepseek", "openai", "moonshot", "replicate", "stability"];
-    const selected = await promptSelect("Choose a provider:", common);
+    const selected = await promptSelect("Choose a provider:", common.map((v) => ({ name: v, value: v })));
     return selected;
   }
-  const labels = providers.map((p) => `${p.name} (${p.id})`);
-  const selected = await promptSelect("Choose a provider:", labels);
-  const idx = labels.indexOf(selected);
-  return providers[idx]?.id ?? providers[0].id;
+  const choices = providers.map((p) => ({ name: `${p.name} (${p.id})`, value: p.id }));
+  const selected = await promptSelect("Choose a provider:", choices);
+  return selected;
 }
 
 async function promptSelectIntent(packsDir: string, providerId: string): Promise<string> {
+  const { promptSelect } = await import("../utils/prompts.js");
   const card = await loadProviderCard(packsDir, providerId);
   if (card && card.features.length > 0) {
     const intents = [...new Set(card.features.map((f) => f.intent))];
     if (intents.length > 0) {
-      const selected = await promptSelect("Choose feature intent:", intents);
+      const selected = await promptSelect("Choose feature intent:", intents.map((v) => ({ name: v, value: v })));
       return selected;
     }
   }
-  // Fallback to common intents
   const commonIntents = ["chat", "embeddings", "text-to-image", "speech-to-text", "translation"];
-  const selected = await promptSelect("Choose feature intent:", commonIntents);
+  const selected = await promptSelect("Choose feature intent:", commonIntents.map((v) => ({ name: v, value: v })));
   return selected;
 }
 
 async function promptJson(label: string): Promise<Record<string, unknown>> {
-  const readline = await import("node:readline");
-  const rl = readline.createInterface({ input: process.stdin, output: process.stdout });
-
-  return new Promise((resolve) => {
-    rl.question(`\n${label} (JSON): `, (answer) => {
-      rl.close();
-      try {
-        resolve(JSON.parse(answer.trim()));
-      } catch {
-        console.error("  Invalid JSON. Using empty object.");
-        resolve({});
-      }
-    });
-  });
+  const { promptInput } = await import("../utils/prompts.js");
+  const raw = await promptInput(`${label} (JSON)`);
+  try {
+    return JSON.parse(raw);
+  } catch {
+    console.error("  Invalid JSON. Using empty object.");
+    return {};
+  }
 }
 
 // ---------------------------------------------------------------------------
@@ -499,15 +469,8 @@ export async function handleConnectCommand(argv: string[]): Promise<void> {
         let enableBilling = options.withBilling === true;
 
         if (!enableBilling) {
-          // Interactive prompt: "Detected billing configuration. Enable billing tracking? [Y/n]"
-          const readline = await import("node:readline");
-          const rl = readline.createInterface({ input: process.stdin, output: process.stdout });
-          const answer = await new Promise<string>((resolve) => {
-            rl.question("\nDetected billing configuration. Enable billing tracking? [Y/n]: ", resolve);
-          });
-          rl.close();
-          const normalized = answer.trim().toLowerCase();
-          enableBilling = normalized === "" || normalized === "y" || normalized === "yes";
+          const { promptConfirm } = await import("../utils/prompts.js");
+          enableBilling = await promptConfirm("Detected billing configuration. Enable billing tracking?", { defaultVal: true });
         }
 
         if (enableBilling) {
