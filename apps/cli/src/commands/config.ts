@@ -217,6 +217,9 @@ Subcommands:
     --local             Write to project-local .synapse/config.json instead of global ~/.synapse/config.json
   get <key>           Get a configuration value
   list                List all configuration
+  profile list|show|reset|stats|refresh  Manage Provider Profiles
+  export [--output|--stdout]              Export .synapse/ data
+  import <file> [--stdin]                 Import .synapse/ data
 
 Configuration keys use dot notation:
   Provider config:    deepseek.base_url, deepseek.pack, deepseek.auth_type
