@@ -12,6 +12,8 @@ import type { ProviderCard } from "@synapse-router/core";
 import { getOrCreateLock } from "@synapse-router/lock";
 import { findPacksDir, loadProviderCard, USER_PACKS_DIR, LOCAL_PACKS_DIR } from "../utils/packs.js";
 import { isInteractive } from "../utils/tty.js";
+import { promptSearch, promptSelect } from "../utils/prompts.js";
+import pc from "picocolors";
 
 // ---------------------------------------------------------------------------
 // Types
@@ -109,15 +111,91 @@ async function collectProvidersForIntent(
   return providers;
 }
 
-/** Stub — will be replaced in Task 2 with full interactive flow */
+/** Full interactive intent + provider selection flow */
 async function runInteractiveNegotiation(
   packsDir: string,
   _configDir: string,
   _opts: NegotiateOptions,
 ): Promise<void> {
+  // Step 1: Display header
+  console.log(pc.bold(pc.cyan("\n  Synapse Interactive Negotiation\n")));
+
+  // Step 2: Intent selection
   const intents = await collectAvailableIntents(packsDir);
-  console.log(`Found ${intents.length} available intents.`);
-  // TODO: Full implementation in Plan 02
+  if (intents.length === 0) {
+    console.error(
+      pc.red(
+        "Error: No Provider Packs found. " +
+        "Install a pack first with \"synapse pack add <pack-id>\" " +
+        "or place provider packs in .synapse/packs/."
+      )
+    );
+    process.exit(1);
+  }
+
+  const intentSource = async (term: string | undefined) => {
+    const filtered = term
+      ? intents.filter(i => i.toLowerCase().includes(term.toLowerCase()))
+      : intents;
+    return filtered.map(i => ({ name: i, value: i }));
+  };
+
+  const selectedIntent = await promptSearch(
+    "Select an intent (type to filter):",
+    intentSource,
+    { pageSize: 10 },
+  );
+
+  // Step 3: Provider selection
+  const providers = await collectProvidersForIntent(packsDir, selectedIntent);
+  if (providers.length === 0) {
+    console.error(
+      pc.red(
+        `Error: No providers found for intent "${selectedIntent}". ` +
+        "Ensure a Provider Pack supporting this intent is installed."
+      )
+    );
+    process.exit(1);
+  }
+
+  const providerChoices = providers.map(p => ({
+    name: `${p.providerId} — ${p.providerName}`,
+    value: p.providerId,
+  }));
+  const selectedProvider = await promptSelect(
+    pc.bold(`Select a provider for "${selectedIntent}":`),
+    providerChoices,
+    { pageSize: 10 },
+  );
+
+  // Step 4: Load provider card and validate feature
+  const found = await loadProviderCard(packsDir, selectedProvider);
+  if (!found) {
+    console.error(
+      pc.red(
+        `Error: Provider pack not found for "${selectedProvider}". ` +
+        `Ensure the pack is installed via "synapse pack add ${selectedProvider}".`
+      )
+    );
+    process.exit(1);
+  }
+  const { card } = found;
+
+  const feature = card.features.find(
+    (f: { intent?: string; id: string }) => f.intent === selectedIntent || f.id === selectedIntent,
+  );
+  if (!feature) {
+    console.error(
+      pc.red(
+        `Error: No feature found for intent "${selectedIntent}" in pack "${selectedProvider}". ` +
+        `Available intents: ${card.features.map((f: any) => f.intent || f.id).join(", ")}`
+      )
+    );
+    process.exit(1);
+  }
+
+  // Step 5: Transition marker
+  console.log(pc.dim(`\n  Provider: ${selectedProvider}  Intent: ${selectedIntent}\n`));
 }
 
 // ---------------------------------------------------------------------------
