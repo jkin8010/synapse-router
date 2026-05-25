@@ -6,6 +6,8 @@ import { readFileSync, readdirSync } from "node:fs";
 import { join, dirname } from "node:path";
 import { homedir } from "node:os";
 import { pricingFromProviderCard } from "@synapse-router/billing";
+import { promptSelect, promptInput, promptConfirm } from "../utils/prompts.js";
+import type { SelectOption } from "../utils/prompts.js";
 
 // ---------------------------------------------------------------------------
 // Billing config file helpers
@@ -176,18 +178,6 @@ async function listAllProviders(): Promise<Array<{ id: string; name: string }>> 
   }
 
   return providers;
-}
-
-// ---------------------------------------------------------------------------
-// Readline prompter
-// ---------------------------------------------------------------------------
-
-async function createPrompter(): Promise<{ question: (q: string) => Promise<string>; close: () => void }> {
-  const { createInterface } = await import("node:readline");
-  const rl = createInterface({ input: process.stdin, output: process.stdout });
-  const question = (q: string): Promise<string> =>
-    new Promise((resolve) => rl.question(q, resolve));
-  return { question, close: () => { try { rl.close(); } catch { /* ignore */ } } };
 }
 
 // ---------------------------------------------------------------------------
@@ -784,7 +774,6 @@ function formatPricingRule(rule: {
 // ---------------------------------------------------------------------------
 
 async function configureProviderInteractive(
-  question: (q: string) => Promise<string>,
   card: ProviderCard,
 ): Promise<{ providerId: string; config: Record<string, unknown> } | null> {
   const providerId = card.provider.id;
@@ -798,57 +787,46 @@ async function configureProviderInteractive(
 
   for (const feature of card.features) {
     const defaultRule = pricingFromProviderCard(feature.pricing);
-    console.log(`  Feature: ${feature.id} (${feature.intent})`);
-    console.log(`    Detected: ${formatPricingRule(defaultRule)}`);
 
-    const answer = (await question("    Accept? [Y/n/custom]: ")).trim();
+    const pricingAction = await promptSelect<string>(
+      `    Feature: ${feature.id} (${feature.intent}) — Detected: ${formatPricingRule(defaultRule)}`,
+      [
+        { name: "Accept detected pricing", value: "accept" },
+        { name: "Enter custom pricing", value: "custom" },
+        { name: "Skip this feature", value: "skip" },
+      ],
+      { defaultIndex: 0 }
+    );
 
-    if (answer === "" || answer === "Y" || answer === "y") {
+    if (pricingAction === "accept") {
       pricing[feature.id] = defaultRule;
       configuredFeatures++;
-    } else if (answer === "n" || answer === "N") {
-      // Skip this feature -- no billing tracking
+    } else if (pricingAction === "skip") {
       continue;
-    } else if (answer.toLowerCase() === "custom") {
-      const strategy = (await question("      Strategy (perToken/perUnit/flat): ")).trim();
-
-      if (!["perToken", "perUnit", "flat"].includes(strategy)) {
-        console.error(`      Invalid strategy '${strategy}', skipping feature.`);
-        continue;
-      }
-
+    } else if (pricingAction === "custom") {
+      const strategy = await promptInput(
+        "      Strategy (perToken/perUnit/flat):",
+        {
+          defaultVal: "perToken",
+          validate: (v) =>
+            ["perToken", "perUnit", "flat"].includes(v) ? true : "Invalid strategy. Use: perToken, perUnit, flat",
+        }
+      );
       if (strategy === "perToken") {
-        const inputPrice = parseFloat((await question("      Input price per 1k tokens: ")).trim()) || 0;
-        const outputPrice = parseFloat((await question("      Output price per 1k tokens: ")).trim()) || 0;
-        pricing[feature.id] = {
-          strategy: "perToken",
-          unit: "1k tokens",
-          inputPrice,
-          outputPrice,
-        };
+        const inputPrice = parseFloat(await promptInput("      Input price per 1k tokens:", { defaultVal: "0" })) || 0;
+        const outputPrice = parseFloat(await promptInput("      Output price per 1k tokens:", { defaultVal: "0" })) || 0;
+        pricing[feature.id] = { strategy: "perToken", unit: "1k tokens", inputPrice, outputPrice };
         configuredFeatures++;
       } else if (strategy === "perUnit") {
-        const unit = (await question("      Unit name (e.g., 'per image'): ")).trim() || "per unit";
-        const unitPrice = parseFloat((await question("      Price per unit: ")).trim()) || 0;
-        pricing[feature.id] = {
-          strategy: "perUnit",
-          unit,
-          unitPrice,
-        };
+        const unit = await promptInput("      Unit name (e.g., 'per image'):", { defaultVal: "per unit" });
+        const unitPrice = parseFloat(await promptInput("      Price per unit:", { defaultVal: "0" })) || 0;
+        pricing[feature.id] = { strategy: "perUnit", unit: unit || "per unit", unitPrice };
         configuredFeatures++;
       } else if (strategy === "flat") {
-        const costPerCall = parseFloat((await question("      Cost per call: ")).trim()) || 0;
-        pricing[feature.id] = {
-          strategy: "flat",
-          unit: "per call",
-          costPerCall,
-        };
+        const costPerCall = parseFloat(await promptInput("      Cost per call:", { defaultVal: "0" })) || 0;
+        pricing[feature.id] = { strategy: "flat", unit: "per call", costPerCall };
         configuredFeatures++;
       }
-    } else {
-      // Unknown input -- accept default
-      pricing[feature.id] = defaultRule;
-      configuredFeatures++;
     }
   }
 
@@ -858,14 +836,14 @@ async function configureProviderInteractive(
   }
 
   // Quota configuration
-  const quotaLimit = parseFloat((await question("    Quota limit in USD (default: 10): ")).trim()) || 10;
+  const quotaLimit = parseFloat(await promptInput("    Quota limit in USD (default: 10):", { defaultVal: "10" })) || 10;
 
-  let quotaPeriod = (await question("    Quota period (hour/day/month, default: month): ")).trim().toLowerCase();
+  let quotaPeriod = (await promptInput("    Quota period (hour/day/month, default: month):", { defaultVal: "month" })).toLowerCase();
   if (!["hour", "day", "month"].includes(quotaPeriod)) {
     quotaPeriod = "month";
   }
 
-  let onError = (await question("    Error handling (warn/reject, default: warn): ")).trim().toLowerCase();
+  let onError = (await promptInput("    Error handling (warn/reject, default: warn):", { defaultVal: "warn" })).toLowerCase();
   if (!["warn", "reject"].includes(onError)) {
     onError = "warn";
   }
@@ -970,42 +948,41 @@ async function handleBillingInit(argv: string[]): Promise<void> {
       process.exit(1);
     }
 
-    console.log("\nAvailable providers:");
-    for (let i = 0; i < installed.length; i++) {
-      console.log(`  ${i + 1}. ${installed[i].name} (${installed[i].id})`);
+    const providerChoices: SelectOption<number>[] = installed.map((p, i) => ({
+      name: `${i + 1}. ${p.name} (${p.id})`,
+      value: i + 1,
+    }));
+    providerChoices.push({
+      name: `${installed.length + 1}. All providers`,
+      value: installed.length + 1,
+    });
+
+    const selection = await promptSelect<number>(
+      "Select provider:",
+      providerChoices,
+      { defaultIndex: 0 }
+    );
+
+    let selectedProviders: Array<{ id: string; name: string }>;
+    if (selection === installed.length + 1) {
+      selectedProviders = installed; // All providers
+    } else if (selection >= 1 && selection <= installed.length) {
+      selectedProviders = [installed[selection - 1]];
+    } else {
+      console.error("Invalid selection.");
+      process.exit(1);
     }
-    console.log(`  ${installed.length + 1}. All providers`);
 
-    const prompter = await createPrompter();
-    try {
-      const selectionStr = await prompter.question("Select provider (enter number): ");
-      const selection = parseInt(selectionStr.trim(), 10);
-
-      let selectedProviders: Array<{ id: string; name: string }>;
-      if (isNaN(selection) || selection === installed.length + 1) {
-        // Last option or invalid = all providers
-        selectedProviders = installed;
-      } else if (selection >= 1 && selection <= installed.length) {
-        selectedProviders = [installed[selection - 1]];
-      } else {
-        console.error("Invalid selection.");
+    for (const provider of selectedProviders) {
+      const card = await loadProviderCard(provider.id);
+      if (!card) {
+        console.error(`Error: Provider card not found for '${provider.id}'`);
         process.exit(1);
       }
-
-      for (const provider of selectedProviders) {
-        const card = await loadProviderCard(provider.id);
-        if (!card) {
-          console.error(`Error: Provider card not found for '${provider.id}'`);
-          process.exit(1);
-        }
-
-        const result = await configureProviderInteractive(prompter.question, card);
-        if (result) {
-          configuredProviders.push({ id: result.providerId, config: result.config });
-        }
+      const result = await configureProviderInteractive(card);
+      if (result) {
+        configuredProviders.push({ id: result.providerId, config: result.config });
       }
-    } finally {
-      prompter.close();
     }
   }
 
