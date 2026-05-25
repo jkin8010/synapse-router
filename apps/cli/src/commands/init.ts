@@ -3,6 +3,7 @@
 
 import { mkdir, writeFile } from "node:fs/promises";
 import { join, resolve, isAbsolute } from "node:path";
+import { HELP_INIT } from "../utils/help.js";
 
 // ---------------------------------------------------------------------------
 // Types

@@ -3,6 +3,7 @@
 
 import { readFile, readdir, writeFile, access, mkdir, rm } from "node:fs/promises";
 import { join } from "node:path";
+import { HELP_PROFILE } from "../utils/help.js";
 
 // ---------------------------------------------------------------------------
 // Paths

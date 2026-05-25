@@ -4,6 +4,7 @@
 import { join, dirname } from "node:path";
 import { homedir } from "node:os";
 import { fileURLToPath } from "node:url";
+import { HELP_LOCK } from "../utils/help.js";
 import {
   getOrCreateLock,
   detectOutdatedLocks,

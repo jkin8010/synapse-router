@@ -13,6 +13,7 @@ import { createReadStream, createWriteStream, existsSync } from "node:fs";
 import { createGzip, createGunzip } from "node:zlib";
 import { pipeline } from "node:stream/promises";
 import { Readable } from "node:stream";
+import { HELP_EXPORT, HELP_IMPORT } from "../utils/help.js";
 
 // ---------------------------------------------------------------------------
 // Constants

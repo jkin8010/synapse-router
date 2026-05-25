@@ -6,6 +6,7 @@ import { join, dirname } from "node:path";
 import { homedir } from "node:os";
 import { createVault } from "@synapse-router/vault";
 import type { ConnectParams, ConnectResult, ConnectLock } from "@synapse-router/connector";
+import { HELP_SMOKE } from "../utils/help.js";
 
 // ---------------------------------------------------------------------------
 // Types

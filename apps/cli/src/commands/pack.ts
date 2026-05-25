@@ -19,6 +19,7 @@ import type {
   SearchResult,
   ManifestEntry,
 } from "@synapse-router/registry-client";
+import { HELP_PACK } from "../utils/help.js";
 import { loadMergedConfig } from "../utils/config.js";
 
 // ---------------------------------------------------------------------------

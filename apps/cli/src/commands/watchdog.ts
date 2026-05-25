@@ -6,6 +6,7 @@
 import { readFile, writeFile, access, mkdir } from "node:fs/promises";
 import { join } from "node:path";
 import { execSync } from "node:child_process";
+import { HELP_WATCHDOG } from "../utils/help.js";
 
 // ---------------------------------------------------------------------------
 // Types

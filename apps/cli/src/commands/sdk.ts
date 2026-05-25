@@ -2,6 +2,7 @@
 // Generate SDKs from Provider Packs
 
 import { generateSdk } from "@synapse-router/sdk-generator";
+import { HELP_SDK } from "../utils/help.js";
 import { readFile } from "node:fs/promises";
 import { join, dirname, resolve, isAbsolute } from "node:path";
 import { homedir } from "node:os";

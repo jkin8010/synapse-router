@@ -14,6 +14,7 @@ import {
   type CustomStrategyConfig,
 } from "@synapse-router/router";
 import { loadMergedConfig } from "../utils/config.js";
+import { HELP_ROUTE } from "../utils/help.js";
 
 // ---------------------------------------------------------------------------
 // Types

@@ -9,6 +9,7 @@ import { join, resolve, isAbsolute } from "node:path";
 import { homedir } from "node:os";
 import { createInterface } from "node:readline";
 import { loadMergedConfig } from "../utils/config.js";
+import { HELP_EVOLVE } from "../utils/help.js";
 import { loadAllProfiles, ProviderProfile } from "./profile.js";
 import {
   tuneStrategies,
