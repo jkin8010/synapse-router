@@ -10,6 +10,11 @@ import { loadMergedConfig, saveGlobalConfig } from "./utils/config.js";
 import {
   HELP_BANNER, GROUP_CORE, GROUP_CONFIG, GROUP_ADVANCED,
   CORE_COMMANDS, CONFIG_COMMANDS, ADVANCED_COMMANDS,
+  HELP_SETUP, HELP_CONNECT, HELP_NEGOTIATE, HELP_EVOLVE,
+  HELP_VAULT, HELP_CONFIG, HELP_PACK, HELP_BILLING,
+  HELP_LOCK, HELP_ROUTE, HELP_SDK,
+  HELP_SMOKE, HELP_WATCHDOG, HELP_GENERATE, HELP_PROVIDER,
+  HELP_EXPORT, HELP_IMPORT, HELP_INIT, HELP_PROFILE,
 } from "./utils/help.js";
 import { handleGenerateCommand } from "./commands/generate.js";
 import { handleConnectCommand, printConnectHelp } from "./commands/connect.js";
@@ -143,108 +148,15 @@ Detailed help:
 }
 
 function printProviderHelp(): void {
-  console.log(`
-synapse provider — List and inspect provider packs
-
-Usage:
-  synapse provider list [--remote]        List available provider packs
-  synapse provider show <id> [--remote]   Show provider card details
-
-Options:
-  --remote               Query remote Registry instead of local
-
-Arguments:
-  <id>                   Provider ID (e.g. openai, deepseek, replicate)
-
-Examples:
-  synapse provider list
-  synapse provider list --remote
-  synapse provider show openai
-
-See also:
-  synapse connect   — Connect to a provider
-  synapse generate  — Generate new provider packs
-  synapse pack      — Manage packs from Registry
-`);
+  console.log(HELP_PROVIDER);
 }
 
 function printVaultHelp(): void {
-  console.log(`
-synapse vault — Manage encrypted API keys
-
-Usage:
-  synapse vault set <provider> <key> [options]    Store an API key
-  synapse vault list                              List stored keys (values hidden)
-  synapse vault get <provider>                    Get key value for a provider
-  synapse vault remove <provider>                 Remove a stored key
-  synapse vault verify <provider>                 Verify key format
-  synapse vault rotate <provider>                 Rotate key password (interactive)
-
-Arguments:
-  <provider>             Provider ID (e.g. deepseek, openai)
-  <key>                  API key value
-
-Options (vault set):
-  --base-url <url>       Set provider base URL in config
-  --pack <id>            Set provider pack in config
-
-Examples:
-  # Store a DeepSeek API key
-  synapse vault set deepseek sk-xxx
-
-  # Store key with provider configuration
-  synapse vault set deepseek sk-xxx --base-url https://api.deepseek.com/v1 --pack openai
-
-  # List all stored keys
-  synapse vault list
-
-  # Verify a key
-  synapse vault verify deepseek
-
-  # Get key value
-  synapse vault get deepseek
-
-  # Remove a key
-  synapse vault remove deepseek
-
-See also:
-  synapse config    — Manage provider configuration
-  synapse setup     — Interactive setup wizard
-  synapse connect   — Connect to a provider
-`);
+  console.log(HELP_VAULT);
 }
 
 function printGenerateHelp(): void {
-  console.log(`
-synapse generate — Generate a Provider Pack from OpenAPI spec
-
-Usage:
-  synapse generate <source> [options]
-
-Arguments:
-  <source>               URL or local file path to OpenAPI spec (JSON)
-
-Options:
-  --provider <id>        Override provider ID
-  --name <name>          Override provider display name
-  --output <dir>         Output directory (default: ./generated-packs/<id>)
-  --no-validate          Skip validation step
-  --no-tarball           Skip tarball build
-
-Examples:
-  # Generate from URL
-  synapse generate https://api.example.com/openapi.json
-
-  # Generate from local file with custom provider ID
-  synapse generate ./openapi.json --provider myapi
-
-  # Generate with custom output directory
-  synapse generate ./openapi.json --output ./my-packs/custom
-
-See also:
-  synapse provider list   — List available providers
-  synapse connect         — Connect to a provider
-`);
+  console.log(HELP_GENERATE);
 }
 
 // ---------------------------------------------------------------------------
@@ -578,64 +490,30 @@ async function main(): Promise<void> {
   if (command === "help") {
     // "synapse help <subcommand>" — show subcommand help
     if (args[0]) {
-      switch (args[0]) {
-        case "connect":
-          printConnectHelp();
-          return;
-        case "setup":
-          printSetupHelp();
-          return;
-        case "config":
-          printConfigHelp();
-          return;
-        case "billing":
-          printBillingHelp();
-          return;
-        case "vault":
-          printVaultHelp();
-          return;
-        case "provider":
-          printProviderHelp();
-          return;
-        case "generate":
-          printGenerateHelp();
-          return;
-        case "negotiate":
-          printNegotiateHelp();
-          return;
-        case "lock":
-          printLockHelp();
-          return;
-        case "sdk":
-          printSdkHelp();
-          return;
-        case "pack":
-          printPackHelp();
-          return;
-        case "smoke":
-          printSmokeHelp();
-          return;
-        case "evolve":
-          printEvolveHelp();
-          return;
-        case "init":
-          printInitHelp();
-          return;
-        case "watchdog":
-          printWatchdogHelp();
-          return;
-        case "profile":
-          printProfileHelp();
-          return;
-        case "route":
-          printRouteHelp();
-          return;
-        case "export":
-          printExportHelp();
-          return;
-        case "import":
-          printImportHelp();
-          return;
+      const helpMap: Record<string, string> = {
+        setup: HELP_SETUP,
+        negotiate: HELP_NEGOTIATE,
+        connect: HELP_CONNECT,
+        evolve: HELP_EVOLVE,
+        vault: HELP_VAULT,
+        config: HELP_CONFIG,
+        pack: HELP_PACK,
+        billing: HELP_BILLING,
+        lock: HELP_LOCK,
+        route: HELP_ROUTE,
+        sdk: HELP_SDK,
+        smoke: HELP_SMOKE,
+        watchdog: HELP_WATCHDOG,
+        generate: HELP_GENERATE,
+        provider: HELP_PROVIDER,
+        export: HELP_EXPORT,
+        import: HELP_IMPORT,
+        init: HELP_INIT,
+        profile: HELP_PROFILE,
+      };
+      if (helpMap[args[0]]) {
+        console.log(helpMap[args[0]]);
+        return;
       }
     }
     printHelp();
