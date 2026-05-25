@@ -62,6 +62,39 @@ describe("help", () => {
     assert.ok(result.stdout.includes("Detailed help"), `got: ${result.stdout}`);
     assert.strictEqual(result.code, 0);
   });
+
+  // Task 3: help <subcommand> tests
+  it("synapse help vault prints vault help text", () => {
+    const result = runCli(["help", "vault"]);
+    assert.ok(result.stdout.includes("Manage encrypted API keys"), `got: ${result.stdout}`);
+    assert.ok(result.stdout.includes("synapse vault set"), `got: ${result.stdout}`);
+    assert.strictEqual(result.code, 0);
+  });
+
+  it("synapse help connect prints connect help text", () => {
+    const result = runCli(["help", "connect"]);
+    assert.ok(result.stdout.includes("Connect to a provider"), `got: ${result.stdout}`);
+    assert.ok(result.stdout.includes("synapse connect"), `got: ${result.stdout}`);
+    assert.strictEqual(result.code, 0);
+  });
+
+  it("synapse help provider prints provider help text", () => {
+    const result = runCli(["help", "provider"]);
+    assert.ok(result.stdout.includes("List and inspect provider packs"), `got: ${result.stdout}`);
+    assert.strictEqual(result.code, 0);
+  });
+
+  it("synapse help generate prints generate help text", () => {
+    const result = runCli(["help", "generate"]);
+    assert.ok(result.stdout.includes("Generate a Provider Pack from OpenAPI spec"), `got: ${result.stdout}`);
+    assert.strictEqual(result.code, 0);
+  });
+
+  it("synapse vault --help still prints vault help text", () => {
+    const result = runCli(["vault", "--help"]);
+    assert.ok(result.stdout.includes("Manage encrypted API keys"), `got: ${result.stdout}`);
+    assert.strictEqual(result.code, 0);
+  });
 });
 
 // ---------------------------------------------------------------------------
