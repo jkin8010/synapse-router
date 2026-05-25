@@ -289,7 +289,7 @@ Plans:
 | 15. Playground Core UI Upgrade | v4.0 | 0/2 | Planned | - |
 | 16. Negotiator CLI Integration | v4.0 | 1/1 | Complete | 2026-05-25 |
 | 17. CLI Infrastructure | v5.0 | 3/3 | Complete    | 2026-05-25 |
-| 18. Interactive Negotiation | v5.0 | 3/3 | Complete   | 2026-05-25 |
+| 18. Interactive Negotiation | v5.0 | 3/3 | Complete    | 2026-05-25 |
 | 19. Command Simplification | v5.0 | 0/0 | Planned | - |
 | 20. Docs + Playground Updates | v5.0 | 0/0 | Planned | - |
 
