@@ -83,9 +83,9 @@
 
 ## CMD — 命令精简
 
-- [ ] **CMD-01**: Help 分组 — `--help` 输出按分类组织：Getting Started、Core Workflow、Provider Management、Configuration、Advanced
+- [x] **CMD-01**: Help 分组 — `--help` 输出按分类组织：Getting Started、Core Workflow、Provider Management、Configuration、Advanced
 - [ ] **CMD-02**: 命令合并评估 — 评估 `provider`→`pack`、`smoke`→`connect`、`init`→`setup`、`profile`→`config`、`export/import`→`config` 等合并方案
-- [ ] **CMD-03**: Help 文本共享 — 提取 help 文本到共享定义，与文档站点保持同步
+- [x] **CMD-03**: Help 文本共享 — 提取 help 文本到共享定义，与文档站点保持同步
 
 ## DOCS — 文档更新
 
@@ -153,9 +153,9 @@
 | NEGO-08 | Phase 18 | Complete |
 | NEGO-09 | Phase 18 | Complete |
 | NEGO-10 | Phase 18 | Complete |
-| CMD-01 | Phase 19 | Pending |
+| CMD-01 | Phase 19 | Complete |
 | CMD-02 | Phase 19 | Pending |
-| CMD-03 | Phase 19 | Pending |
+| CMD-03 | Phase 19 | Complete |
 | DOCS-01 | Phase 20 | Pending |
 | DOCS-02 | Phase 20 | Pending |
 | DOCS-03 | Phase 20 | Pending |

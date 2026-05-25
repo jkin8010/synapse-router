@@ -243,7 +243,7 @@ Plans:
 **Plans**: 3 plans
 
 Plans:
-- [ ] 19-01-PLAN.md — Create utils/help.ts with all help text; update index.ts printHelp() to 3-group format; update help switch and inline helps
+- [x] 19-01-PLAN.md — Create utils/help.ts with all help text; update index.ts printHelp() to 3-group format; update help switch and inline helps
 - [ ] 19-02-PLAN.md — Merge commands: smoke->connect --smoke, init->setup, profile/export/import->config subcommands
 - [ ] 19-03-PLAN.md — Migrate all command files to import help text from utils/help.ts; build and test verification
 
@@ -290,7 +290,7 @@ Plans:
 | 16. Negotiator CLI Integration | v4.0 | 1/1 | Complete | 2026-05-25 |
 | 17. CLI Infrastructure | v5.0 | 3/3 | Complete    | 2026-05-25 |
 | 18. Interactive Negotiation | v5.0 | 3/3 | Complete    | 2026-05-25 |
-| 19. Command Simplification | v5.0 | 0/3 | Planned | - |
+| 19. Command Simplification | v5.0 | 1/3 | In Progress|  |
 | 20. Docs + Playground Updates | v5.0 | 0/0 | Planned | - |
 
 ## Post-Roadmap Enhancement: Router Package Rewrite (2026-05-09)
