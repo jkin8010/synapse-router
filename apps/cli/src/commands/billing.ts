@@ -99,43 +99,77 @@ See also:
 // Packs directory and provider card loading
 // ---------------------------------------------------------------------------
 
-async function findPacksDir(): Promise<string> {
-  const { fileURLToPath } = await import("node:url");
-  const dir = fileURLToPath(import.meta.url);
-  if (dir.includes("/dist/")) {
-    // From dist/commands/billing.js -> 5 levels up = project root
-    return join(dirname(dirname(dirname(dirname(dirname(dir))))), "packs");
-  } else {
-    // From src/commands/billing.ts -> 4 levels up = project root
-    return join(dirname(dirname(dirname(dirname(dir)))), "packs");
-  }
+async function findBuiltinPacksDir(): Promise<string | null> {
+  const cwd = process.cwd();
+  const devPath = join(cwd, "packs");
+  try {
+    await readdir(devPath);
+    return devPath;
+  } catch { /* ignore */ }
+
+  try {
+    const { fileURLToPath } = await import("node:url");
+    const dir = fileURLToPath(import.meta.url);
+    const depth = dir.includes("/dist/") ? 5 : 4;
+    const ups = new Array<string>(depth).fill("..");
+    const packsFromCli = join(dir, ...ups, "packs");
+    await readdir(packsFromCli);
+    return packsFromCli;
+  } catch { /* ignore */ }
+
+  return null;
 }
 
-async function loadProviderCard(packsDir: string, providerId: string): Promise<ProviderCard | null> {
+async function loadProviderCard(providerId: string): Promise<ProviderCard | null> {
   const dirName = providerId.includes("/") ? providerId.replace("/", "__") : providerId;
-  const cardPath = join(packsDir, dirName, "provider-card.json");
-  try {
-    const content = await readFile(cardPath, "utf8");
-    return JSON.parse(content) as ProviderCard;
-  } catch {
-    return null;
+
+  // Search all pack sources, local takes priority
+  const searchDirs: string[] = [];
+  const builtin = await findBuiltinPacksDir();
+  if (builtin) searchDirs.push(builtin);
+  searchDirs.push(join(homedir(), ".synapse", "packs"));
+  searchDirs.push(join(process.cwd(), ".synapse", "packs"));
+
+  for (const dir of searchDirs.reverse()) {
+    try {
+      const cardPath = join(dir, dirName, "provider-card.json");
+      const content = await readFile(cardPath, "utf8");
+      return JSON.parse(content) as ProviderCard;
+    } catch { /* try next */ }
   }
+  return null;
 }
 
-async function listInstalledProviders(packsDir: string): Promise<Array<{ id: string; name: string }>> {
+async function listAllProviders(): Promise<Array<{ id: string; name: string }>> {
+  const seen = new Set<string>();
   const providers: Array<{ id: string; name: string }> = [];
-  try {
-    const entries = await readdir(packsDir, { withFileTypes: true });
-    for (const entry of entries) {
-      if (!entry.isDirectory() || entry.name.startsWith(".")) continue;
-      const card = await loadProviderCard(packsDir, entry.name);
-      if (card) {
-        providers.push({ id: card.provider.id, name: card.provider.name });
+
+  // Priority order: builtin < registry < local
+  const dirs: Array<{ dir: string }> = [];
+  const builtin = await findBuiltinPacksDir();
+  if (builtin) dirs.push({ dir: builtin });
+  dirs.push({ dir: join(homedir(), ".synapse", "packs") });
+  dirs.push({ dir: join(process.cwd(), ".synapse", "packs") });
+
+  for (const { dir } of dirs) {
+    try {
+      const entries = await readdir(dir, { withFileTypes: true });
+      for (const entry of entries) {
+        if (!entry.isDirectory() || entry.name.startsWith(".")) continue;
+        if (seen.has(entry.name)) continue;
+        const cardPath = join(dir, entry.name, "provider-card.json");
+        try {
+          const content = await readFile(cardPath, "utf8");
+          const card = JSON.parse(content) as { provider: { id: string; name: string } };
+          if (card?.provider?.id) {
+            seen.add(entry.name);
+            providers.push({ id: card.provider.id, name: card.provider.name });
+          }
+        } catch { /* skip invalid */ }
       }
-    }
-  } catch {
-    // packs dir not found -- return empty list
+    } catch { /* dir not found */ }
   }
+
   return providers;
 }
 
@@ -855,14 +889,13 @@ async function configureProviderInteractive(
 // ---------------------------------------------------------------------------
 
 async function configureProviderNonInteractive(
-  packsDir: string,
   providerId: string,
   pricingStrategyOverride: string | undefined,
   quotaLimit: number,
   quotaPeriod: string,
   onError: string,
 ): Promise<{ providerId: string; config: Record<string, unknown> }> {
-  const card = await loadProviderCard(packsDir, providerId);
+  const card = await loadProviderCard(providerId);
   if (!card) {
     console.error(`Error: Provider card not found for '${providerId}'`);
     process.exit(1);
@@ -905,7 +938,6 @@ async function handleBillingInit(argv: string[]): Promise<void> {
   const flags = parseInitFlags(argv);
   if (!flags) return; // --help was shown
 
-  const packsDir = await findPacksDir();
   const configuredProviders: Array<{ id: string; config: Record<string, unknown> }> = [];
 
   if (flags.providers.length > 0) {
@@ -916,7 +948,6 @@ async function handleBillingInit(argv: string[]): Promise<void> {
 
     for (const providerId of flags.providers) {
       const result = await configureProviderNonInteractive(
-        packsDir,
         providerId,
         flags.pricingStrategy,
         quotaLimit,
@@ -927,7 +958,7 @@ async function handleBillingInit(argv: string[]): Promise<void> {
     }
   } else {
     // Interactive wizard
-    const installed = await listInstalledProviders(packsDir);
+    const installed = await listAllProviders();
 
     if (installed.length === 0) {
       console.error("No provider packs found. Run 'synapse pack add <provider>' first.");
@@ -957,7 +988,7 @@ async function handleBillingInit(argv: string[]): Promise<void> {
       }
 
       for (const provider of selectedProviders) {
-        const card = await loadProviderCard(packsDir, provider.id);
+        const card = await loadProviderCard(provider.id);
         if (!card) {
           console.error(`Error: Provider card not found for '${provider.id}'`);
           process.exit(1);
