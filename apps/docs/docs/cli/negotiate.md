@@ -159,7 +159,7 @@ After successful negotiation, a 5-option menu lets you choose the next action:
     Save and exit
 ```
 
-Each option displays the corresponding command or code snippet. Selecting "Test connection" shows a ready-to-run `synapse connect` command. Selecting "Generate SDK" shows a `synapse evolve` command. "Show SDK integration code" displays import and usage examples. "Open in Playground" opens the web Playground (<http://localhost:5173>) in your default browser:
+Each option displays the corresponding command or code snippet. Selecting "Test connection" shows a ready-to-run `synapse connect` command. Selecting "Generate SDK" shows a `synapse evolve` command. "Show SDK integration code" displays import and usage examples. "Open in Playground" opens the web Playground ([http://localhost:5173](http://localhost:5173)) in your default browser:
 
 ```
   Run this command to test:

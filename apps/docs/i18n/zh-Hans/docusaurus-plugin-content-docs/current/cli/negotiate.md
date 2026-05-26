@@ -159,7 +159,7 @@ Schema 协商发生在工作流的以下节点：
     Save and exit
 ```
 
-每个选项显示对应的命令或代码片段。选择"Test connection"显示可运行的 `synapse connect` 命令。选择"Generate SDK"显示 `synapse evolve` 命令。"Show SDK integration code"显示导入和使用示例。"Open in Playground"在默认浏览器中打开 Playground（<http://localhost:5173>）：
+每个选项显示对应的命令或代码片段。选择"Test connection"显示可运行的 `synapse connect` 命令。选择"Generate SDK"显示 `synapse evolve` 命令。"Show SDK integration code"显示导入和使用示例。"Open in Playground"在默认浏览器中打开 Playground（[http://localhost:5173](http://localhost:5173)）：
 
 ```
   Run this command to test:
