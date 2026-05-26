@@ -13,7 +13,7 @@ All commands follow the unified `synapse <command> [subcommand] [options]` forma
 
 | Command | Description | Page |
 |---------|-------------|------|
-| `synapse connect` | Connect to a Provider and execute an intent | [/docs/cli/connect](/docs/cli/connect) |
+| `synapse connect` | Connect to a Provider and execute an intent (incl. `--smoke` for testing) | [/docs/cli/connect](/docs/cli/connect) |
 | `synapse vault` | Manage encrypted API Keys (AES-256-GCM) | [/docs/cli/vault](/docs/cli/vault) |
 | `synapse negotiate` | Schema negotiation — intent matching and Schema Lock creation | [/docs/cli/negotiate](/docs/cli/negotiate) |
 | `synapse evolve` | Generate zero-dependency SDK | [/docs/cli/evolve](/docs/cli/evolve) |
@@ -22,16 +22,16 @@ All commands follow the unified `synapse <command> [subcommand] [options]` forma
 | `synapse billing` | Billing management and quota viewing | [/docs/cli/billing](/docs/cli/billing) |
 | `synapse pack` | Manage Provider Packs | [/docs/cli/pack](/docs/cli/pack) |
 | `synapse lock` | Manage Schema Locks | [/docs/cli/lock](/docs/cli/lock) |
-| `synapse config` | Configuration management (dot notation) | [/docs/cli/config](/docs/cli/config) |
-| `synapse setup` | Interactive initialization wizard | [/docs/cli/setup](/docs/cli/setup) |
+| `synapse config` | Configuration management (dot notation, incl. `profile`/`export`/`import` subcommands, replaces `profile`/`export`/`import`) | [/docs/cli/config](/docs/cli/config) |
+| `synapse setup` | Interactive initialization wizard (replaces `init`) | [/docs/cli/setup](/docs/cli/setup) |
 
 ## Quick Navigation
 
 Grouped by usage category for quick reference:
 
-- **Core Operations:** [connect](/docs/cli/connect), [negotiate](/docs/cli/negotiate), [route](/docs/cli/route), [evolve](/docs/cli/evolve), [sdk](/docs/cli/sdk)
-- **Configuration & Management:** [setup](/docs/cli/setup), [config](/docs/cli/config)
-- **Security & Resources:** [vault](/docs/cli/vault), [billing](/docs/cli/billing), [pack](/docs/cli/pack), [lock](/docs/cli/lock)
+- **Core Workflow:** [connect](/docs/cli/connect), [negotiate](/docs/cli/negotiate), [route](/docs/cli/route), [evolve](/docs/cli/evolve), [sdk](/docs/cli/sdk)
+- **Configuration:** [setup](/docs/cli/setup), [config](/docs/cli/config), [vault](/docs/cli/vault), [billing](/docs/cli/billing), [pack](/docs/cli/pack), [lock](/docs/cli/lock)
+- **Advanced:** `synapse --help` for additional commands (`generate`, `provider`, `watchdog` — `init`/`smoke`/`profile`/`export`/`import` are merged into `config`/`connect`/`setup`)
 
 ## General Conventions
 
@@ -60,6 +60,18 @@ When using the Synapse CLI for the first time, follow this recommended order:
 2. Use `synapse vault set <provider> <key>` to store API Keys
 3. Use `synapse connect <provider> <intent>` to test the connection
 4. Configure billing and routing strategies as needed
+
+## Recent Updates (v5.0)
+
+The following command changes were introduced in v5.0:
+
+| Change | Description |
+| --- | --- |
+| `smoke` merged into `connect` | Use `synapse connect --smoke` instead of the standalone `synapse smoke` command |
+| `init` merged into `setup` | Use `synapse setup` for interactive first-time setup (replaces `synapse init`) |
+| `profile` merged into `config` | Use `synapse config profile` for profile management (replaces `synapse profile`) |
+| `export` / `import` merged into `config` | Use `synapse config export` / `synapse config import` (replaces standalone commands) |
+| `negotiate` gains interactive mode | Running `synapse negotiate` with no arguments launches an 8-step interactive wizard |
 
 ## Link Index
 

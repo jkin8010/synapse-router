@@ -119,6 +119,12 @@ Provider Card 由三个顶级对象组成：`provider`（身份）、`service`�
 
 Synapse CLI 是 Router 的开发者工具入口。所有协商、路由、账单管理都在 CLI 中完成。
 
+命令分为三组：
+
+- **核心工作流 (Core Workflow):** setup（初始化）、negotiate（Schema 协商）、connect（连接 Provider 执行功能）、evolve（生成 SDK）
+- **配置 (Configuration):** vault（API Key 管理）、config（配置管理）、pack（Pack 管理）、billing（计费管理）
+- **高级 (Advanced):** `synapse --help` 查看完整列表（lock、route、sdk、watchdog、generate、provider——`init`/`smoke`/`profile`/`export`/`import` 已合并到 `config`/`connect`/`setup`）
+
 ### connect — 连接 Provider 执行功能
 
 连接指定 Provider 并执行一个功能（intent）。
@@ -132,6 +138,7 @@ synapse connect <provider> <intent> [--input <json>] [--billing <strategy>]
 - `<intent>` — 意图类型（如 `chat`, `text-to-image`）
 - `--input <json>` — 输入参数的 JSON 字符串
 - `--billing <strategy>` — 计费策略（如 `preCall`），如果 billing 配置存在则自动包裹
+- `--smoke` — 运行 Provider smoke 测试（替代独立 `smoke` 命令）
 
 **示例：**
 ```bash
@@ -140,17 +147,20 @@ synapse connect deepseek chat --input '{"messages":[{"role":"user","content":"he
 
 # 使用 billing 包裹
 synapse connect deepseek chat --input '{"messages":[]}' --billing preCall
+
+# 运行 smoke 测试
+synapse connect --smoke --provider openai
 ```
 
-> **相关命令：** `synapse billing init`（初始化计费配置）、`synapse vault set`（预存 API Key）
+> **相关命令：** `synapse billing init`（初始化计费配置）、`synapse vault set`（预存 API Key）、`synapse setup`（交互式初始化）
 
-### setup — 交互式初始化向导
+### setup — 交互式初始化向导（替代 init）
 
 ```bash
 synapse setup
 ```
 
-首次运行的交互式设置，引导用户选择 Provider、配置 API Key 和基础参数。
+首次运行的交互式设置，引导用户选择 Provider、配置 API Key 和基础参数。替代了 `synapse init` 命令。
 
 ### config — 配置管理
 
@@ -162,12 +172,18 @@ synapse config set|get|list [key] [value]
 - `set` — 设置配置值，支持点号记法（如 `billing.*`）
 - `get` — 获取配置值
 - `list` — 列出所有配置
+- `profile` — 管理 Provider Profiles（替代独立 `profile` 命令）
+- `export` — 导出 `.synapse/` 数据（替代独立 `export` 命令）
+- `import` — 导入 `.synapse/` 数据（替代独立 `import` 命令）
 
 **示例：**
 ```bash
 synapse config set billing.strategy perToken
 synapse config get billing.strategy
 synapse config list
+synapse config profile list
+synapse config export --output ./backup.tgz
+synapse config import ./backup.tgz --merge
 ```
 
 ### billing — 账单管理与配额查看
