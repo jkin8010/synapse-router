@@ -479,4 +479,63 @@ describe("HTTP API Server", () => {
       });
     });
   });
+
+  // ─── SDK Preview Tests ────────────────────────────────────────────────────────
+
+  it("POST /sdk-preview without provider_id returns 400", async () => {
+    await withServer(getTestOptions(), async (baseUrl) => {
+      const res = await httpRequest(`${baseUrl}/sdk-preview`, {
+        method: "POST",
+        body: {
+          agent_schema: { features: [{ intent: "chat" }] },
+        },
+      });
+      assert.equal(res.status, 400);
+      assert.equal((res.body as any).error?.code, "INVALID_REQUEST");
+    });
+  });
+
+  it("POST /sdk-preview without agent_schema returns 400", async () => {
+    await withServer(getTestOptions(), async (baseUrl) => {
+      const res = await httpRequest(`${baseUrl}/sdk-preview`, {
+        method: "POST",
+        body: { provider_id: "openai" },
+      });
+      assert.equal(res.status, 400);
+      assert.equal((res.body as any).error?.code, "INVALID_REQUEST");
+    });
+  });
+
+  it("POST /sdk-preview with unknown provider returns 404", async () => {
+    await withServer(getTestOptions(), async (baseUrl) => {
+      const res = await httpRequest(`${baseUrl}/sdk-preview`, {
+        method: "POST",
+        body: {
+          provider_id: "unknown-provider",
+          agent_schema: { features: [{ intent: "chat" }] },
+        },
+      });
+      assert.equal(res.status, 404);
+      assert.equal((res.body as any).error?.code, "PACK_NOT_FOUND");
+    });
+  });
+
+  it("POST /sdk-preview with valid request returns 200 and code", async () => {
+    await withServer(getTestOptions(), async (baseUrl) => {
+      const res = await httpRequest(`${baseUrl}/sdk-preview`, {
+        method: "POST",
+        body: {
+          provider_id: "openai",
+          agent_schema: { features: [{ intent: "chat" }] },
+          lang: "typescript",
+        },
+      });
+      assert.equal(res.status, 200, `Expected 200, got ${res.status}: ${JSON.stringify(res.body)}`);
+      const body = res.body as { code?: string; lang?: string; provider?: string; features?: number };
+      assert.ok(typeof body.code === "string" && body.code.length > 0, "should have non-empty code");
+      assert.equal(body.lang, "typescript");
+      assert.equal(body.provider, "openai");
+      assert.ok(typeof body.features === "number" && body.features > 0, "should have positive feature count");
+    });
+  });
 });

@@ -13,6 +13,7 @@
   "dependencies": {
     "@synapse-router/negotiator": "workspace:*",
     "@synapse-router/registry-client": "workspace:*",
+    "@synapse-router/sdk-generator": "workspace:*",
     "@synapse-router/vault": "workspace:*"
   }
 }

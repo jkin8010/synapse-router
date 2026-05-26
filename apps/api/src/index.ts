@@ -23,6 +23,7 @@ import type {
   ProviderFeature,
   FieldMapping,
 } from "@synapse-router/core";
+import { generateSdk } from "@synapse-router/sdk-generator";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -47,6 +48,12 @@ interface ExecuteBody {
   feature_id?: string;
   input?: Record<string, unknown>;
   base_url?: string;
+}
+
+interface SdkPreviewBody {
+  agent_schema?: { features?: Array<{ intent?: string }> };
+  provider_id?: string;
+  lang?: "typescript" | "python";
 }
 
 interface VaultSetKeyBody {
@@ -432,6 +439,51 @@ async function handleRequest(
       const provider = vaultVerifyParams["provider"];
       const valid = await ctx.vault.verifyKey(provider);
       sendJson(res, 200, { provider, valid });
+      return;
+    }
+
+    // ── POST /sdk-preview ───────────────────────────────────────────────────
+    if (req.method === "POST" && matchRoute("/sdk-preview", pathname)) {
+      const body = (await parseBody(req)) as SdkPreviewBody;
+
+      if (!body.provider_id) {
+        sendError(res, 400, "INVALID_REQUEST", "provider_id is required");
+        return;
+      }
+      if (!body.agent_schema || !Array.isArray(body.agent_schema.features) || body.agent_schema.features.length === 0) {
+        sendError(res, 400, "INVALID_REQUEST", "agent_schema.features must be a non-empty array");
+        return;
+      }
+
+      const lang = body.lang === "python" ? "python" : "typescript";
+      const packDir = path.join(REPO_ROOT, "packs", body.provider_id);
+
+      try {
+        await fs.promises.access(packDir);
+      } catch {
+        sendError(res, 404, "PACK_NOT_FOUND", "Pack not found");
+        return;
+      }
+
+      try {
+        const result = await generateSdk({
+          packDir,
+          lang,
+          outputDir: "/tmp/synapse-sdk-preview",
+          withBilling: false,
+        });
+
+        const mainFile = result.files.find(f =>
+          f.path.endsWith("index.ts") || f.path.endsWith("client.ts") ||
+          f.path.endsWith("index.py") || f.path.endsWith("client.py")
+        );
+        const code = mainFile?.content ?? result.files.map(f => `// ${f.path}\n${f.content}`).join("\n\n");
+
+        sendJson(res, 200, { code, lang: result.lang, provider: result.provider, features: result.features });
+      } catch (err) {
+        const message = err instanceof Error ? err.message : "SDK generation failed";
+        sendError(res, 500, "SDK_GENERATION_FAILED", message);
+      }
       return;
     }
 
