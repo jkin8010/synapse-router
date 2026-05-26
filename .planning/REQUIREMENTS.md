@@ -89,13 +89,13 @@
 
 ## DOCS — 文档更新
 
-- [ ] **DOCS-01**: 协商命令文档更新 — 更新 docs 中 `negotiate` 命令文档，覆盖交互式协商流程
-- [ ] **DOCS-02**: 用户旅程文档 — 新增"用户旅程"文档，描述从安装到使用的完整流程
-- [ ] **DOCS-03**: 命令参考更新 — 更新 CLI 命令参考，反映精简后的命令结构
+- [x] **DOCS-01**: 协商命令文档更新 — 更新 docs 中 `negotiate` 命令文档，覆盖交互式协商流程
+- [x] **DOCS-02**: 用户旅程文档 — 新增"用户旅程"文档，描述从安装到使用的完整流程
+- [x] **DOCS-03**: 命令参考更新 — 更新 CLI 命令参考，反映精简后的命令结构
 
 ## PLAY — Playground 更新
 
-- [ ] **PLAY-06**: SDK 代码自动预览 — Playground 中 Schema 变化时自动预览生成的 SDK 代码
+- [x] **PLAY-06**: SDK 代码自动预览 — Playground 中 Schema 变化时自动预览生成的 SDK 代码
 - [ ] **PLAY-07**: Schema 预设 — 内置 Chat、Text-to-Image、Embedding 预设 + localStorage 自定义预设
 - [ ] **PLAY-08**: Billing 费用预览 — 在 Playground 中显示当前 Schema 的预估费用
 
@@ -156,9 +156,9 @@
 | CMD-01 | Phase 19 | Complete |
 | CMD-02 | Phase 19 | Complete |
 | CMD-03 | Phase 19 | Complete |
-| DOCS-01 | Phase 20 | Pending |
-| DOCS-02 | Phase 20 | Pending |
-| DOCS-03 | Phase 20 | Pending |
-| PLAY-06 | Phase 20 | Pending |
+| DOCS-01 | Phase 20 | Complete |
+| DOCS-02 | Phase 20 | Complete |
+| DOCS-03 | Phase 20 | Complete |
+| PLAY-06 | Phase 20 | Complete |
 | PLAY-07 | Phase 20 | Pending |
 | PLAY-08 | Phase 20 | Pending |
