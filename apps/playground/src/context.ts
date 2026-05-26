@@ -67,6 +67,8 @@ export interface AppState {
   timing: { negotiate?: number; execute?: number };
   selectedBaseUrl: string | null;
   activePanel: "providers" | "schema" | "response";
+  sdkPreviewCode: string | null;
+  sdkPreviewLoading: boolean;
 }
 
 // ── Actions ────────────────────────────────────────────────────────────────
@@ -84,7 +86,8 @@ export type AppAction =
   | { type: "ADD_ERROR"; error: AppError }
   | { type: "CLEAR_ERRORS" }
   | { type: "SET_BASE_URL"; baseUrl: string | null }
-  | { type: "SET_ACTIVE_PANEL"; panel: "providers" | "schema" | "response" };
+  | { type: "SET_ACTIVE_PANEL"; panel: "providers" | "schema" | "response" }
+  | { type: "UPDATE_SDK_PREVIEW"; code: string | null; loading: boolean };
 
 // ── Default Schema ─────────────────────────────────────────────────────────
 
@@ -142,6 +145,8 @@ export const initialState: AppState = {
   timing: {},
   selectedBaseUrl: null,
   activePanel: "providers",
+  sdkPreviewCode: null,
+  sdkPreviewLoading: false,
 };
 
 // ── Reducer ────────────────────────────────────────────────────────────────
@@ -182,6 +187,8 @@ export function appReducer(state: AppState, action: AppAction): AppState {
       return { ...state, selectedBaseUrl: action.baseUrl };
     case "SET_ACTIVE_PANEL":
       return { ...state, activePanel: action.panel };
+    case "UPDATE_SDK_PREVIEW":
+      return { ...state, sdkPreviewCode: action.code, sdkPreviewLoading: action.loading };
     default:
       return state;
   }

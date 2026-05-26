@@ -1,7 +1,8 @@
-import { useRef, useCallback } from "react";
+import { useRef, useCallback, useEffect } from "react";
 import { useAppState, useDispatch } from "../context";
 import { useCodeMirror } from "../hooks/useCodeMirror";
 import { useI18n } from "../i18n/context";
+import { createApiClient } from "../lib/api";
 
 function tryParseJSON(str: string): boolean {
   try {
@@ -14,7 +15,7 @@ function tryParseJSON(str: string): boolean {
 
 export default function SchemaEditor() {
   const { t } = useI18n();
-  const { schema, status } = useAppState();
+  const { schema, schemaValid, selectedProviderId, status } = useAppState();
   const dispatch = useDispatch();
   const divRef = useRef<HTMLDivElement>(null);
 
@@ -25,6 +26,30 @@ export default function SchemaEditor() {
       dispatch({ type: "UPDATE_SCHEMA", schema: value, valid: tryParseJSON(value) }),
     editable: status !== "negotiating",
   });
+
+  // ── SDK Preview: 1s debounce on schema change ───────────────────────────
+  useEffect(() => {
+    if (!schemaValid || !selectedProviderId) return;
+
+    const api = createApiClient();
+    const controller = new AbortController();
+    const timer = setTimeout(async () => {
+      dispatch({ type: "UPDATE_SDK_PREVIEW", code: null, loading: true });
+      try {
+        const parsed = JSON.parse(schema);
+        const result = await api.generateSdkPreview(parsed, selectedProviderId, controller.signal);
+        dispatch({ type: "UPDATE_SDK_PREVIEW", code: result.code, loading: false });
+      } catch (err) {
+        if (err instanceof Error && err.name === "AbortError") return;
+        dispatch({ type: "UPDATE_SDK_PREVIEW", code: null, loading: false });
+      }
+    }, 1000);
+
+    return () => {
+      clearTimeout(timer);
+      controller.abort();
+    };
+  }, [schema, schemaValid, selectedProviderId, dispatch]);
 
   const handleLoad = useCallback(() => {
     const input = document.createElement("input");

@@ -72,5 +72,7 @@
   "mockTestDisabled.noSchema": "Schema is invalid -- fix JSON errors first",
   "tooltip.negotiate": "Negotiate schema with selected provider",
   "tooltip.execute": "Execute the negotiated request",
-  "tooltip.mockTest": "Run mock test against the schema"
+  "tooltip.mockTest": "Run mock test against the schema",
+  "sdkPreview.generating": "Generating SDK preview...",
+  "sdkPreview.empty": "Edit the schema to auto-generate SDK code, or run Negotiate first"
 }

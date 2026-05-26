@@ -72,5 +72,7 @@
   "mockTestDisabled.noSchema": "Schema 无效 — 请先修复 JSON 错误",
   "tooltip.negotiate": "与所选 Provider 协商 Schema",
   "tooltip.execute": "执行已协商的请求",
-  "tooltip.mockTest": "对 Schema 运行 Mock 测试"
+  "tooltip.mockTest": "对 Schema 运行 Mock 测试",
+  "sdkPreview.generating": "正在生成 SDK 预览...",
+  "sdkPreview.empty": "编辑 Schema 自动生成 SDK 代码，或先运行 Negotiate"
 }

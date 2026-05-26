@@ -75,5 +75,24 @@ export function createApiClient(config: ApiConfig = { baseUrl: "/api" }) {
     return res.json();
   }
 
-  return { getProviders, negotiate, execute, searchPacks, installPack };
+  async function generateSdkPreview(
+    agentSchema: unknown,
+    providerId: string,
+    signal?: AbortSignal,
+  ): Promise<{ code: string; lang: string; provider: string }> {
+    const res = await fetch(`${config.baseUrl}/sdk-preview`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        agent_schema: agentSchema,
+        provider_id: providerId,
+        lang: "typescript",
+      }),
+      signal,
+    });
+    if (!res.ok) throw new ApiError("SDK preview failed", res.status, await res.json());
+    return res.json();
+  }
+
+  return { getProviders, negotiate, execute, searchPacks, installPack, generateSdkPreview };
 }
