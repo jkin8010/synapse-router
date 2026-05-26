@@ -1,14 +1,13 @@
 import { describe, it } from "node:test";
 import assert from "node:assert/strict";
 
-// These imports will fail until help.ts is created
 import {
   HELP_BANNER, GROUP_CORE, GROUP_CONFIG, GROUP_ADVANCED,
   CORE_COMMANDS, CONFIG_COMMANDS, ADVANCED_COMMANDS,
-  HELP_SETUP, HELP_CONNECT, HELP_NEGOTIATE, HELP_EVOLVE,
+  HELP_SETUP, HELP_CONNECT, HELP_NEGOTIATE,
   HELP_VAULT, HELP_CONFIG, HELP_PACK, HELP_BILLING,
   HELP_LOCK, HELP_ROUTE, HELP_SDK,
-  HELP_SMOKE, HELP_WATCHDOG, HELP_GENERATE, HELP_PROVIDER,
+  HELP_SMOKE, HELP_WATCHDOG, HELP_PROVIDER,
   HELP_EXPORT, HELP_IMPORT, HELP_INIT, HELP_PROFILE,
 } from "./help.js";
 
@@ -22,24 +21,24 @@ describe("help module", () => {
     assert.ok(HELP_BANNER.includes("Synapse Router CLI"));
   });
 
-  it("Test 3: CORE_COMMANDS array has exactly 4 entries", () => {
-    assert.strictEqual(CORE_COMMANDS.length, 4);
+  it("Test 3: CORE_COMMANDS array has exactly 3 entries", () => {
+    assert.strictEqual(CORE_COMMANDS.length, 3);
   });
 
   it("Test 4: CONFIG_COMMANDS array has exactly 4 entries", () => {
     assert.strictEqual(CONFIG_COMMANDS.length, 4);
   });
 
-  it("Test 5: ADVANCED_COMMANDS array has exactly 11 entries", () => {
-    assert.strictEqual(ADVANCED_COMMANDS.length, 11);
+  it("Test 5: ADVANCED_COMMANDS array has exactly 10 entries", () => {
+    assert.strictEqual(ADVANCED_COMMANDS.length, 10);
   });
 
   it("Test 6: all HELP_* constants are non-empty strings", () => {
     const helpConstants = [
-      HELP_SETUP, HELP_CONNECT, HELP_NEGOTIATE, HELP_EVOLVE,
+      HELP_SETUP, HELP_CONNECT, HELP_NEGOTIATE,
       HELP_VAULT, HELP_CONFIG, HELP_PACK, HELP_BILLING,
       HELP_LOCK, HELP_ROUTE, HELP_SDK,
-      HELP_SMOKE, HELP_WATCHDOG, HELP_GENERATE, HELP_PROVIDER,
+      HELP_SMOKE, HELP_WATCHDOG, HELP_PROVIDER,
       HELP_EXPORT, HELP_IMPORT, HELP_INIT, HELP_PROFILE,
     ];
     for (const h of helpConstants) {

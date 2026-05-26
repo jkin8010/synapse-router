@@ -10,16 +10,14 @@ import { loadMergedConfig, saveGlobalConfig } from "./utils/config.js";
 import {
   HELP_BANNER, GROUP_CORE, GROUP_CONFIG, GROUP_ADVANCED,
   CORE_COMMANDS, CONFIG_COMMANDS, ADVANCED_COMMANDS,
-  HELP_SETUP, HELP_CONNECT, HELP_NEGOTIATE, HELP_EVOLVE,
+  HELP_SETUP, HELP_CONNECT, HELP_NEGOTIATE,
   HELP_VAULT, HELP_CONFIG, HELP_PACK, HELP_BILLING,
   HELP_LOCK, HELP_ROUTE, HELP_SDK,
-  HELP_SMOKE, HELP_WATCHDOG, HELP_GENERATE, HELP_PROVIDER,
+  HELP_SMOKE, HELP_WATCHDOG, HELP_PROVIDER,
   HELP_EXPORT, HELP_IMPORT, HELP_INIT, HELP_PROFILE,
 } from "./utils/help.js";
-import { handleGenerateCommand } from "./commands/generate.js";
 import { handleConnectCommand, printConnectHelp } from "./commands/connect.js";
 import { handleSmokeCommand, printSmokeHelp } from "./commands/smoke.js";
-import { handleEvolveCommand, printEvolveHelp } from "./commands/evolve.js";
 import { handleInitCommand, printInitHelp } from "./commands/init.js";
 import { handleWatchdogCommand, printWatchdogHelp } from "./commands/watchdog.js";
 import { handleProfileCommand, printProfileHelp } from "./commands/profile.js";
@@ -135,7 +133,7 @@ Detailed help:
   synapse setup --help          Setup wizard
   synapse negotiate --help      Negotiate command
   synapse connect --help        Connect command options & examples
-  synapse evolve --help         Evolve SDK generation
+  synapse sdk --help           SDK generation
   synapse vault --help          Vault subcommands
   synapse config --help         Config management
   synapse pack --help           Pack management
@@ -153,10 +151,6 @@ function printProviderHelp(): void {
 
 function printVaultHelp(): void {
   console.log(HELP_VAULT);
-}
-
-function printGenerateHelp(): void {
-  console.log(HELP_GENERATE);
 }
 
 // ---------------------------------------------------------------------------
@@ -494,7 +488,6 @@ async function main(): Promise<void> {
         setup: HELP_SETUP,
         negotiate: HELP_NEGOTIATE,
         connect: HELP_CONNECT,
-        evolve: HELP_EVOLVE,
         vault: HELP_VAULT,
         config: HELP_CONFIG,
         pack: HELP_PACK,
@@ -504,7 +497,6 @@ async function main(): Promise<void> {
         sdk: HELP_SDK,
         smoke: HELP_SMOKE,
         watchdog: HELP_WATCHDOG,
-        generate: HELP_GENERATE,
         provider: HELP_PROVIDER,
         export: HELP_EXPORT,
         import: HELP_IMPORT,
@@ -581,11 +573,10 @@ async function main(): Promise<void> {
         }
         break;
       case "generate":
-        if (flags.has("help") || args.includes("--help") || args.includes("-h")) {
-          printGenerateHelp();
-        } else {
-          await handleGenerateCommand(args);
-        }
+      case "evolve":
+        console.error("The 'evolve' and 'generate' commands have been removed. Use 'synapse sdk generate' for SDK generation instead.");
+        console.error("Run 'synapse sdk --help' for more information.");
+        process.exit(1);
         break;
       case "negotiate":
         if (flags.has("help") || args.includes("--help") || args.includes("-h")) {
@@ -621,13 +612,6 @@ async function main(): Promise<void> {
         } else {
           console.error("Note: `synapse smoke` has been merged into `synapse connect --smoke`. Use that instead.");
           await handleConnectCommand(["--smoke", ...rawArgs]);
-        }
-        break;
-      case "evolve":
-        if (flags.has("help") || args.includes("--help") || args.includes("-h")) {
-          printEvolveHelp();
-        } else {
-          await handleEvolveCommand(rawArgs);
         }
         break;
       case "init":

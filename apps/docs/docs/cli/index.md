@@ -16,8 +16,7 @@ All commands follow the unified `synapse <command> [subcommand] [options]` forma
 | `synapse connect` | Connect to a Provider and execute an intent (incl. `--smoke` for testing) | [/docs/cli/connect](/docs/cli/connect) |
 | `synapse vault` | Manage encrypted API Keys (AES-256-GCM) | [/docs/cli/vault](/docs/cli/vault) |
 | `synapse negotiate` | Schema negotiation — intent matching and Schema Lock creation | [/docs/cli/negotiate](/docs/cli/negotiate) |
-| `synapse evolve` | Generate zero-dependency SDK | [/docs/cli/evolve](/docs/cli/evolve) |
-| `synapse sdk` | Generate SDK from a single Provider Pack | [/docs/cli/sdk](/docs/cli/sdk) |
+| `synapse sdk` | Generate SDK from a Provider Pack | [/docs/cli/sdk](/docs/cli/sdk) |
 | `synapse route` | Multi-dimensional scored routing | [/docs/cli/route](/docs/cli/route) |
 | `synapse billing` | Billing management and quota viewing | [/docs/cli/billing](/docs/cli/billing) |
 | `synapse pack` | Manage Provider Packs | [/docs/cli/pack](/docs/cli/pack) |
@@ -29,9 +28,9 @@ All commands follow the unified `synapse <command> [subcommand] [options]` forma
 
 Grouped by usage category for quick reference:
 
-- **Core Workflow:** [connect](/docs/cli/connect), [negotiate](/docs/cli/negotiate), [route](/docs/cli/route), [evolve](/docs/cli/evolve), [sdk](/docs/cli/sdk)
+- **Core Workflow:** [connect](/docs/cli/connect), [negotiate](/docs/cli/negotiate), [route](/docs/cli/route), [sdk](/docs/cli/sdk)
 - **Configuration:** [setup](/docs/cli/setup), [config](/docs/cli/config), [vault](/docs/cli/vault), [billing](/docs/cli/billing), [pack](/docs/cli/pack), [lock](/docs/cli/lock)
-- **Advanced:** `synapse --help` for additional commands (`generate`, `provider`, `watchdog` — `init`/`smoke`/`profile`/`export`/`import` are merged into `config`/`connect`/`setup`)
+- **Advanced:** `synapse --help` for additional commands (`provider`, `watchdog` — `init`/`smoke`/`profile`/`export`/`import` are merged into `config`/`connect`/`setup`)
 
 ## General Conventions
 
@@ -79,7 +78,6 @@ The following command changes were introduced in v5.0:
 - [vault](/docs/cli/vault)
 - [negotiate](/docs/cli/negotiate)
 - [route](/docs/cli/route)
-- [evolve](/docs/cli/evolve)
 - [sdk](/docs/cli/sdk)
 - [billing](/docs/cli/billing)
 - [pack](/docs/cli/pack)

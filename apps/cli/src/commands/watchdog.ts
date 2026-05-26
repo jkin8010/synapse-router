@@ -314,7 +314,7 @@ const DEFAULT_CONFIG: WatchdogConfig = {
 建议操作：
 \`\`\`bash
 git pull
-synapse evolve
+synapse sdk generate --pack {provider} --lang typescript
 pnpm test
 git add -A && git commit -m "chore: 重新生成 SDK"
 \`\`\``,
@@ -711,7 +711,7 @@ rules:
       建议操作：
       \`\`\`bash
       git pull
-      synapse evolve
+      synapse sdk generate --pack {provider} --lang typescript
       pnpm test
       git add -A && git commit -m "chore: 重新生成 SDK"
       \`\`\`

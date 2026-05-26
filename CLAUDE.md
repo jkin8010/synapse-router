@@ -121,9 +121,9 @@ Synapse CLI 是 Router 的开发者工具入口。所有协商、路由、账单
 
 命令分为三组：
 
-- **核心工作流 (Core Workflow):** setup（初始化）、negotiate（Schema 协商）、connect（连接 Provider 执行功能）、evolve（生成 SDK）
+- **核心工作流 (Core Workflow):** setup（初始化）、negotiate（Schema 协商）、connect（连接 Provider 执行功能）
 - **配置 (Configuration):** vault（API Key 管理）、config（配置管理）、pack（Pack 管理）、billing（计费管理）
-- **高级 (Advanced):** `synapse --help` 查看完整列表（lock、route、sdk、watchdog、generate、provider——`init`/`smoke`/`profile`/`export`/`import` 已合并到 `config`/`connect`/`setup`）
+- **高级 (Advanced):** `synapse --help` 查看完整列表（lock、route、sdk、watchdog、provider——`init`/`smoke`/`profile`/`export`/`import` 已合并到 `config`/`connect`/`setup`）
 
 ### connect — 连接 Provider 执行功能
 
@@ -234,42 +234,9 @@ synapse route chat --strategy quality
 synapse route chat --exclude openai --region apac --min-version 3.5
 ```
 
-### evolve — 生成零依赖 SDK（批量、生产工作流）
+### sdk — 从 Provider Pack 生成 SDK
 
-```bash
-synapse evolve [--output <dir>] [--tune] [--with-billing] [--dry-run]
-```
-
-**参数：**
-- `--output <dir>` — 输出目录（默认 `./synapse-sdk`）
-- `--tune` — 重新协商 Schema Lock 并生成策略调优报告
-- `--with-billing` — 包含 BillingTracker 类
-- `--with-profile` — 注入生产 Profile 数据（genesis.json）
-- `--from-registry` — 检查 Registry 是否有新版 Pack
-- `--provider <id>` — 只生成指定 Provider 的 SDK
-- `--dry-run` — 预览模式，扫描但不写入
-
-**示例：**
-```bash
-# 从所有已安装 Pack 生成 SDK
-synapse evolve
-
-# 生成带有 Billing 追踪的 SDK
-synapse evolve --with-billing
-
-# 注入生产 Profile 并调优策略
-synapse evolve --with-profile --tune
-
-# 指定输出目录
-synapse evolve --output ./my-sdk
-
-# 仅生成指定 Provider
-synapse evolve --provider deepseek
-```
-
-> `evolve` 是高阶工作流命令，循环调用 `@synapse-router/sdk-generator` 为每个 Pack 生成 SDK，并叠加 Pack 发现、Profile 注入、策略调优等能力。底层原语是 `synapse sdk generate`。
-
-### sdk — 从 Provider Pack 生成 SDK（低层原语）
+`synapse sdk generate` 是 SDK 生成的唯一命令。它从单个 Provider Pack 生成零依赖 SDK 代码。
 
 ```bash
 synapse sdk generate --pack <pack> --lang <lang> --output <dir> [options]
@@ -420,16 +387,15 @@ Agent Intent (如 "chat") → Negotiate → Provider Feature (如 "chat_post_v1_
 
 ### 3. SDK 生成流程
 
-`synapse evolve` 是 SDK 生成的入口，其处理流程：
+`synapse sdk generate` 是 SDK 生成的唯一命令，其处理流程：
 
-1. **读取 Provider Pack** — 从 `packs/`、Registry 和本地目录加载所有 Provider Pack
-2. **协商 Schema Lock** — 对每个 Provider 的 Feature 执行协商，创建 Schema Lock
-3. **生成代码** — 根据 Lock 中的字段映射生成 TypeScript / Python SDK 代码
-4. **输出** — 写入 `--output` 目录（默认 `./synapse-sdk`），零外部依赖
+1. **读取 Provider Pack** — 加载 Provider Pack
+2. **生成代码** — 根据 Pack DSL 中的字段映射生成 TypeScript / Python SDK 代码
+3. **输出** — 写入 `--output` 目录，零外部依赖
 
 ```bash
-# 完整流程
-synapse evolve --with-billing
+# 生成 TypeScript SDK
+synapse sdk generate --pack openai --lang typescript --output ./sdk
 ```
 
 SDK 生成器（`@synapse-router/sdk-generator`）将 Pack DSL 转换为纯函数代码，使用内置 `fetch`，不依赖 `@synapse-router/*`。
@@ -515,7 +481,7 @@ synapse route chat --region apac --min-version 3.5
 
 ### 运行时无路由
 
-路由决策在开发时通过 `synapse evolve` 完成，运行时路径不包含路由引擎。生成的 SDK 直接调用选定的 Provider，零决策开销。
+路由决策在开发时通过 `synapse sdk generate` 完成，运行时路径不包含路由引擎。生成的 SDK 直接调用选定的 Provider，零决策开销。
 
 ## Billing 集成
 
@@ -615,7 +581,7 @@ Billing 错误默认不阻塞 API 调用。
 | `downgrade` | 自动降级到低价 Provider |
 | `notify` | 发送通知并继续执行 |
 
-> **相关命令：** `synapse billing status`（查看配额）、`synapse evolve --with-billing`（生成含 BillingTracker 的 SDK）
+> **相关命令：** `synapse billing status`（查看配额）、`synapse sdk generate --with-billing`（生成含 BillingTracker 的 SDK）
 
 ## Sub-Agent 调度
 

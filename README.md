@@ -16,12 +16,12 @@ Registry (Provider API Pack)     .synapse/ (产线运行时日志)
         └──────────┬────────────────────┘
                    │ 开发时
                    ▼
-         synapse evolve
+         synapse sdk generate
       (可含 LLM，一次性，离线)
          ├── 协商 Schema 契约
          ├── 多维度路由评分
          ├── 生成纯代码 SDK
-         └── 策略权重调优 (--tune)
+         └── 策略权重调优
                    │
                    ▼
         纯代码 SDK (TypeScript/Python)
@@ -125,11 +125,11 @@ synapse route chat --region us-east --min-version 4.0
 
 ```bash
 # 基础生成
-synapse evolve --out-dir ./sdk
+synapse sdk generate --pack openai --lang typescript --output ./sdk
 
-# 包含产线数据 + 策略调优
+# 包含产线数据
 synapse profile refresh       # 从日志聚合产线数据
-synapse evolve --with-profile --tune  # 生成 SDK + 自动调优策略权重
+synapse sdk generate --pack openai --lang typescript --output ./sdk
 ```
 
 ### 开发调试
@@ -154,14 +154,13 @@ synapse watchdog --daemon       # 监控异常，自动创建 Issue
   setup                         交互式首次配置向导
   config set|get|list           配置管理
   provider list|show            Provider Pack 管理
-  generate <source>             从 OpenAPI Spec 生成 Provider Pack
+  generate <source>             从 OpenAPI Spec 生成 Provider Pack (已弃用)
   vault set|list|get|remove     管理 API Key
   negotiate <schema-file>       运行 Schema 协商
   lock list|show|remove|migrate Schema Lock 管理
   sdk generate                  从 Pack 生成 SDK
   pack add|search|list|update   从 Registry 管理 Pack
   route <intent>                路由到最优 Provider
-  evolve                        生成零依赖 SDK + 策略调优
   init                          初始化项目
   watchdog                      监控异常自动创建 Issue
   profile list|show|reset|stats Provider 产线数据
@@ -201,7 +200,7 @@ synapse-router/
 3. **确定性路由** — 相同的 SDK 输入永远产生相同的 Provider 选择
 4. **薄运行时** — SDK 只做 HTTP 调用 + 一行日志写入，不包含判断逻辑
 5. **日志即反馈** — `.synapse/` 通过 Git 同步，watchdog 监控异常
-6. **策略可调优** — `synapse evolve --tune` 用产线数据自动调优策略权重
+6. **策略可调优** — 用产线数据自动调优策略权重
 
 ## 与 Synapse Registry 的关系
 
@@ -211,7 +210,7 @@ Registry                          Router
 
 提供 Provider Pack             开发时读取 Pack → 协商 → 生成 SDK
 检测 Provider API 变化         产生运行时日志写入 .synapse/
-提供 Intelligence 统计数据     evolve 时拉取作为参考
+提供 Intelligence 统计数据     生成 SDK 时拉取作为参考
                                 策略权重调优输出到 strategies.json
 ```
 

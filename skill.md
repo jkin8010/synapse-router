@@ -21,7 +21,7 @@ GitHub raw URL 安装: `skills add https://raw.githubusercontent.com/useeclaw/sy
 
 1. **Schema 协商**: 匹配 Agent Intent 到 Provider Feature，验证能力契约
 2. **Provider 路由**: 五维评分选择最优 Provider
-3. **SDK 生成**: `synapse evolve` 生成零依赖 TypeScript/Python SDK
+3. **SDK 生成**: `synapse sdk generate` 生成零依赖 TypeScript/Python SDK
 4. **Billing 集成**: 配额管理、定价策略、自动包裹
 5. **加密密钥管理**: AES-256-GCM 加密存储
 
@@ -30,7 +30,7 @@ GitHub raw URL 安装: `skills add https://raw.githubusercontent.com/useeclaw/sy
 | 命令                                  | 用途                   |
 | ------------------------------------- | ---------------------- |
 | `synapse connect <provider> <intent>` | 连接 Provider 执行功能 |
-| `synapse evolve`                      | 生成零依赖 SDK         |
+| `synapse sdk generate`               | 生成零依赖 SDK         |
 | `synapse route <intent>`              | 多维评分路由           |
 | `synapse billing init`                | 初始化计费配置         |
 | `synapse billing status`              | 查看配额和费用概览     |

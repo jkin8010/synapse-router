@@ -219,9 +219,9 @@ async function promptRoutingMenu(
       description: `synapse connect ${selectedProvider} ${selectedIntent} --input '...'`,
     },
     {
-      name: pc.green("Generate SDK") + pc.dim("  (synapse evolve)"),
+      name: pc.green("Generate SDK") + pc.dim("  (synapse sdk generate)"),
       value: "evolve",
-      description: `synapse evolve --provider ${selectedProvider}`,
+      description: `synapse sdk generate --pack ${selectedProvider} --lang typescript --output ./generated-sdk`,
     },
     {
       name: pc.cyan("Show SDK integration code"),
@@ -251,9 +251,9 @@ async function promptRoutingMenu(
       break;
     case "evolve":
       console.log(pc.cyan("\n  Generate a zero-dependency SDK:"));
-      console.log(pc.bold("  synapse evolve --provider " + selectedProvider));
-      console.log(pc.dim("\n  Add --with-billing for BillingTracker."));
-      console.log(pc.dim("  Add --output ./my-sdk for custom output directory."));
+      console.log(pc.bold("  synapse sdk generate --pack " + selectedProvider + " --lang typescript --output ./generated-sdk"));
+      console.log(pc.dim("\n  Add --lang python for Python output."));
+      console.log(pc.dim("  Add --provider <name> to override provider name."));
       break;
     case "sdk-code":
       console.log(pc.cyan("\n  SDK Integration Example:\n"));

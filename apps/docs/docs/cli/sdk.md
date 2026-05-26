@@ -5,7 +5,7 @@ title: synapse sdk
 
 # synapse sdk — Generate SDK from a Provider Pack
 
-The `synapse sdk generate` command generates a zero-dependency SDK from a single Provider Pack. Unlike `synapse evolve` which processes all installed packs at once, this command targets a specific pack and supports both TypeScript and Python output.
+The `synapse sdk generate` command generates a zero-dependency SDK from a Provider Pack. It supports both TypeScript and Python output.
 
 ## Parameters
 
@@ -72,6 +72,5 @@ For Python output (`--lang python`):
 
 ## Related Commands
 
-- [/docs/cli/evolve](/docs/cli/evolve) — Generate SDK from all installed packs at once
 - [/docs/cli/pack](/docs/cli/pack) — View and install Provider Packs
 - [/docs/sdk](/docs/sdk) — SDK usage detailed guide

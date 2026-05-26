@@ -21,7 +21,6 @@ export const CORE_COMMANDS: HelpCommandEntry[] = [
   { name: "setup", usage: "setup", desc: "Interactive first-time setup wizard" },
   { name: "negotiate", usage: "negotiate <schema-file>", desc: "Run schema negotiation" },
   { name: "connect", usage: "connect <provider> <intent>", desc: "Connect to a provider and execute a feature" },
-  { name: "evolve", usage: "evolve", desc: "Generate zero-dependency SDK from all provider packs" },
 ];
 
 export const CONFIG_COMMANDS: HelpCommandEntry[] = [
@@ -38,7 +37,6 @@ export const ADVANCED_COMMANDS: HelpCommandEntry[] = [
   { name: "init", usage: "init", desc: "Initialize a synapse-sdk project" },
   { name: "smoke", usage: "smoke --provider <name>", desc: "Run provider smoke tests against live APIs" },
   { name: "watchdog", usage: "watchdog", desc: "Monitor events and auto-create Git Issues" },
-  { name: "generate", usage: "generate <source>", desc: "Generate a Provider Pack from OpenAPI spec" },
   { name: "provider", usage: "provider list|show", desc: "List and inspect provider packs" },
   { name: "export", usage: "export", desc: "Export .synapse/ data (tar.gz)" },
   { name: "import", usage: "import <file>", desc: "Import .synapse/ data" },
@@ -158,77 +156,6 @@ See also:
   synapse provider list   — List available providers
   synapse connect         — Connect to a provider
   synapse lock list       — Manage cached Schema Locks
-`;
-
-export const HELP_EVOLVE = `
-synapse evolve — Generate zero-dependency SDK from all installed Provider Packs
-
-Usage:
-  synapse evolve [options]
-
-Options:
-  --out-dir <path>      SDK output directory (default: ./synapse-sdk)
-  --provider <names>    Comma-separated provider IDs to include (default: all)
-  --dry-run             Preview changes without writing files
-  --force               Regenerate even if no provider changes detected
-  --with-profile        Read .synapse/profiles/ to inform SDK generation
-  --tune                Tune strategy weights from production profile data
-  --from-registry       Check registry for newer pack versions before generation
-  --registry-url <url>  Registry URL (implies --from-registry, overrides config/env)
-  --yes, -y             Non-interactive mode (auto-confirm downloads)
-
-Description:
-  Reads provider packs from built-in packs/ and ~/.synapse/packs/, then
-  generates a zero-dependency TypeScript SDK for each provider into the
-  output directory. The generated SDK uses native fetch only — no LLM,
-  no @synapse-router dependencies, no network dependencies beyond provider APIs.
-
-  With --with-profile, evolve reads production profiles from .synapse/profiles/
-  and includes them in the SDK output as genesis.json with per-provider stats,
-  success rates, and latency data. This enables development-time visibility
-  into production runtime behavior.
-
-Evolve Workflow:
-  1. Production SDK generates events -> .synapse/watchdog/events.ndjson
-  2. synapse profile refresh  -> aggregates events into .synapse/profiles/*.json
-  3. synapse export           -> packages .synapse/ as tar.gz for dev transfer
-  4. synapse import           -> restores .synapse/ in dev environment (via git or pipe)
-  5. synapse evolve --with-profile  -> reads profiles, generates SDK + genesis.json
-  6. Test -> deploy the new SDK
-  7. Repeat -- production data loops back to improve every evolve cycle
-
-  All complexity lives at development time. The generated SDK remains
-  pure zero-dependency code with no runtime Router or LLM dependency.
-
-Output structure:
-  <out-dir>/
-  ├── openai/
-  │   ├── index.ts           # Exports client + types
-  │   ├── client.ts          # HTTP client (zero-dependency)
-  │   ├── types.ts           # Type definitions
-  │   ├── <feature>.ts       # Per-feature type files
-  │   └── README.md
-  ├── replicate/
-  │   └── ...
-  ├── genesis.json           # Profile-informed metadata (with --with-profile)
-  ├── synapse.json           # Generation metadata
-  └── tsconfig.json          # TypeScript config
-
-Examples:
-  # Generate SDK for all providers
-  synapse evolve
-
-  # Generate only for openai and replicate
-  synapse evolve --provider openai,replicate
-
-  # Preview without writing
-  synapse evolve --dry-run
-
-  # Custom output directory
-  synapse evolve --out-dir ./my-sdk
-
-  # Include production profiles in SDK output
-  synapse evolve --with-profile
 `;
 
 export const HELP_VAULT = `
@@ -568,39 +495,8 @@ Examples:
   synapse watchdog rules validate
 
 See also:
-  synapse evolve    — Generate SDK from provider packs
+  synapse sdk       — Generate SDK from provider packs
   synapse init      — Initialize synapse-sdk project
-`;
-
-export const HELP_GENERATE = `
-synapse generate — Generate a Provider Pack from OpenAPI spec
-
-Usage:
-  synapse generate <source> [options]
-
-Arguments:
-  <source>               URL or local file path to OpenAPI spec (JSON)
-
-Options:
-  --provider <id>        Override provider ID
-  --name <name>          Override provider display name
-  --output <dir>         Output directory (default: ./generated-packs/<id>)
-  --no-validate          Skip validation step
-  --no-tarball           Skip tarball build
-
-Examples:
-  # Generate from URL
-  synapse generate https://api.example.com/openapi.json
-
-  # Generate from local file with custom provider ID
-  synapse generate ./openapi.json --provider myapi
-
-  # Generate with custom output directory
-  synapse generate ./openapi.json --output ./my-packs/custom
-
-See also:
-  synapse provider list   — List available providers
-  synapse connect         — Connect to a provider
 `;
 
 export const HELP_PROVIDER = `
@@ -623,7 +519,7 @@ Examples:
 
 See also:
   synapse connect   — Connect to a provider
-  synapse generate  — Generate new provider packs
+  synapse sdk       — Generate SDK from provider packs
   synapse pack      — Manage packs from Registry
 `;
 
@@ -702,8 +598,7 @@ Description:
   Creates a synapse-sdk project directory structure with a synapse.json
   configuration file. Run this in your project root before generating SDKs.
 
-  With --with-cicd, creates .github/workflows/synapse-evolve.yml for
-  automated weekly SDK evolution with production profile data.
+  With --with-cicd, creates a GitHub Actions CI/CD workflow template.
 
 Output structure:
   <out-dir>/
@@ -713,7 +608,7 @@ Output structure:
   synapse.json               # Generation configuration
 
   .github/workflows/         # (with --with-cicd)
-  └── synapse-evolve.yml     # CI/CD workflow template
+  └── sdk-generate.yml       # CI/CD workflow template
 
 Examples:
   # Interactive setup
