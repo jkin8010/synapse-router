@@ -26,6 +26,9 @@ importers:
       '@synapse-router/registry-client':
         specifier: workspace:*
         version: link:../../packages/registry-client
+      '@synapse-router/sdk-generator':
+        specifier: workspace:*
+        version: link:../../packages/sdk-generator
       '@synapse-router/vault':
         specifier: workspace:*
         version: link:../../packages/vault

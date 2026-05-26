@@ -96,8 +96,8 @@
 ## PLAY — Playground 更新
 
 - [x] **PLAY-06**: SDK 代码自动预览 — Playground 中 Schema 变化时自动预览生成的 SDK 代码
-- [ ] **PLAY-07**: Schema 预设 — 内置 Chat、Text-to-Image、Embedding 预设 + localStorage 自定义预设
-- [ ] **PLAY-08**: Billing 费用预览 — 在 Playground 中显示当前 Schema 的预估费用
+- [x] **PLAY-07**: Schema 预设 — 内置 Chat、Text-to-Image、Embedding 预设 + localStorage 自定义预设
+- [x] **PLAY-08**: Billing 费用预览 — 在 Playground 中显示当前 Schema 的预估费用
 
 ## Future Requirements (Deferred)
 
@@ -160,5 +160,5 @@
 | DOCS-02 | Phase 20 | Complete |
 | DOCS-03 | Phase 20 | Complete |
 | PLAY-06 | Phase 20 | Complete |
-| PLAY-07 | Phase 20 | Pending |
-| PLAY-08 | Phase 20 | Pending |
+| PLAY-07 | Phase 20 | Complete |
+| PLAY-08 | Phase 20 | Complete |

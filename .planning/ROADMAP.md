@@ -263,7 +263,7 @@ Plans:
 Plans:
 - [x] 20-01-PLAN.md — Doc updates: negotiate.md interactive flow, user-journey.md guide, CLI reference & CLAUDE.md sync
 - [x] 20-02-PLAN.md — Playground SDK auto-preview: /api/sdk-preview endpoint, 1s debounce trigger, TabTypeScript/TabPython render
-- [ ] 20-03-PLAN.md — Playground presets + billing: 3 built-in presets (Chat/Text-to-Image/Embedding), localStorage custom presets, StatusBar billing cost preview
+- [x] 20-03-PLAN.md — Playground presets + billing: 3 built-in presets (Chat/Text-to-Image/Embedding), localStorage custom presets, StatusBar billing cost preview
 
 ## Progress
 
@@ -290,7 +290,7 @@ Plans:
 | 17. CLI Infrastructure | v5.0 | 3/3 | Complete    | 2026-05-25 |
 | 18. Interactive Negotiation | v5.0 | 3/3 | Complete    | 2026-05-25 |
 | 19. Command Simplification | v5.0 | 3/3 | Complete    | 2026-05-25 |
-| 20. Docs + Playground Updates | v5.0 | 2/3 | In Progress|  |
+| 20. Docs + Playground Updates | v5.0 | 3/3 | Complete    | 2026-05-26 |
 
 ## Post-Roadmap Enhancement: Router Package Rewrite (2026-05-09)
 
