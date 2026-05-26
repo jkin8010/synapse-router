@@ -74,5 +74,11 @@
   "tooltip.execute": "Execute the negotiated request",
   "tooltip.mockTest": "Run mock test against the schema",
   "sdkPreview.generating": "Generating SDK preview...",
-  "sdkPreview.empty": "Edit the schema to auto-generate SDK code, or run Negotiate first"
+  "sdkPreview.empty": "Edit the schema to auto-generate SDK code, or run Negotiate first",
+  "presets.select": "Select preset...",
+  "presets.save": "[Save Preset]",
+  "presets.custom": "Custom",
+  "billing.estimated": "Est. cost",
+  "billing.input": "in",
+  "billing.output": "out"
 }

@@ -1,4 +1,6 @@
 import { createContext, useContext, useReducer, createElement } from "react";
+import type { SchemaPreset } from "../lib/presets";
+import type { BillingPreview } from "../lib/billing-preview";
 
 // ── Types ──────────────────────────────────────────────────────────────────
 
@@ -69,6 +71,9 @@ export interface AppState {
   activePanel: "providers" | "schema" | "response";
   sdkPreviewCode: string | null;
   sdkPreviewLoading: boolean;
+  presets: SchemaPreset[];
+  activePresetId: string | null;
+  billingPreview: BillingPreview | null;
 }
 
 // ── Actions ────────────────────────────────────────────────────────────────
@@ -87,7 +92,10 @@ export type AppAction =
   | { type: "CLEAR_ERRORS" }
   | { type: "SET_BASE_URL"; baseUrl: string | null }
   | { type: "SET_ACTIVE_PANEL"; panel: "providers" | "schema" | "response" }
-  | { type: "UPDATE_SDK_PREVIEW"; code: string | null; loading: boolean };
+  | { type: "UPDATE_SDK_PREVIEW"; code: string | null; loading: boolean }
+  | { type: "SET_PRESETS"; presets: SchemaPreset[] }
+  | { type: "SET_ACTIVE_PRESET"; presetId: string | null }
+  | { type: "SET_BILLING_PREVIEW"; preview: BillingPreview | null };
 
 // ── Default Schema ─────────────────────────────────────────────────────────
 
@@ -147,6 +155,9 @@ export const initialState: AppState = {
   activePanel: "providers",
   sdkPreviewCode: null,
   sdkPreviewLoading: false,
+  presets: [],
+  activePresetId: null,
+  billingPreview: null,
 };
 
 // ── Reducer ────────────────────────────────────────────────────────────────
@@ -189,6 +200,12 @@ export function appReducer(state: AppState, action: AppAction): AppState {
       return { ...state, activePanel: action.panel };
     case "UPDATE_SDK_PREVIEW":
       return { ...state, sdkPreviewCode: action.code, sdkPreviewLoading: action.loading };
+    case "SET_PRESETS":
+      return { ...state, presets: action.presets };
+    case "SET_ACTIVE_PRESET":
+      return { ...state, activePresetId: action.presetId };
+    case "SET_BILLING_PREVIEW":
+      return { ...state, billingPreview: action.preview };
     default:
       return state;
   }

@@ -74,5 +74,11 @@
   "tooltip.execute": "执行已协商的请求",
   "tooltip.mockTest": "对 Schema 运行 Mock 测试",
   "sdkPreview.generating": "正在生成 SDK 预览...",
-  "sdkPreview.empty": "编辑 Schema 自动生成 SDK 代码，或先运行 Negotiate"
+  "sdkPreview.empty": "编辑 Schema 自动生成 SDK 代码，或先运行 Negotiate",
+  "presets.select": "选择预设...",
+  "presets.save": "[保存预设]",
+  "presets.custom": "自定义",
+  "billing.estimated": "预估费用",
+  "billing.input": "输入",
+  "billing.output": "输出"
 }

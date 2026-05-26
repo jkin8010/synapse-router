@@ -1,5 +1,7 @@
+import { useMemo } from "react";
 import { useAppState } from "../context";
 import { useI18n } from "../i18n/context";
+import { computeBillingPreview } from "../lib/billing-preview";
 
 export default function StatusBar() {
   const { t, language, setLanguage } = useI18n();
@@ -7,6 +9,19 @@ export default function StatusBar() {
   const configuredCount = providers.filter((p) => p.configured).length;
   const totalCount = providers.length;
   const selectedProvider = providers.find((p) => p.provider.id === selectedProviderId);
+
+  const billingPreview = useMemo(() => {
+    if (!selectedProviderId || !schemaValid) return null;
+    const provider = providers.find((p) => p.provider.id === selectedProviderId);
+    if (!provider) return null;
+    try {
+      const parsed = JSON.parse(schema);
+      const intent = parsed.features?.[0]?.intent ?? "chat";
+      return computeBillingPreview(provider, intent);
+    } catch {
+      return null;
+    }
+  }, [selectedProviderId, schema, schemaValid, providers]);
 
   const statusDot = () => {
     switch (status) {
@@ -50,6 +65,18 @@ export default function StatusBar() {
           </span>
         )}
       </div>
+      {billingPreview && billingPreview.hasPricing && (
+        <div className="flex items-center gap-2">
+          <span className="text-emerald-400">
+            {t("billing.estimated")}: ${billingPreview.estimatedCost.toFixed(4)}
+          </span>
+          <span className="text-zinc-500">
+            {billingPreview.strategy === "perToken"
+              ? `${t("billing.input")}: $${billingPreview.inputCost?.toFixed(4)} / ${t("billing.output")}: $${billingPreview.outputCost?.toFixed(4)}`
+              : billingPreview.unit}
+          </span>
+        </div>
+      )}
       <div>
         Schema: {schemaValid ? t("status.schema.valid") : t("status.schema.invalid")} | v0.1.0
       </div>

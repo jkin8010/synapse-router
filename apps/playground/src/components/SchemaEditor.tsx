@@ -3,6 +3,7 @@ import { useAppState, useDispatch } from "../context";
 import { useCodeMirror } from "../hooks/useCodeMirror";
 import { useI18n } from "../i18n/context";
 import { createApiClient } from "../lib/api";
+import { getAllPresets, saveCustomPreset, BUILT_IN_PRESETS } from "../lib/presets";
 
 function tryParseJSON(str: string): boolean {
   try {
@@ -15,7 +16,7 @@ function tryParseJSON(str: string): boolean {
 
 export default function SchemaEditor() {
   const { t } = useI18n();
-  const { schema, schemaValid, selectedProviderId, status } = useAppState();
+  const { schema, schemaValid, selectedProviderId, status, presets, activePresetId } = useAppState();
   const dispatch = useDispatch();
   const divRef = useRef<HTMLDivElement>(null);
 
@@ -84,6 +85,34 @@ export default function SchemaEditor() {
     dispatch({ type: "UPDATE_SCHEMA", schema: "", valid: false });
   }, [setValue, dispatch]);
 
+  // Load presets on mount
+  useEffect(() => {
+    dispatch({ type: "SET_PRESETS", presets: getAllPresets() });
+  }, [dispatch]);
+
+  const handlePresetSelect = (e: React.ChangeEvent<HTMLSelectElement>) => {
+    const id = e.target.value;
+    if (!id) return;
+    const preset = presets.find((p) => p.id === id);
+    if (!preset) return;
+    setValue(preset.schema);
+    dispatch({ type: "UPDATE_SCHEMA", schema: preset.schema, valid: true });
+    dispatch({ type: "SET_ACTIVE_PRESET", presetId: id });
+    if (!selectedProviderId) {
+      dispatch({ type: "SELECT_PROVIDER", providerId: preset.provider });
+    }
+  };
+
+  const handleSaveAsPreset = () => {
+    if (!schemaValid) return;
+    const parsed = JSON.parse(schema);
+    const intent = parsed.features?.[0]?.intent ?? "unknown";
+    const name = window.prompt("Preset name:")?.trim();
+    if (!name) return;
+    const updated = saveCustomPreset({ name, intent, provider: selectedProviderId || "unknown", schema });
+    dispatch({ type: "SET_PRESETS", presets: [...BUILT_IN_PRESETS, ...updated] });
+  };
+
   return (
     <div className="h-full flex flex-col">
       {/* Header */}
@@ -91,6 +120,31 @@ export default function SchemaEditor() {
         <span className="text-xs font-semibold text-zinc-400 uppercase tracking-wider">
           {t("schema.title")}
         </span>
+        <div className="flex items-center gap-2">
+          <select
+            value={activePresetId ?? ""}
+            onChange={handlePresetSelect}
+            className="bg-zinc-800 border border-zinc-700 rounded px-2 py-1 text-xs text-zinc-300 focus:border-emerald-400 focus:outline-none"
+          >
+            <option value="">{t("presets.select")}</option>
+            {presets.filter(p => p.category === "built-in").map(p => (
+              <option key={p.id} value={p.id}>{p.name}</option>
+            ))}
+            {presets.some(p => p.category === "custom") && (
+              <optgroup label={t("presets.custom")}>
+                {presets.filter(p => p.category === "custom").map(p => (
+                  <option key={p.id} value={p.id}>{p.name}</option>
+                ))}
+              </optgroup>
+            )}
+          </select>
+          <button
+            onClick={handleSaveAsPreset}
+            className="text-xs text-emerald-400 hover:text-emerald-300"
+          >
+            {t("presets.save")}
+          </button>
+        </div>
         <div className="flex items-center gap-3">
           <button
             onClick={handleLoad}
