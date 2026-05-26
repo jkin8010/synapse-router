@@ -261,10 +261,9 @@ Plans:
 **Plans**: 3 plans
 
 Plans:
-- [ ] 17-01-PLAN.md — Install @inquirer/prompts, picocolors; create utils/tty.ts (isInteractive), utils/prompts.ts (wrapper functions)
-- [ ] 17-02-PLAN.md — Extract packs.ts (findPacksDir, loadProviderCard), extract negotiate.ts; add --yes/--dry-run/--no-save/--no-interactive flags
-- [ ] 17-03-PLAN.md — Refactor setup.ts and billing.ts init to use shared prompts.ts
-**UI hint**: yes
+- [ ] 20-01-PLAN.md — Doc updates: negotiate.md interactive flow, user-journey.md guide, CLI reference & CLAUDE.md sync
+- [ ] 20-02-PLAN.md — Playground SDK auto-preview: /api/sdk-preview endpoint, 1s debounce trigger, TabTypeScript/TabPython render
+- [ ] 20-03-PLAN.md — Playground presets + billing: 3 built-in presets (Chat/Text-to-Image/Embedding), localStorage custom presets, StatusBar billing cost preview
 
 ## Progress
 
