@@ -14,14 +14,10 @@
 
 **"开发时协商，运行时无感"** — 协商阶段可以复杂、可以调用 LLM、可以探索，因为它是离线的、一次性的。运行时只有纯代码逻辑的 SDK，确定性、零 Token 成本、零 LLM 意外。
 
-## Current Milestone: v5.0 交互式协商与体验优化
+## Shipped: v4.0 + v5.0 (2026-05-27)
 
-**Goal:** 让 `synapse negotiate` 成为真正的交互式协商工具，用户参与协定输入输出格式；精简命令体系，降低使用成本；更新文档站点和 Playground。
-
-**用户旅程：**
-1. **安装包** → 安装成功后提示可运行协商命令
-2. **协商命令** → 交互式流程：展示同一 intent 的输入输出格式，标明必须字段，用户自定义增减字段，完成后提示下一步（connect 测试 / 生成零依赖 SDK / @synapse-router/sdk 接入）
-3. **使用 SDK** → 生成的零依赖 SDK 包或 @synapse-router/sdk 接入示例
+**v4.0 Documentation & Playground** — Docusaurus 文档站点 + Playground UI 基础升级
+**v5.0 交互式协商与体验优化** — 交互式 negotiate、命令精简、文档站点内容补全、Playground SDK 预览 + Presets
 
 ## Requirements
 
@@ -50,6 +46,17 @@
 - ✅ skill.md GitHub raw URL 安装入口 — v3.0 (Phase 11)
 - ✅ `@synapse-router/install-skill` npm CLI (platform detection, install/uninstall, backup/manifest) — v3.0 (Phase 12)
 - ✅ GitHub Actions CI/CD 发布工作流 (tag 触发, 双包发布, GitHub Release auto-generation) — v3.0 (Phase 12)
+- ✅ Docusaurus 文档站点脚手架 + pnpm workspace 集成 + 构建隔离 — v4.0 (Phase 13)
+- ✅ Vite proxy 修复 + GitHub Actions 文档自动部署 — v4.0 (Phase 13)
+- ✅ 入门指南 (Overview + 安装 + 首次 connect) — v4.0 (Phase 14)
+- ✅ CLI 命令参考覆盖全部命令和参数 — v4.0 (Phase 14)
+- ✅ Playground 响应式布局 + UI 升级 (3 档断点, tooltip, 快捷键, Add Pack 对话框) — v4.0 (Phase 15)
+- ✅ negotiate CLI 接入实际 negotiator 协商管道 — v4.0 (Phase 16)
+- ✅ CLI 基础设施提取: 共享 prompts/tty, 全局 flags, 命令模块化 — v5.0 (Phase 17)
+- ✅ 交互式协商全流程: intent 选择 → Schema 预览 → 字段开关 → Lock diff — v5.0 (Phase 18)
+- ✅ 命令精简: --help 3 组格式, 命令合并, help 文本集中化 — v5.0 (Phase 19)
+- ✅ Playground SDK 自动预览 + Schema 预设 (Chat/T2I/Embedding) + 费用预估 — v5.0 (Phase 20)
+- ✅ 用户旅程文档 (中英文) + CLI 参考同步 — v5.0 (Phase 20)
 
 ### Active
 
@@ -58,8 +65,6 @@
 - [ ] Registry `contract_verifications` 表和 API
 - [ ] 协商记忆 (markdown) 系统
 - [ ] 匿名遥测 (opt-in)
-- [ ] **文档站点 (apps/docs/)** — v4.0 (Phase 13)
-- [ ] **Playground 增强** — 升级为测试验证站点 — v4.0
 
 ### Out of Scope
 
@@ -69,12 +74,12 @@
 
 ## Context
 
-Shipped v3.0 with 57,320 LOC TypeScript across 15 packages + 4 apps + 1 skill package.
+Shipped v5.0 with 57,320+ LOC TypeScript across 15 packages + 4 apps + 1 skill package.
 Tech stack: TypeScript 5.9+ strict, Node.js 22+, pnpm 10+ monorepo.
 15 packages: core, negotiator, providers, router, connector, lock, vault, pack-generator, sdk-generator, sdk, billing, observability, contract-mocker, registry-client, install-skill.
 4 apps: cli, api, mcp-server, playground, comfy-node.
 ~430 tests passing across all packages.
-6 milestones shipped across 12 phases.
+8 milestones shipped across 20 phases.
 
 ## Key Decisions
 
@@ -114,4 +119,4 @@ This document evolves at phase transitions and milestone boundaries.
 4. Update Context with current state
 
 ---
-*Last updated: 2026-05-21 — v3.0 AI Agent Skill Distribution completed and archived*
+*Last updated: 2026-05-27 — v4.0 + v5.0 milestones completed and archived*

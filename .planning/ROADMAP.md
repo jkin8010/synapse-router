@@ -8,8 +8,8 @@
 - ✅ **v2.0 Offline Evolution** — Phases 6-7 (shipped)
 - ✅ **v2.1 Billing Integration** — Phases 8-10 (shipped 2026-05-19)
 - ✅ **v3.0 AI Agent Skill Distribution** — Phases 11-12 (shipped 2026-05-21)
-- 📋 **v4.0 Documentation & Playground** — Phases 13-16 (in progress)
-- 📋 **v5.0 交互式协商与体验优化** — Phases 17-20 (planned)
+- ✅ **v4.0 Documentation & Playground** — Phases 13-16 (shipped 2026-05-27)
+- ✅ **v5.0 交互式协商与体验优化** — Phases 17-20 (shipped 2026-05-27)
 
 ## Phase Details
 
@@ -130,140 +130,102 @@ Plans:
 
 </details>
 
+<details>
+<summary>✅ v4.0 Documentation & Playground (Phases 13-16) — SHIPPED 2026-05-27</summary>
+
 ### Phase 13: Docs Scaffold + Playground Infra
 **Goal**: Docusaurus docs site skeleton is operational and playground API calls no longer hardcode localhost
 **Depends on**: Nothing (first phase of v4.0)
 **Requirements**: INFRA-01, INFRA-02, INFRA-03
-**Success Criteria** (what must be TRUE):
-  1. Developer can run `pnpm build:docs` and see a functioning Docusaurus v3 site at `apps/docs/` with default homepage and sidebar
-  2. Running `pnpm build` does not trigger Docusaurus build (no webpack/Vite conflict with main pipeline)
-  3. Playground API calls use relative `/api` prefix and work through Vite proxy in both dev and production
-  4. Docs site is registered in pnpm workspace as `@synapse-router/docs` (private) and imports resolve correctly
 **Plans**: 3 plans
 
 Plans:
-- [x] 17-01-PLAN.md — Install @inquirer/prompts, picocolors; create utils/tty.ts (isInteractive), utils/prompts.ts (wrapper functions)
-- [x] 17-02-PLAN.md — Extract packs.ts (findPacksDir, loadProviderCard), extract negotiate.ts; add --yes/--dry-run/--no-save/--no-interactive flags
-- [x] 17-03-PLAN.md — Refactor setup.ts and billing.ts init to use shared prompts.ts
+- [x] 13-01 — Docusaurus scaffold + pnpm workspace registration + build isolation
+- [x] 13-02 — Vite proxy fix + CI/CD docs deployment workflow
+- [x] 13-03 — MDX content structure + navigation sidebar
 
 ### Phase 14: Documentation Site Content
 **Goal**: Developers can read Getting Started guide and complete CLI command reference on the docs site
 **Depends on**: Phase 13 (Docusaurus scaffold required before adding content)
 **Requirements**: DCOC-01, DCOC-02
-**Success Criteria** (what must be TRUE):
-  1. Visitor can read a "Getting Started" page covering installation, first configuration, and first `synapse connect` call
-  2. Visitor can browse a complete CLI command reference with all commands, parameter tables, and examples
-  3. All pages are navigable via Docusaurus sidebar and render correctly on mobile viewports
 **Plans**: 3 plans
 
 Plans:
-- [ ] 17-01-PLAN.md — Install @inquirer/prompts, picocolors; create utils/tty.ts (isInteractive), utils/prompts.ts (wrapper functions)
-- [ ] 17-02-PLAN.md — Extract packs.ts (findPacksDir, loadProviderCard), extract negotiate.ts; add --yes/--dry-run/--no-save/--no-interactive flags
-- [ ] 17-03-PLAN.md — Refactor setup.ts and billing.ts init to use shared prompts.ts
+- [x] 14-01 — Getting Started guide (Overview + installation + first connect)
+- [x] 14-02 — CLI command reference pages (connect, vault, route, evolve)
+- [x] 14-03 — CLI secondary command pages (billing, pack, lock, config, setup)
+
+**Note:** Phases 14 and 15 are independent of each other and can be partially parallelized.
 
 ### Phase 15: Playground Core UI Upgrade
 **Goal**: Playground is usable on any screen size, with key status visibility and workflow-enhancing interactions
 **Depends on**: Phase 13 (Vite proxy fix required before UI enhancements)
 **Requirements**: PLAY-01, PLAY-02, PLAY-03, PLAY-04, PLAY-05
-**Success Criteria** (what must be TRUE):
-  1. User sees responsive layout adapting correctly at >1440px (3-column), 1024-1440px (collapsible sidebar), and <1024px (stacked tabs)
-  2. User can open Add Pack dialog, search for Provider Packs, and select one to install
-  3. Each Provider card shows a clear key status indicator ("configured" / "no key")
-  4. Hovering over a disabled action button shows a tooltip explaining why it is unavailable
-  5. User can use Cmd+Enter to execute a request and Cmd+Shift+Enter to trigger negotiation
 **Plans**: 2 plans
 
 Plans:
-- [ ] 15-01-PLAN.md -- Foundation: context.ts types (configured, activePanel), index.css breakpoints + responsive grid CSS, useKeyboardShortcut hook
-- [ ] 15-02-PLAN.md -- Components + Layout: App.tsx responsive grid + sidebar collapse + keyboard shortcuts, ProviderSelector collapsed mode + Add Pack dialog + configured wiring, ActionBar tooltips + kbd hints, StatusBar configured count
-**UI hint**: yes
-
-**Note:** Phases 14 and 15 are independent of each other and can be partially parallelized.
+- [x] 15-01 — Foundation: context.ts types, responsive grid CSS, useKeyboardShortcut hook
+- [x] 15-02 — Components + Layout: responsive grid, keyboard shortcuts, ProviderSelector, Add Pack dialog, tooltips
 
 ### Phase 16: Negotiator CLI Integration
-**Goal**: `synapse negotiate` CLI 命令真正调用 `@synapse-router/negotiator` 包的完整协商管道（LLM Schema 生成 → Manifest 字段级匹配 → Mock 测试 → Schema Lock 保存）
-**Depends on**: Nothing (Phase 1 Negotiator Reliability 已完成，negotiator 包已实现但未接入 CLI)
+**Goal**: `synapse negotiate` CLI calls actual negotiator pipeline
+**Depends on**: Nothing
 **Requirements**: None
-**Success Criteria** (what must be TRUE):
-  1. `synapse negotiate --intent X --provider Y` 调用 `negotiateAndVerify()` 全链路
-  2. LLM API Key 从 Vault 读取（key 名 `negotiator-llm`）
-  3. 输出显示协商详细报告：Schema 字段、Manifest 匹配、Mock 测试结果、Lock 保存确认
-  4. 无 vault key 时降级为确定性 stub（不报错、不阻塞）
-  5. `--no-cache` 跳过缓存强制重新协商
-**Plans**: TBD
+**Plans**: 1 plan
+
+Plans:
+- [x] 16-01 — Wire negotiate CLI to negotiator package
+
+</details>
+
+<details>
+<summary>✅ v5.0 交互式协商与体验优化 (Phases 17-20) — SHIPPED 2026-05-27</summary>
+
 ### Phase 17: CLI Infrastructure
-**Goal**: CLI command infrastructure is extracted and shared, interactive prompt utilities exist independently of index.ts
-**Depends on**: Phase 16 (Negotiator CLI Integration provides the negotiate pipeline before adding interactive flow)
-**Requirements**: CLI-INFRA-01, CLI-INFRA-02, CLI-INFRA-03, CLI-INFRA-04, CLI-INFRA-05, CLI-INFRA-06
-**Success Criteria** (what must be TRUE):
-  1. `negotiate()` extracted from `apps/cli/src/index.ts` to `apps/cli/src/commands/negotiate.ts` following existing command pattern
-  2. `apps/cli/src/utils/prompts.ts` exists with `@inquirer/prompts` wrappers for all prompt types
-  3. `apps/cli/src/utils/tty.ts` exists with `isInteractive()` checking stdin/stdout TTY + CI env vars + `--no-interactive` flag
-  4. CLI supports `--yes` (skip all prompts), `--dry-run` (preview no save), `--no-save` (don't save Lock) global flags
-  5. `findPacksDir()` and `loadProviderCard()` extracted from index.ts to shared utility
-  6. `setup.ts`, `connect.ts`, `billing.ts` migrated from local prompt calls to shared `utils/prompts.ts`
-  7. All existing tests pass without modification
+**Goal**: CLI command infrastructure extracted and shared, interactive prompt utilities independent of index.ts
+**Depends on**: Phase 16
+**Requirements**: CLI-INFRA-01 to CLI-INFRA-06
 **Plans**: 3 plans
 
 Plans:
-- [ ] 17-01-PLAN.md — Install @inquirer/prompts, picocolors; create utils/tty.ts (isInteractive), utils/prompts.ts (wrapper functions)
-- [ ] 17-02-PLAN.md — Extract packs.ts (findPacksDir, loadProviderCard), extract negotiate.ts; add --yes/--dry-run/--no-save/--no-interactive flags
-- [ ] 17-03-PLAN.md — Refactor setup.ts and billing.ts init to use shared prompts.ts
+- [x] 17-01-PLAN.md — Install @inquirer/prompts, picocolors; create utils/tty.ts, utils/prompts.ts
+- [x] 17-02-PLAN.md — Extract packs.ts, negotiate.ts; add --yes/--dry-run/--no-save/--no-interactive flags
+- [x] 17-03-PLAN.md — Refactor setup.ts and billing.ts init to use shared prompts
 
 ### Phase 18: Interactive Negotiation
-**Goal**: Developers can run `synapse negotiate` interactively to review schemas, customize fields, and route post-negotiation
-**Depends on**: Phase 17 (shared prompts and TTY detection required for interactive flow)
-**Requirements**: NEGO-01, NEGO-02, NEGO-03, NEGO-04, NEGO-05, NEGO-06, NEGO-07, NEGO-08, NEGO-09, NEGO-10
-**Success Criteria** (what must be TRUE):
-  1. `synapse negotiate` (no flags) starts interactive flow: select intent -> select provider -> review schema -> confirm
-  2. Input/output schema fields displayed with required/optional marking and field constraints
-  3. User can toggle optional fields on/off with multi-select prompt, supporting batch operations
-  4. LLM API Key discovered from vault/config/env before negotiation; if no key found, user guided to configure one
-  5. Stub output clearly marked when using deterministic stub (no LLM key) with visible warning
-  6. Lock diff preview shown before save, comparing new Lock with existing Lock (if any)
-  7. Post-negotiation menu offers: test connect / generate SDK / view @synapse-router/sdk integration / exit
-  8. `--intent X --provider Y` (non-interactive mode) preserves existing behavior unchanged
-  9. SIGINT/SIGTERM handled gracefully: partial state cleaned up, no orphan Lock files
-  10. Prompts classified as required/recommended/contextual/confirmation; Enter accepts default value
+**Goal**: Developers run `synapse negotiate` interactively
+**Depends on**: Phase 17
+**Requirements**: NEGO-01 to NEGO-10
 **Plans**: 3 plans
 
 Plans:
-- [x] 18-01-PLAN.md — Interactive mode entry point: intent collection and provider selection via promptSearch/promptSelect
-- [x] 18-02-PLAN.md — Schema display with picocolors, field checkbox toggling, LLM key detection + stub warning, negotiateAndVerify
-- [x] 18-03-PLAN.md — Lock diff preview, post-negotiation routing menu, SIGINT/SIGTERM cleanup, non-interactive preservation
+- [x] 18-01-PLAN.md — Interactive mode: intent collection + provider selection
+- [x] 18-02-PLAN.md — Schema display, field toggling, LLM key detection, stub warning, negotiateAndVerify
+- [x] 18-03-PLAN.md — Lock diff preview, post-negotiation menu, SIGINT cleanup, non-interactive preservation
 
 ### Phase 19: Command Simplification
-**Goal**: CLI help output is organized, command duplication is reduced, help text is shared with docs site
-**Depends on**: Nothing (can be done independently)
+**Goal**: CLI help organized, commands simplified, help text shared with docs
+**Depends on**: Nothing
 **Requirements**: CMD-01, CMD-02, CMD-03
-**Success Criteria** (what must be TRUE):
-  1. `--help` output organized into 3 groups: Core Workflow (setup, negotiate, connect, evolve), Configuration (vault, config, pack, billing), Advanced (lock, route, sdk, provider, etc.)
-  2. Merged commands: smoke->connect --smoke, init->setup, profile->config profile, export/import->config export/import; provider stays standalone
-  3. Help text definitions extracted to `utils/help.ts` as shared module, imported by CLI and referenceable by docs site
 **Plans**: 3 plans
 
 Plans:
-- [x] 19-01-PLAN.md — Create utils/help.ts with all help text; update index.ts printHelp() to 3-group format; update help switch and inline helps
-- [x] 19-02-PLAN.md — Merge commands: smoke->connect --smoke, init->setup, profile/export/import->config subcommands
-- [x] 19-03-PLAN.md — Migrate all command files to import help text from utils/help.ts; build and test verification
+- [x] 19-01-PLAN.md — Create utils/help.ts; 3-group help format
+- [x] 19-02-PLAN.md — Merge smoke→connect --smoke, init→setup, profile/export/import→config
+- [x] 19-03-PLAN.md — Migrate all command files to utils/help.ts imports
 
 ### Phase 20: Docs + Playground Updates
-**Goal**: Documentation is updated for v5.0 changes, Playground has SDK preview and schema presets
-**Depends on**: Phase 18 (negotiate interactive flow must exist before documenting it), Phase 19 (command simplification must be final before updating CLI reference)
+**Goal**: Documentation updated for v5.0, Playground SDK preview + presets
+**Depends on**: Phase 18, Phase 19
 **Requirements**: DOCS-01, DOCS-02, DOCS-03, PLAY-06, PLAY-07, PLAY-08
-**Success Criteria** (what must be TRUE):
-  1. `negotiate` command doc updated with interactive negotiation flow description
-  2. "User Journey" doc created: install -> negotiate -> connect/evolve/sdk integration
-  3. CLI command reference updated to reflect any command simplifications from Phase 19
-  4. Playground auto-preview shows generated SDK code when Schema changes (debounced)
-  5. Playground has 3 built-in schema presets (Chat, Text-to-Image, Embedding) + localStorage custom presets
-  6. Playground shows estimated billing cost for current Schema
 **Plans**: 3 plans
 
 Plans:
-- [x] 20-01-PLAN.md — Doc updates: negotiate.md interactive flow, user-journey.md guide, CLI reference & CLAUDE.md sync
-- [x] 20-02-PLAN.md — Playground SDK auto-preview: /api/sdk-preview endpoint, 1s debounce trigger, TabTypeScript/TabPython render
-- [x] 20-03-PLAN.md — Playground presets + billing: 3 built-in presets (Chat/Text-to-Image/Embedding), localStorage custom presets, StatusBar billing cost preview
+- [x] 20-01-PLAN.md — Doc updates: negotiate.md, user-journey.md, CLI reference & CLAUDE.md
+- [x] 20-02-PLAN.md — Playground SDK auto-preview API + client
+- [x] 20-03-PLAN.md — Playground presets + billing cost preview
+
+</details>
 
 ## Progress
 
@@ -283,14 +245,14 @@ Plans:
 | 10. CLI Billing Commands | v2.1 | 3/3 | Complete | 2026-05-19 |
 | 11. Skill 包创建与内容覆盖 | v3.0 | 4/4 | Complete | 2026-05-19 |
 | 12. Install CLI + 自动化分发 | v3.0 | 2/2 | Complete | 2026-05-21 |
-| 13. Docs Scaffold + Playground Infra | v4.0 | 0/0 | Planned | - |
-| 14. Documentation Site Content | v4.0 | 0/0 | Planned | - |
-| 15. Playground Core UI Upgrade | v4.0 | 0/2 | Planned | - |
+| 13. Docs Scaffold + Playground Infra | v4.0 | 3/3 | Complete | 2026-05-25 |
+| 14. Documentation Site Content | v4.0 | 3/3 | Complete | 2026-05-25 |
+| 15. Playground Core UI Upgrade | v4.0 | 2/2 | Complete | 2026-05-25 |
 | 16. Negotiator CLI Integration | v4.0 | 1/1 | Complete | 2026-05-25 |
-| 17. CLI Infrastructure | v5.0 | 3/3 | Complete    | 2026-05-25 |
-| 18. Interactive Negotiation | v5.0 | 3/3 | Complete    | 2026-05-25 |
-| 19. Command Simplification | v5.0 | 3/3 | Complete    | 2026-05-25 |
-| 20. Docs + Playground Updates | v5.0 | 3/3 | Complete    | 2026-05-26 |
+| 17. CLI Infrastructure | v5.0 | 3/3 | Complete | 2026-05-25 |
+| 18. Interactive Negotiation | v5.0 | 3/3 | Complete | 2026-05-25 |
+| 19. Command Simplification | v5.0 | 3/3 | Complete | 2026-05-25 |
+| 20. Docs + Playground Updates | v5.0 | 3/3 | Complete | 2026-05-26 |
 
 ## Post-Roadmap Enhancement: Router Package Rewrite (2026-05-09)
 
