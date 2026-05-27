@@ -5,7 +5,7 @@ title: synapse sdk
 
 # synapse sdk — 从 Provider Pack 生成 SDK
 
-`synapse sdk generate` 命令从单个 Provider Pack 生成零依赖（Zero-Dependency）SDK。与 `synapse evolve` 一次性处理所有已安装 Pack 不同，此命令针对特定的 Pack，并同时支持 TypeScript 和 Python 输出。
+`synapse sdk generate` 命令从单个 Provider Pack 生成零依赖（Zero-Dependency）SDK。支持 TypeScript 和 Python 两种语言输出。添加 `--with-billing` 可包含 BillingTracker 类用于自动配额追踪。
 
 ## 参数 (Parameters)
 
@@ -16,6 +16,7 @@ title: synapse sdk
 | `--output <dir>` | string | 是 | SDK 输出目录 |
 | `--provider <id>` | string | 否 | 覆盖 Provider 名称（如用 openai Pack 生成 deepseek SDK） |
 | `--base-url <url>` | string | 否 | 覆盖默认 base_url |
+| `--with-billing` | flag | 否 | 包含 BillingTracker 类用于配额追踪 |
 
 ## 示例 (Examples)
 
@@ -40,7 +41,14 @@ synapse sdk generate --pack openai --lang typescript --provider deepseek --base-
 # Generates DeepSeek SDK using openai pack structure
 ```
 
-### Example 4 — 从本地 Pack 路径生成
+### Example 4 — 生成带计费追踪的 SDK
+
+```bash
+synapse sdk generate --pack openai --lang typescript --output ./sdk --with-billing
+# 生成包含 BillingTracker 类的 SDK，用于配额追踪
+```
+
+### Example 5 — 从本地 Pack 路径生成
 
 ```bash
 synapse sdk generate --pack ./my-packs/custom-api --lang typescript --output ./sdk
@@ -72,6 +80,5 @@ Python 输出（`--lang python`）：
 
 ## 相关命令 (Related Commands)
 
-- [/docs/cli/evolve](/docs/cli/evolve) — 一次生成所有已安装 Pack 的 SDK
 - [/docs/cli/pack](/docs/cli/pack) — 查看和安装 Provider Pack
 - [/docs/sdk](/docs/sdk) — SDK 使用详细指南

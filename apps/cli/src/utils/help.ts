@@ -410,6 +410,7 @@ Options:
   --output <dir>        Output directory for generated SDK
   --provider <id>       Override provider name (e.g. deepseek using openai pack)
   --base-url <url>      Override default base URL
+  --with-billing        Include BillingTracker class for quota tracking
 
 Examples:
   # Generate TypeScript SDK from openai pack
@@ -420,6 +421,9 @@ Examples:
 
   # Generate DeepSeek SDK using openai pack
   synapse sdk generate --pack openai --lang typescript --provider deepseek --base-url https://api.deepseek.com/v1 --output ./generated-sdk
+
+  # Generate SDK with billing tracking
+  synapse sdk generate --pack openai --lang typescript --output ./sdk --with-billing
 `;
 
 export const HELP_SMOKE = `

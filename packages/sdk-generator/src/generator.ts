@@ -109,6 +109,7 @@ export interface PackData {
   providerName: string;
   baseUrl: string;
   authType: string;
+  defaultEndpoint: string;  // fallback endpoint path when regex cannot parse feature_id
 }
 
 async function loadProviderCard(packDir: string): Promise<ProviderCard> {
@@ -191,6 +192,14 @@ export async function generateSdk(options: SdkGenerateOptions): Promise<SdkGener
   const baseUrl = baseUrlOverride ?? providerCard.service.base_url;
   const authType = providerCard.service.auth_type;
 
+  // Compute default endpoint from provider.base_url path relative to service.base_url
+  // Some packs (e.g. bytedance) store the full API path in provider.base_url
+  const providerUrl = providerCard.provider?.base_url;
+  const serviceUrl = providerCard.service.base_url;
+  const defaultEndpoint = providerUrl && serviceUrl && providerUrl.startsWith(serviceUrl)
+    ? providerUrl.slice(serviceUrl.length)
+    : "";
+
   const packData: PackData = {
     providerCard,
     dslDocuments,
@@ -198,6 +207,7 @@ export async function generateSdk(options: SdkGenerateOptions): Promise<SdkGener
     providerName,
     baseUrl,
     authType,
+    defaultEndpoint,
   };
 
   // Generate code files

@@ -22,7 +22,7 @@ function className(providerName: string): string {
 }
 
 /** Build the endpoint path from feature_id, with DSL endpoint override. */
-function featureIdToEndpoint(featureId: string, endpointMap?: FeatureEndpointMap): string {
+function featureIdToEndpoint(featureId: string, endpointMap?: FeatureEndpointMap, defaultEndpoint?: string): string {
   if (endpointMap?.has(featureId)) {
     return endpointMap.get(featureId)!;
   }
@@ -30,6 +30,7 @@ function featureIdToEndpoint(featureId: string, endpointMap?: FeatureEndpointMap
   if (match) {
     return "/" + match[1].replace(/_/g, "/");
   }
+  if (defaultEndpoint) return defaultEndpoint;
   return "/" + featureId.replace(/_/g, "/");
 }
 
@@ -38,7 +39,7 @@ function featureIdToEndpoint(featureId: string, endpointMap?: FeatureEndpointMap
 // ---------------------------------------------------------------------------
 
 export function generatePython(packData: PackData): GeneratedFile[] {
-  const { providerCard, providerId, providerName, baseUrl, dslDocuments } = packData;
+  const { providerCard, providerId, providerName, baseUrl, dslDocuments, defaultEndpoint } = packData;
   const clientClass = className(providerName);
   const now = new Date().toISOString().split("T")[0];
   const endpointMap = buildFeatureEndpointMap(dslDocuments);
@@ -54,7 +55,7 @@ export function generatePython(packData: PackData): GeneratedFile[] {
   // ---- client.py ----
   files.push({
     path: "client.py",
-    content: generateClient(providerCard, clientClass, baseUrl, providerId, providerName, now, endpointMap),
+    content: generateClient(providerCard, clientClass, baseUrl, providerId, providerName, now, endpointMap, defaultEndpoint),
   });
 
   // ---- pyproject.toml ----
@@ -89,6 +90,7 @@ function generateClient(
   providerName: string,
   now: string,
   endpointMap?: FeatureEndpointMap,
+  defaultEndpoint?: string,
 ): string {
   const lines: string[] = [];
 
@@ -115,7 +117,7 @@ function generateClient(
   // Methods
   for (const feature of providerCard.features) {
     const methodName = featureIdToMethodName(feature.id);
-    const endpoint = featureIdToEndpoint(feature.id, endpointMap);
+    const endpoint = featureIdToEndpoint(feature.id, endpointMap, defaultEndpoint);
 
     lines.push(`    async def ${methodName}(self, **kwargs: Any) -> dict[str, Any]:`);
     if (feature.description) {

@@ -21,6 +21,7 @@ interface SdkCommandOptions {
   output?: string;
   provider?: string;
   baseUrl?: string;
+  withBilling?: boolean;
 }
 
 // ---------------------------------------------------------------------------
@@ -56,6 +57,8 @@ export function parseSdkArgs(argv: string[]): { subcommand: string; options: Sdk
       options.provider = argv[++i];
     } else if (arg === "--base-url" && argv[i + 1]) {
       options.baseUrl = argv[++i];
+    } else if (arg === "--with-billing") {
+      options.withBilling = true;
     }
   }
 
@@ -144,6 +147,7 @@ async function handleSdkGenerate(options: SdkCommandOptions): Promise<void> {
   console.log(`  Output:   ${outputDir}`);
   if (options.provider) console.log(`  Provider: ${options.provider}`);
   if (options.baseUrl) console.log(`  Base URL: ${options.baseUrl}`);
+  if (options.withBilling) console.log(`  Billing:  enabled`);
   console.log("");
 
   try {
@@ -153,6 +157,7 @@ async function handleSdkGenerate(options: SdkCommandOptions): Promise<void> {
       outputDir,
       providerOverride: options.provider,
       baseUrlOverride: options.baseUrl,
+      withBilling: options.withBilling,
     });
 
     console.log(`✅ Generated ${result.features} feature(s) → ${result.files.length} file(s)`);

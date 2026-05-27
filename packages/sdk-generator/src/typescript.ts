@@ -31,7 +31,7 @@ function packageName(providerId: string): string {
  *  images_generations_post_v1_images_generations -> /images/generations
  *  Falls back to DSL access_protocol.endpoint when available via the map.
  */
-function featureIdToEndpoint(featureId: string, endpointMap?: FeatureEndpointMap): string {
+function featureIdToEndpoint(featureId: string, endpointMap?: FeatureEndpointMap, defaultEndpoint?: string): string {
   // Use DSL endpoint when available
   if (endpointMap?.has(featureId)) {
     return endpointMap.get(featureId)!;
@@ -41,7 +41,10 @@ function featureIdToEndpoint(featureId: string, endpointMap?: FeatureEndpointMap
   if (match) {
     return "/" + match[1].replace(/_/g, "/");
   }
-  // Fallback: use the whole id with underscores -> slashes
+  // Fallback: use defaultEndpoint from provider.base_url when available
+  // (e.g. bytedance packs store the full API path in provider.base_url)
+  if (defaultEndpoint) return defaultEndpoint;
+  // Last resort: use the whole id with underscores -> slashes
   return "/" + featureId.replace(/_/g, "/");
 }
 
@@ -90,7 +93,7 @@ function generateInterface(name: string, fields: FieldInfo[], fieldMappings?: Ar
 // Method generation
 // ---------------------------------------------------------------------------
 
-function generateMethod(feature: ProviderFeature, providerId: string, endpointMap?: FeatureEndpointMap): string {
+function generateMethod(feature: ProviderFeature, providerId: string, endpointMap?: FeatureEndpointMap, defaultEndpoint?: string): string {
   const methodName = featureIdToMethodName(feature.id);
   const inputTypeName = feature.input.fields.length > 0
     ? toPascalCase(methodName) + "Input"
@@ -98,7 +101,7 @@ function generateMethod(feature: ProviderFeature, providerId: string, endpointMa
   const outputTypeName = feature.output.fields.length > 0
     ? toPascalCase(methodName) + "Output"
     : "Record<string, unknown>";
-  const endpoint = featureIdToEndpoint(feature.id, endpointMap);
+  const endpoint = featureIdToEndpoint(feature.id, endpointMap, defaultEndpoint);
 
   const lines: string[] = [];
 
@@ -177,7 +180,7 @@ export function generateTypeScript(packData: PackData): GeneratedFile[] {
   // ---- client.ts ----
   files.push({
     path: "client.ts",
-    content: generateClientFile(providerCard, clientClass, baseUrl, authType, providerId, providerName, now, endpointMap),
+    content: generateClientFile(providerCard, clientClass, baseUrl, authType, providerId, providerName, now, endpointMap, packData.defaultEndpoint),
   });
 
   // ---- index.ts ----
@@ -201,7 +204,7 @@ export function generateTypeScript(packData: PackData): GeneratedFile[] {
   // ---- README.md ----
   files.push({
     path: "README.md",
-    content: generateReadme(providerId, providerName, clientClass, baseUrl, providerCard.features, endpointMap),
+    content: generateReadme(providerId, providerName, clientClass, baseUrl, providerCard.features, endpointMap, packData.defaultEndpoint),
   });
 
   return files;
@@ -255,6 +258,7 @@ function generateClientFile(
   providerName: string,
   now: string,
   endpointMap?: FeatureEndpointMap,
+  defaultEndpoint?: string,
 ): string {
   const lines: string[] = [];
 
@@ -313,7 +317,7 @@ function generateClientFile(
   // Methods
   for (const feature of providerCard.features) {
     lines.push("");
-    lines.push(generateMethod(feature, providerId, endpointMap));
+    lines.push(generateMethod(feature, providerId, endpointMap, defaultEndpoint));
   }
 
   lines.push("}");
@@ -369,6 +373,7 @@ function generateReadme(
   baseUrl: string,
   features: readonly ProviderFeature[],
   endpointMap?: FeatureEndpointMap,
+  defaultEndpoint?: string,
 ): string {
   const now = new Date().toISOString().split("T")[0];
 
@@ -379,7 +384,7 @@ function generateReadme(
     const desc = feature.description ?? feature.name;
     const requiredCount = feature.input.fields.filter((f: any) => f.required).length;
     const totalCount = feature.input.fields.length;
-    methodLines.push(`| \`${methodName}()\` | \`${baseUrl}${featureIdToEndpoint(feature.id, endpointMap)}\` | ${desc} | ${totalCount} (${requiredCount} required) |`);
+    methodLines.push(`| \`${methodName}()\` | \`${baseUrl}${featureIdToEndpoint(feature.id, endpointMap, defaultEndpoint)}\` | ${desc} | ${totalCount} (${requiredCount} required) |`);
   }
   const methodTable = methodLines.join("\n");
 

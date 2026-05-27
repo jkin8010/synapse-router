@@ -5,7 +5,7 @@ title: synapse sdk
 
 # synapse sdk — Generate SDK from a Provider Pack
 
-The `synapse sdk generate` command generates a zero-dependency SDK from a Provider Pack. It supports both TypeScript and Python output.
+The `synapse sdk generate` command generates a zero-dependency SDK from a Provider Pack. It supports both TypeScript and Python output. Add `--with-billing` to include a BillingTracker class for automatic quota tracking.
 
 ## Parameters
 
@@ -16,6 +16,7 @@ The `synapse sdk generate` command generates a zero-dependency SDK from a Provid
 | `--output <dir>` | string | Yes | Output directory for generated SDK |
 | `--provider <id>` | string | No | Override provider name (e.g. `deepseek` using openai pack) |
 | `--base-url <url>` | string | No | Override default base URL |
+| `--with-billing` | flag | No | Include BillingTracker class for quota tracking |
 
 ## Examples
 
@@ -40,7 +41,14 @@ synapse sdk generate --pack openai --lang typescript --provider deepseek --base-
 # Generates DeepSeek SDK using openai pack structure
 ```
 
-### Example 4 — Generate from a local pack path
+### Example 4 — Generate SDK with billing tracking
+
+```bash
+synapse sdk generate --pack openai --lang typescript --output ./sdk --with-billing
+# Generates SDK with BillingTracker class for quota tracking
+```
+
+### Example 5 — Generate from a local pack path
 
 ```bash
 synapse sdk generate --pack ./my-packs/custom-api --lang typescript --output ./sdk

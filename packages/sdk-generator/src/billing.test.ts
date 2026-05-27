@@ -44,6 +44,11 @@ async function loadPackData(
     ? providerOverride.charAt(0).toUpperCase() + providerOverride.slice(1)
     : providerCard.provider.name;
   const baseUrl = baseUrlOverride ?? providerCard.service.base_url;
+  const providerUrl = providerCard.provider?.base_url;
+  const serviceUrl = providerCard.service.base_url;
+  const defaultEndpoint = providerUrl && serviceUrl && providerUrl.startsWith(serviceUrl)
+    ? providerUrl.slice(serviceUrl.length)
+    : "";
 
   return {
     providerCard,
@@ -52,6 +57,7 @@ async function loadPackData(
     providerName,
     baseUrl,
     authType: providerCard.service.auth_type,
+    defaultEndpoint,
   };
 }
 
