@@ -45,7 +45,7 @@ export default function ProviderCard({ card, isSelected, isConfigured, onSelect 
           {visibleFeatures.map((feature) => (
             <span
               key={feature.feature_id}
-              className="bg-zinc-800 text-zinc-300 text-xs rounded-md px-2 py-0.5"
+              className="bg-zinc-800 text-zinc-200 text-xs rounded-md px-2 py-0.5"
             >
               {feature.feature_name || feature.feature_id}
             </span>
@@ -54,12 +54,12 @@ export default function ProviderCard({ card, isSelected, isConfigured, onSelect 
       )}
 
       {/* Feature count */}
-      <p className="text-xs text-zinc-500">{card.features.length} {t("pack.features")}</p>
+      <p className="text-xs text-zinc-400">{card.features.length} {t("pack.features")}</p>
 
       {/* base_url display */}
       {card.service?.base_url && (
-        <p className="text-xs text-zinc-500 mt-0.5 truncate">
-          <span className="text-zinc-600">URL: </span>
+        <p className="text-xs text-zinc-400 mt-0.5 truncate">
+          <span className="text-zinc-500">URL: </span>
           {card.service.base_url}
         </p>
       )}

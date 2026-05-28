@@ -5,7 +5,7 @@ import { computeBillingPreview } from "../lib/billing-preview";
 
 export default function StatusBar() {
   const { t, language, setLanguage } = useI18n();
-  const { status, selectedProviderId, schemaValid, providers } = useAppState();
+  const { status, selectedProviderId, schema, schemaValid, providers } = useAppState();
   const configuredCount = providers.filter((p) => p.configured).length;
   const totalCount = providers.length;
   const selectedProvider = providers.find((p) => p.provider.id === selectedProviderId);

@@ -31,14 +31,21 @@ export function useCodeMirror(options: {
         EditorView.editable.of(options.editable ?? true),
         updateListener,
         EditorView.theme({
-          "&": { backgroundColor: "transparent", height: "100%" },
+          "&": { backgroundColor: "#18181b", height: "100%", color: "#e4e4e7" },
+          ".cm-content": { color: "#e4e4e7" },
+          ".cm-gutters": { backgroundColor: "#18181b", color: "#71717a", border: "none" },
           ".cm-scroller": {
             fontFamily: "ui-monospace, SFMono-Regular, monospace",
             fontSize: "13px",
           },
           ".cm-activeLine": { backgroundColor: "rgba(59, 130, 246, 0.05)" },
+          ".cm-activeLineGutter": { backgroundColor: "rgba(59, 130, 246, 0.08)" },
           ".cm-cursor": { borderLeftColor: "#60a5fa" },
-          ".cm-selectionBackground": { backgroundColor: "rgba(59, 130, 246, 0.2)" },
+          ".cm-selectionBackground": { backgroundColor: "rgba(59, 130, 246, 0.3)" },
+          "&.cm-focused .cm-selectionBackground": { backgroundColor: "rgba(59, 130, 246, 0.35)" },
+          ".cm-matchingBracket": { backgroundColor: "rgba(52, 211, 153, 0.2)", outline: "1px solid #34d399" },
+          ".cm-lintRange-error": { backgroundImage: "none" },
+          ".cm-lintRange-warning": { backgroundImage: "none" },
         }),
       ],
     });
