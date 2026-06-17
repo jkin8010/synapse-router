@@ -180,7 +180,7 @@ export default function ProviderSelector({ collapsed = false, onToggleCollapse }
           {selectedProviderId && (
             <div className="px-0 pb-2">
               <div className="flex items-center gap-1.5">
-                <label className="text-xs text-zinc-500 shrink-0">URL:</label>
+                <label className="text-xs text-zinc-400 shrink-0">URL:</label>
                 <input
                   type="text"
                   value={selectedBaseUrl ?? ""}
@@ -211,7 +211,7 @@ export default function ProviderSelector({ collapsed = false, onToggleCollapse }
                   </button>
                 )}
               </div>
-              <p className="text-xs text-zinc-600 mt-1">
+              <p className="text-xs text-zinc-500 mt-1">
                 {t("providers.url.override")}
               </p>
             </div>
