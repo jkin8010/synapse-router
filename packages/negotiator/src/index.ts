@@ -219,3 +219,21 @@ export type { NegotiateAndVerifyInput, NegotiationResult } from "./verifier.js";
 // ─── Re-export Retry Logic (Plan 01-03) ─────────────────────────────────
 export { retryWithFeedback, buildFeedbackPrompt, MAX_RETRIES } from "./retry.js";
 export type { RetryableError } from "./retry.js";
+
+// ─── Re-export Field Negotiator (Phase 1 - Field-Level Negotiation) ─────
+export {
+  compareFieldMappings,
+  resolveFieldNegotiation,
+  negotiateFeature,
+} from "./field-negotiator.js";
+export type {
+  AgentFieldRequest,
+  FieldComparison,
+  FieldMatch,
+  FieldRename,
+  TypeDowngrade,
+  MissingField,
+  NegotiateOptions,
+  NegotiationDecision,
+  ProviderFeature,
+} from "./field-negotiator.js";
