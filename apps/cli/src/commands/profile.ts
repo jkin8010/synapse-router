@@ -3,7 +3,7 @@
 
 import { readFile, readdir, writeFile, access, mkdir, rm } from "node:fs/promises";
 import { join } from "node:path";
-import { HELP_PROFILE } from "../utils/help.js";
+import { HELP_CONFIG } from "../utils/help.js";
 
 // ---------------------------------------------------------------------------
 // Paths
@@ -385,8 +385,9 @@ async function refreshProfiles(): Promise<void> {
 // Help
 // ---------------------------------------------------------------------------
 
+/** `synapse config profile --help` — profile IS a config subcommand now. */
 export function printProfileHelp(): void {
-  console.log(HELP_PROFILE);
+  console.log(HELP_CONFIG);
 }
 
 // ---------------------------------------------------------------------------

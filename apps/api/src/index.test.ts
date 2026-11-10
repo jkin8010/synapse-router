@@ -453,7 +453,9 @@ describe("HTTP API Server", () => {
   it("POST with invalid JSON returns 400", async () => {
     await withServer(getTestOptions(), async (baseUrl) => {
       return new Promise<void>((resolve, reject) => {
-        const urlObj = new URL(`${baseUrl}/health`);
+        // Must target a real POST route: /health is GET-only, so the router
+        // would answer 404 before the body is ever parsed.
+        const urlObj = new URL(`${baseUrl}/negotiate`);
         const req = http.request(
           {
             hostname: urlObj.hostname,
@@ -477,6 +479,71 @@ describe("HTTP API Server", () => {
         req.write("not valid json {{{");
         req.end();
       });
+    });
+  });
+
+  // 21. Vault routes are not public — cross-site origins must be rejected
+  it("rejects vault requests from a non-allowlisted origin", async () => {
+    await withServer(getTestOptions(), async (baseUrl) => {
+      const res = await httpRequest(`${baseUrl}/vault/keys`, {
+        headers: { Origin: "https://evil.example" },
+      });
+      assert.equal(res.status, 403);
+      assert.equal((res.body as any).error?.code, "ORIGIN_NOT_ALLOWED");
+    });
+  });
+
+  // 22. Vault routes require a bearer token when one is configured
+  it("requires a bearer token for vault routes when API_TOKEN is set", async () => {
+    const previous = process.env.API_TOKEN;
+    process.env.API_TOKEN = "test-token";
+    try {
+      await withServer(getTestOptions(), async (baseUrl) => {
+        const unauthorized = await httpRequest(`${baseUrl}/vault/keys`);
+        assert.equal(unauthorized.status, 401);
+        assert.equal((unauthorized.body as any).error?.code, "UNAUTHORIZED");
+
+        const authorized = await httpRequest(`${baseUrl}/vault/keys`, {
+          headers: { Authorization: "Bearer test-token" },
+        });
+        assert.equal(authorized.status, 200);
+      });
+    } finally {
+      if (previous === undefined) delete process.env.API_TOKEN;
+      else process.env.API_TOKEN = previous;
+    }
+  });
+
+  // 23. Declared oversize bodies are rejected before buffering
+  it("rejects a request whose Content-Length exceeds the body limit", async () => {
+    await withServer(getTestOptions(), async (baseUrl) => {
+      const res = await httpRequest(`${baseUrl}/negotiate`, {
+        method: "POST",
+        headers: { "Content-Length": String(2_000_000) },
+        body: { agent_schema: { features: [{ intent: "chat" }] } },
+      });
+      assert.equal(res.status, 500);
+      assert.equal((res.body as any).error?.message, "Request body too large");
+    });
+  });
+
+  // 24. Route params are URL-decoded once (providers and vault share the rule)
+  it("decodes percent-encoded route params", async () => {
+    await withServer(getTestOptions(), async (baseUrl) => {
+      const res = await httpRequest(`${baseUrl}/providers/${encodeURIComponent("openai")}`);
+      assert.equal(res.status, 200);
+      assert.equal((res.body as any).provider?.id, "openai");
+
+      // A slash smuggled through %2F must NOT create a match — segment count
+      // is decided before decoding, so it stays a 404 rather than reaching
+      // the provider handler with a different path.
+      const smuggled = await httpRequest(`${baseUrl}/providers/${encodeURIComponent("acme/vendor")}`);
+      assert.equal(smuggled.status, 404);
+      assert.equal((smuggled.body as any).error?.code, "NOT_FOUND");
+
+      const unknown = await httpRequest(`${baseUrl}/providers/${encodeURIComponent("no such provider")}`);
+      assert.equal(unknown.status, 404);
+      assert.equal((unknown.body as any).error?.code, "PROVIDER_NOT_FOUND");
     });
   });
 

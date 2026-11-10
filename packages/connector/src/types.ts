@@ -38,13 +38,24 @@ export interface ConnectParams {
      *  When provided, takes priority over path derived from lock.feature_id. */
     endpoint?: string;
   };
+  /**
+   * Opt-in: include the provider's raw response in `ConnectResult.raw`.
+   * Intended for diagnostics only (CLI --raw, smoke tests); canonical
+   * consumers should rely on `output`.
+   */
+  includeRaw?: boolean;
 }
 
 export interface ConnectResult {
   /** 标准化输出（canonical 字段） */
   output: Record<string, unknown>;
-  /** Provider 原始响应 */
-  raw: unknown;
+  /**
+   * Provider 原始响应 — 仅诊断用途。
+   *
+   * 只有在 `ConnectParams.includeRaw` 为 true（CLI `--raw` / smoke 诊断）时才
+   * 返回，避免上层绕过 mapper 直接依赖 provider 私有字段。
+   */
+  raw?: unknown;
   meta: {
     provider: string;
     feature_id: string;

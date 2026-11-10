@@ -150,6 +150,8 @@ async function runOpenAiSmoke(packsDir: string, apiKey: string, timeoutSec: numb
     lock,
     input,
     connection: { base_url: baseUrl, api_key: apiKey, auth_type: authType },
+    // Smoke checks inspect the provider's raw shape — request it explicitly
+    includeRaw: true,
   };
 
   // 5. Execute with timeout
@@ -246,6 +248,8 @@ async function runReplicateSmoke(packsDir: string, apiKey: string, timeoutSec: n
     lock,
     input,
     connection: { base_url: baseUrl, api_key: apiKey, auth_type: authType },
+    // Smoke checks inspect the provider's raw shape — request it explicitly
+    includeRaw: true,
   };
 
   // 5. Execute with timeout

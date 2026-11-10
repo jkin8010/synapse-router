@@ -205,11 +205,15 @@ export async function negotiateAndVerify(
   const llm = input.llmOptions
     ? { llm: createLLMClientFromOptions(input.llmOptions) }
     : {};
+  // No explicit LLM client and no API key: keep the offline mock schema so the
+  // pipeline stays usable without credentials, but never silently inside
+  // negotiateSchema — the fallback is requested explicitly here.
+  const llmOrMock = "llm" in llm ? llm : { allowMockLLM: true };
 
   // Step 1: negotiateSchema — 协商 Schema
   const negotiated = await negotiateSchema(
     { task: input.task, goal: input.goal, constraints: input.constraints },
-    llm
+    llmOrMock
   );
 
   // Step 2: Phase 1a — 加载 Manifest (with Registry enhancement, D-15) 并匹配

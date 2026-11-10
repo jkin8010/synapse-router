@@ -9,6 +9,21 @@ import { cwd } from "node:process";
 export const GLOBAL_SYNAPSE_DIR = join(homedir(), ".synapse");
 export const GLOBAL_CONFIG_PATH = join(GLOBAL_SYNAPSE_DIR, "config.json");
 
+/** Encrypted API-key store used by the vault commands. */
+export function getVaultDir(): string {
+  return join(GLOBAL_SYNAPSE_DIR, "keys");
+}
+
+/** Config shape owned by this CLI (providers + defaults). */
+export interface SynapseConfig extends Record<string, unknown> {
+  providers?: Record<string, {
+    base_url?: string;
+    pack?: string;
+    auth_type?: string;
+  }>;
+  defaults?: Record<string, string>;
+}
+
 export function getLocalConfigDir(): string {
   return join(cwd(), ".synapse");
 }
@@ -46,7 +61,9 @@ function deepMerge(
  * Load config with cascading: global → project-local.
  * Project-local values override global ones.
  */
-export async function loadMergedConfig(): Promise<Record<string, unknown>> {
+export async function loadMergedConfig<
+  T extends Record<string, unknown> = Record<string, unknown>,
+>(): Promise<T> {
   // Load global config
   let global: Record<string, unknown> = {};
   try {
@@ -67,10 +84,10 @@ export async function loadMergedConfig(): Promise<Record<string, unknown>> {
   }
 
   // If no local config, return global as-is
-  if (Object.keys(local).length === 0) return global;
+  if (Object.keys(local).length === 0) return global as T;
 
   // Deep-merge: local overrides global
-  return deepMerge(global, local);
+  return deepMerge(global, local) as T;
 }
 
 /**

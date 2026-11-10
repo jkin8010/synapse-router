@@ -539,22 +539,15 @@ synapse route chat --strategy myCustom
                                                              └──────────────┘
 ```
 
+> `synapse evolve` 与 `synapse profile` 顶层命令均已下线：
+> Profile 聚合改为 `synapse config profile`，SDK 生成改为 `synapse sdk generate`。
+
 ```bash
-# 1. 产线日志 → 聚合 Profile
-synapse profile refresh
+# 1. 产线日志 → 聚合 Profile（原 synapse profile refresh）
+synapse config profile refresh
 
-# 2. 生成 SDK + 策略调优
-synapse evolve --with-profile --tune
-#   Tuning strategy weights from production data...
-#   Evaluated 3 provider(s) across 4 strategy/strategies
-#     cheap           2 match  1 under  0 over
-#     fast            1 match  2 under  0 over
-#     quality         3 match  0 under  0 over
-#     balanced        2 match  1 under  0 over
-
-# 3. 生成的 SDK 目录包含策略调优报告
-#    ./synapse-sdk/strategies.json   — JSON 格式调优结果
-#    ./synapse-sdk/STRATEGIES.md     — Markdown 格式调优报告
+# 2. 从 Pack 生成 SDK
+synapse sdk generate --pack openai --lang typescript --output ./synapse-sdk
 ```
 
 调优报告示例（STRATEGIES.md）：
@@ -747,7 +740,6 @@ curl -X POST http://localhost:3011/execute \
 | `synapse pack`               | 管理 Provider Pack        | Pack 开发者   |
 | `synapse vault`              | 管理 API Key              | 所有人        |
 | `synapse config`             | 管理配置文件              | 开发者        |
-| `synapse generate`           | 从 OpenAPI Spec 生成 Pack | Pack 开发者   |
 
 ---
 
@@ -1087,19 +1079,16 @@ synapse pack remove @openai/chat
 
 ---
 
-### `synapse generate` — 从 OpenAPI Spec 生成 Pack
+### 从 OpenAPI Spec 生成 Pack（库 API）
 
-```bash
-synapse generate <openapi-file> --provider <id> --name <name>
-```
+> `synapse generate` 命令已下线。Pack 生成能力保留在 `@synapse-router/pack-generator` 包中，
+> 通过 `generatePack()` / `writePack()` 调用；CLI 侧请手动创建 Pack（见下文「添加新 Provider Pack」）。
 
-**示例**:
+```ts
+import { generatePack, writePack } from "@synapse-router/pack-generator";
 
-```bash
-synapse generate ./my-api-spec.yaml \
-  --provider my-api \
-  --name "My API"
-# ✓ Pack generated: packs/my-api/
+const pack = generatePack({ openapi: spec, providerId: "my-api" });
+await writePack(pack, "./packs/my-api");
 ```
 
 ---
@@ -1220,9 +1209,8 @@ pnpm typecheck      # 类型检查
 
 #### 方法一：自动生成（推荐）
 
-```bash
-synapse generate ./openapi.json --provider my-api --name "My API"
-```
+`synapse generate` 已下线；使用 `@synapse-router/pack-generator` 的 `generatePack()` 生成，
+或按下述方式手动编写（见「方法二」）。
 
 #### 方法二：手动创建
 

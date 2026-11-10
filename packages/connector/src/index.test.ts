@@ -8,7 +8,7 @@ import assert from "node:assert/strict";
 import { mapInput, mapOutput } from "./mapper.js";
 import { deriveApiPath } from "./path.js";
 import { connect } from "./index.js";
-import type { ConnectLock } from "./types.js";
+import type { ConnectLock, ConnectParams } from "./types.js";
 import { ConnectorHttpError } from "./http.js";
 
 // ─── Fixtures ───────────────────────────────────────────────────────────────
@@ -255,6 +255,8 @@ describe("connect", () => {
         api_key: "sk-deepseek-xxx",
         auth_type: "Bearer",
       },
+      // raw 是诊断字段，需要显式开启
+      includeRaw: true,
     });
 
     // 输出包含 canonical 字段
@@ -270,6 +272,46 @@ describe("connect", () => {
     assert.equal(result.meta.model, "deepseek-chat");
     assert.deepEqual(result.meta.usage, { input_tokens: 10, output_tokens: 5 });
     assert.ok(result.meta.latency_ms >= 0);
+  });
+
+  it("omits raw by default so canonical consumers cannot depend on provider fields", async () => {
+    globalThis.fetch = mockFetch({ model: "deepseek-chat", choices: [] });
+
+    const result = await connect({
+      lock: chatLock,
+      input: { prompt: [], model: "deepseek-chat" },
+      connection: {
+        base_url: "https://api.deepseek.com/v1",
+        api_key: "sk-deepseek-xxx",
+        auth_type: "Bearer",
+      },
+    });
+
+    assert.equal("raw" in result, false);
+    assert.equal(result.output.model, "deepseek-chat");
+  });
+
+  it("throws for an unsupported auth_type instead of sending an unauthenticated request", async () => {
+    let fetched = false;
+    globalThis.fetch = (async () => {
+      fetched = true;
+      return { ok: true, status: 200, json: async () => ({}), text: async () => "{}" };
+    }) as unknown as typeof globalThis.fetch;
+
+    await assert.rejects(
+      connect({
+        lock: chatLock,
+        input: { prompt: [], model: "gpt-4" },
+        connection: {
+          base_url: "https://api.example.com",
+          api_key: "secret",
+          // Simulates a config written with an auth_type this build cannot honour
+          auth_type: "Hmac" as unknown as ConnectParams["connection"]["auth_type"],
+        },
+      }),
+      /Unsupported auth_type/,
+    );
+    assert.equal(fetched, false, "must not call the provider with unknown auth");
   });
 
   it("uses connection.base_url instead of provider-card base_url", async () => {

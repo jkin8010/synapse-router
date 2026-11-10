@@ -6,6 +6,7 @@
     "rootDir": "."
   },
   "references": [
+    { "path": "../../packages/core" },
     { "path": "../../packages/vault" },
     { "path": "../../packages/negotiator" },
     { "path": "../../packages/registry-client" },

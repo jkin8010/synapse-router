@@ -3,6 +3,11 @@
   "version": "0.1.0",
   "private": true,
   "packageManager": "pnpm@10.0.0",
+  "workspaces": [
+    "apps/*",
+    "packages/*",
+    "packs/*"
+  ],
   "scripts": {
     "build": "pnpm -r build",
     "build:docs": "pnpm --filter @synapse-router/docs build:site",

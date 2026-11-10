@@ -34,13 +34,9 @@ export const ADVANCED_COMMANDS: HelpCommandEntry[] = [
   { name: "lock", usage: "lock list|show|remove|migrate|outdated", desc: "Manage Schema Locks" },
   { name: "route", usage: "route <intent>", desc: "Route to best provider using multi-dimensional scoring" },
   { name: "sdk", usage: "sdk generate", desc: "Generate SDK from Provider Pack" },
-  { name: "init", usage: "init", desc: "Initialize a synapse-sdk project" },
-  { name: "smoke", usage: "smoke --provider <name>", desc: "Run provider smoke tests against live APIs" },
+  { name: "smoke", usage: "smoke --provider <name>", desc: "Alias of connect --smoke (provider smoke tests)" },
   { name: "watchdog", usage: "watchdog", desc: "Monitor events and auto-create Git Issues" },
   { name: "provider", usage: "provider list|show", desc: "List and inspect provider packs" },
-  { name: "export", usage: "export", desc: "Export .synapse/ data (tar.gz)" },
-  { name: "import", usage: "import <file>", desc: "Import .synapse/ data" },
-  { name: "profile", usage: "profile list|show|reset|stats", desc: "View and manage Provider Profiles" },
 ];
 
 // ---------------------------------------------------------------------------
@@ -63,11 +59,22 @@ Description:
   After setup, you can use:
     synapse connect <provider> <intent>
 
+SDK project scaffolding (non-interactive, formerly "synapse init"):
+  synapse setup --sdk [--provider <id>] [--out-dir <path>] [--with-cicd]
+
+  --sdk               Scaffold an SDK project instead of running the wizard
+  --provider <id>     Default provider to record in synapse.json
+  --out-dir <path>    Output directory (default: ./synapse-sdk)
+  --with-cicd         Also write .github/workflows/synapse-sdk.yml
+
 Examples:
   synapse setup
+  synapse setup --sdk --provider openai --out-dir ./synapse-sdk
+  synapse setup --sdk --with-cicd
 
 See also:
   synapse connect   — Connect to a provider
+  synapse sdk       — Generate an SDK from a Pack
   synapse vault     — Manage API keys
   synapse config    — Manage provider configuration
 `;
@@ -527,128 +534,3 @@ See also:
   synapse pack      — Manage packs from Registry
 `;
 
-export const HELP_EXPORT = `
-Note: \`synapse export\` has been merged into \`synapse config export\`.
-
-synapse export — Export .synapse/ data for transfer to development environment
-
-Usage:
-  synapse export [options]
-
-Options:
-  --output <path>    Output file path (default: ./synapse-data.tgz)
-  --stdout           Write tar.gz to stdout (for pipe mode)
-  --minimal          Export only profiles + memories (no raw events)
-
-Description:
-  Creates a tar.gz archive of the .synapse/ directory for transfer
-  between production and development environments.
-
-  API keys are NOT included — they live in ~/.synapse/keys/ (global vault).
-
-Modes:
-  Full export:     includes profiles, memories, config, schemas, and raw events
-  Minimal export:  only profiles + memories + config (smaller, no raw events)
-
-Examples:
-  synapse export
-  synapse export --output ./backup.tgz
-  synapse export --stdout --minimal | ssh prod "synapse import --stdin --merge"
-`;
-
-export const HELP_IMPORT = `
-Note: \`synapse import\` has been merged into \`synapse config import\`.
-
-synapse import — Import .synapse/ data from an export archive
-
-Usage:
-  synapse import <file.tgz> [options]
-  synapse import --stdin [options]
-
-Options:
-  --stdin             Read tar.gz from stdin (for pipe mode)
-  --dry-run           Preview import contents without writing files
-  --merge             Merge with local data (skip existing files)
-  --overwrite         Overwrite existing files (default behavior)
-
-Security:
-  Import performs automatic validation:
-  - No path traversal (../)
-  - No suspicious characters (;|&\\$)
-  - No API key patterns in content
-  - All paths must be within .synapse/
-
-Examples:
-  synapse import ./synapse-data.tgz
-  synapse import ./synapse-data.tgz --dry-run
-  synapse import ./synapse-data.tgz --merge
-  ssh prod "synapse export --stdout --minimal" | synapse import --stdin --merge
-`;
-
-export const HELP_INIT = `
-Note: \`synapse init\` has been merged into \`synapse setup\`.
-
-synapse init — Initialize a synapse-sdk project
-
-Usage:
-  synapse init [options]
-
-Options:
-  --provider <name>     Provider ID to pre-configure (e.g. openai, replicate)
-  --out-dir <path>      Output directory (default: ./synapse-sdk)
-  --with-cicd           Generate GitHub Actions CI/CD workflow template
-
-Description:
-  Creates a synapse-sdk project directory structure with a synapse.json
-  configuration file. Run this in your project root before generating SDKs.
-
-  With --with-cicd, creates a GitHub Actions CI/CD workflow template.
-
-Output structure:
-  <out-dir>/
-  ├── README.md              # Integration instructions
-  └── .gitkeep               # Ensures directory is tracked
-
-  synapse.json               # Generation configuration
-
-  .github/workflows/         # (with --with-cicd)
-  └── sdk-generate.yml       # CI/CD workflow template
-
-Examples:
-  # Interactive setup
-  synapse init
-
-  # Pre-select openai provider
-  synapse init --provider openai
-
-  # Custom output directory
-  synapse init --out-dir ./src/sdk
-
-  # Include CI/CD workflow
-  synapse init --with-cicd
-`;
-
-export const HELP_PROFILE = `
-Note: \`synapse profile\` has been merged into \`synapse config profile\`.
-
-synapse profile — View and manage Provider Profiles
-
-Usage:
-  synapse profile list                 List all providers with summary stats
-  synapse profile show <provider>      Show detailed stats for a provider
-  synapse profile reset <provider>     Reset provider profile data
-  synapse profile stats                Global statistics across all providers
-  synapse profile refresh              Rebuild profiles from events.ndjson
-
-Description:
-  Provider Profiles aggregate runtime event data from
-  .synapse/watchdog/events.ndjson. Each profile contains
-  success rates, latency percentiles, error breakdowns,
-  and per-feature statistics.
-
-Examples:
-  synapse profile list
-  synapse profile show openai
-  synapse profile stats
-  synapse profile refresh
-`;

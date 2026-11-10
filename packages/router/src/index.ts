@@ -17,6 +17,13 @@
  *   - 纯函数，无运行时 LLM
  *   - 所有评分确定性的（相同输入 → 相同输出）
  *   - 路由决策可解释（返回完整 score + explanation）
+ *
+ * 注意（显式全局状态）：
+ *   route()/getStrategies() 在只使用内置策略时是纯函数；但本模块额外导出
+ *   registerCustomStrategy / registerCustomStrategies / unregisterCustomStrategy，
+ *   它们写入模块级注册表，会让后续 route() 的结果依赖进程内注册历史。
+ *   需要确定性的调用方应只使用 BUILTIN_STRATEGY_IDS，或在使用前显式注册并在
+ *   结束后 unregister；测试中请在每个用例后清理，避免用例间相互污染。
  */
 
 // 类型
@@ -36,6 +43,8 @@ export type {
 export { BUILTIN_STRATEGY_IDS, Dimension } from "./types.js";
 
 // 策略
+// NOTE: the register*/unregister* helpers below mutate process-wide state —
+// see the "显式全局状态" note in the module header.
 export {
   getStrategies,
   getStrategy,

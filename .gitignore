@@ -6,6 +6,7 @@ dist/
 *.tsbuildinfo
 .env
 .DS_Store
+.pnpm-store/
 *.log
 .omc/
 .claude/

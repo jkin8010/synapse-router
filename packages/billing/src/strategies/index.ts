@@ -32,12 +32,29 @@ export class StrategyRegistry {
   }
 }
 
+/**
+ * Create an independent registry — use this in tests or whenever the caller
+ * needs its own strategy set instead of the process-wide default.
+ */
+export function createStrategyRegistry(): StrategyRegistry {
+  return new StrategyRegistry();
+}
+
 // Singleton for convenience
 let _defaultRegistry: StrategyRegistry | undefined;
 
-export function getDefaultRegistry(): StrategyRegistry {
+/**
+ * Process-wide default registry.
+ *
+ * It contains only the built-in strategies and is frozen: callers must not
+ * register into shared global state (that would make results depend on
+ * initialization order and leak across tests). Use `StrategyRegistry` directly
+ * when custom strategies are needed.
+ */
+export function getDefaultRegistry(): Readonly<StrategyRegistry> {
   if (!_defaultRegistry) {
-    _defaultRegistry = new StrategyRegistry();
+    _defaultRegistry = createStrategyRegistry();
+    Object.freeze(_defaultRegistry);
   }
   return _defaultRegistry;
 }

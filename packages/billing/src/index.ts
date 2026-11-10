@@ -52,7 +52,7 @@ export { PerTokenStrategy } from './strategies/per-token.js';
 export { PerUnitStrategy } from './strategies/per-unit.js';
 export { TieredStrategy } from './strategies/tiered.js';
 export { FlatStrategy } from './strategies/flat.js';
-export { StrategyRegistry, getDefaultRegistry } from './strategies/index.js';
+export { StrategyRegistry, getDefaultRegistry, createStrategyRegistry } from './strategies/index.js';
 
 // Quota
 export { QuotaManager } from './quota.js';

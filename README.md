@@ -45,7 +45,7 @@ Registry (Provider API Pack)     .synapse/ (产线运行时日志)
 | 层次 | 是什么 | 含 LLM? | 何时运行 | 复杂度 |
 |------|--------|---------|---------|--------|
 | **运行时** | 生成的 SDK（纯代码） | ❌ 无 | 每次 API 调用 | 极薄 |
-| **演化** | `synapse evolve` | ✅ 可含 | 开发时，一次性 | 复杂 |
+| **演化** | `synapse sdk generate` | ❌ 无 | 开发时，一次性 | 中 |
 | **监控** | `synapse watchdog` | ❌ 无 | 后台常驻/CI | 可配置 |
 
 ## 路由引擎
@@ -128,7 +128,7 @@ synapse route chat --region us-east --min-version 4.0
 synapse sdk generate --pack openai --lang typescript --output ./sdk
 
 # 包含产线数据
-synapse profile refresh       # 从日志聚合产线数据
+synapse config profile refresh   # 从日志聚合产线数据
 synapse sdk generate --pack openai --lang typescript --output ./sdk
 ```
 
@@ -142,30 +142,30 @@ synapse connect openai chat --input '{"messages":[{"role":"user","content":"Hell
 
 ```bash
 # 运行时日志自动写入 .synapse/，通过 Git 同步到开发环境
-synapse export --stdout | ssh dev "synapse import --stdin"
+synapse config export --stdout | ssh dev "synapse config import --stdin"
 synapse watchdog --daemon       # 监控异常，自动创建 Issue
 ```
 
 ### 所有 CLI 命令
 
 ```
-  connect <provider> <intent>   连接到 Provider 并执行功能
-  smoke --provider <name>       运行 Provider 冒烟测试
-  setup                         交互式首次配置向导
-  config set|get|list           配置管理
-  provider list|show            Provider Pack 管理
-  generate <source>             从 OpenAPI Spec 生成 Provider Pack (已弃用)
-  vault set|list|get|remove     管理 API Key
+  setup [--sdk]                 交互式首次配置向导 / SDK 项目脚手架
+  connect <provider> <intent>   连接到 Provider 并执行功能（--smoke 运行冒烟测试）
   negotiate <schema-file>       运行 Schema 协商
-  lock list|show|remove|migrate Schema Lock 管理
-  sdk generate                  从 Pack 生成 SDK
+  vault set|list|get|remove     管理 API Key
+  config set|get|list           配置管理
+  config profile|export|import  产线 Profile / 数据导出导入
   pack add|search|list|update   从 Registry 管理 Pack
+  billing init|config|status    计费与配额管理
+  lock list|show|remove|migrate Schema Lock 管理
   route <intent>                路由到最优 Provider
-  init                          初始化项目
+  sdk generate                  从 Pack 生成 SDK
+  provider list|show            Provider Pack 管理
   watchdog                      监控异常自动创建 Issue
-  profile list|show|reset|stats Provider 产线数据
-  export|import                 导出/导入 .synapse/ 数据
 ```
+
+> 已下线：`generate`、`evolve`、`init`、`smoke`、`profile`、`export`、`import`、`execute`。
+> 其中 `smoke` / `init` / `profile` / `export` / `import` 仍作为别名保留并提示新入口。
 
 ## 架构
 

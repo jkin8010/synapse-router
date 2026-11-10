@@ -8,7 +8,6 @@ import {
   HELP_VAULT, HELP_CONFIG, HELP_PACK, HELP_BILLING,
   HELP_LOCK, HELP_ROUTE, HELP_SDK,
   HELP_SMOKE, HELP_WATCHDOG, HELP_PROVIDER,
-  HELP_EXPORT, HELP_IMPORT, HELP_INIT, HELP_PROFILE,
 } from "./help.js";
 
 describe("help module", () => {
@@ -29,8 +28,12 @@ describe("help module", () => {
     assert.strictEqual(CONFIG_COMMANDS.length, 4);
   });
 
-  it("Test 5: ADVANCED_COMMANDS array has exactly 10 entries", () => {
-    assert.strictEqual(ADVANCED_COMMANDS.length, 10);
+  it("Test 5: ADVANCED_COMMANDS no longer lists merged-away aliases", () => {
+    assert.strictEqual(ADVANCED_COMMANDS.length, 6);
+    const names = ADVANCED_COMMANDS.map((c) => c.name);
+    for (const removed of ["init", "export", "import", "profile"]) {
+      assert.ok(!names.includes(removed), `${removed} should not be advertised`);
+    }
   });
 
   it("Test 6: all HELP_* constants are non-empty strings", () => {
@@ -39,7 +42,6 @@ describe("help module", () => {
       HELP_VAULT, HELP_CONFIG, HELP_PACK, HELP_BILLING,
       HELP_LOCK, HELP_ROUTE, HELP_SDK,
       HELP_SMOKE, HELP_WATCHDOG, HELP_PROVIDER,
-      HELP_EXPORT, HELP_IMPORT, HELP_INIT, HELP_PROFILE,
     ];
     for (const h of helpConstants) {
       assert.ok(typeof h === "string" && h.length > 0, `Expected non-empty string, got ${typeof h} length ${h.length}`);

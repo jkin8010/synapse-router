@@ -643,6 +643,8 @@ export async function handleConnectCommand(argv: string[]): Promise<void> {
       auth_type: authType,
       endpoint: dslEndpoint,
     },
+    // Provider 原始响应只在 --raw 时带回（诊断用途）
+    includeRaw: options.raw === true,
   };
 
   // Determine output format

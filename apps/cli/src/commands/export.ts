@@ -13,7 +13,7 @@ import { createReadStream, createWriteStream, existsSync } from "node:fs";
 import { createGzip, createGunzip } from "node:zlib";
 import { pipeline } from "node:stream/promises";
 import { Readable } from "node:stream";
-import { HELP_EXPORT, HELP_IMPORT } from "../utils/help.js";
+import { HELP_CONFIG } from "../utils/help.js";
 
 // ---------------------------------------------------------------------------
 // Constants
@@ -375,8 +375,9 @@ async function exportSynapse(options: ExportOptions): Promise<void> {
   }
 }
 
+/** `synapse config export --help` — export IS a config subcommand now. */
 export function printExportHelp(): void {
-  console.log(HELP_EXPORT);
+  console.log(HELP_CONFIG);
 }
 
 // ---------------------------------------------------------------------------
@@ -517,8 +518,9 @@ async function importSynapse(options: ImportOptions): Promise<void> {
   }
 }
 
+/** `synapse config import --help` — import IS a config subcommand now. */
 export function printImportHelp(): void {
-  console.log(HELP_IMPORT);
+  console.log(HELP_CONFIG);
 }
 
 // ---------------------------------------------------------------------------

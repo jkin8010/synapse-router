@@ -30,10 +30,13 @@ export {
   buildSuggestions,
 } from "./manifest.js";
 
+// ─── Re-export Intent matching ──────────────────────────────────────────
+export { intentsMatch, normalizeIntent } from "./intent.js";
+
 export interface NegotiateSchemaInput {
   task: string;
   goal: string;
-  constraints?: any;
+  constraints?: Record<string, unknown>;
 }
 
 export interface NegotiatedSchema {
@@ -54,6 +57,12 @@ export interface LLMClient {
 
 export interface NegotiateSchemaOptions {
   llm?: LLMClient;
+  /**
+   * Opt-in deterministic stub returned when no LLM is injected and no API key
+   * is configured. Production callers should NOT set this — the default
+   * behaviour is to fail loudly so a missing configuration is visible.
+   */
+  allowMockLLM?: boolean;
 }
 
 export interface OpenAICompatibleClientOptions {
@@ -78,7 +87,7 @@ export async function negotiateSchema(
   input: NegotiateSchemaInput,
   options: NegotiateSchemaOptions = {}
 ): Promise<NegotiatedSchema> {
-  const llm = options.llm ?? createDefaultLLMClient();
+  const llm = options.llm ?? createDefaultLLMClient(options);
   const content = await llm.complete([
     { role: "system", content: SCHEMA_NEGOTIATION_SYSTEM_PROMPT },
     { role: "user", content: createUserPrompt(input) }
@@ -135,23 +144,29 @@ export function createOpenAICompatibleClient(options: OpenAICompatibleClientOpti
   };
 }
 
-function createDefaultLLMClient(): LLMClient {
+function createDefaultLLMClient(options: NegotiateSchemaOptions): LLMClient {
   const apiKey = process.env.OPENAI_API_KEY;
 
-  if (apiKey !== undefined && apiKey.trim().length > 0) {
-    return createOpenAICompatibleClient({ apiKey });
+  if (apiKey === undefined || apiKey.trim().length === 0) {
+    if (options.allowMockLLM === true) {
+      return {
+        async complete() {
+          return JSON.stringify({
+            name: "negotiated-schema",
+            fields: [
+              { name: "input", type: "string", required: true }
+            ]
+          });
+        }
+      };
+    }
+
+    throw new Error(
+      "OPENAI_API_KEY is required unless a custom LLMClient is provided via options.llm"
+    );
   }
 
-  return {
-    async complete() {
-      return JSON.stringify({
-        name: "negotiated-schema",
-        fields: [
-          { name: "input", type: "string", required: true }
-        ]
-      });
-    }
-  };
+  return createOpenAICompatibleClient({ apiKey });
 }
 
 function createUserPrompt(input: NegotiateSchemaInput): string {

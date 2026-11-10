@@ -1,6 +1,6 @@
 // ─── D-12: Retry Logic with Structured Error Feedback ────────────────────
 
-import { negotiateSchema } from "./index.js";
+import { negotiateSchema, createOpenAICompatibleClient } from "./index.js";
 import {
   loadManifestFromPack,
   matchManifest,
@@ -252,9 +252,19 @@ export async function retryWithFeedback(
     _verification_feedback: feedbackPrompt,
   };
 
+  const retryLLMOptions = input.llmOptions?.apiKey
+    ? {
+        llm: createOpenAICompatibleClient({
+          apiKey: input.llmOptions.apiKey,
+          model: input.llmOptions.model,
+          baseUrl: input.llmOptions.baseUrl,
+        }),
+      }
+    : { allowMockLLM: true };
+
   const negotiated = await negotiateSchema(
     { task: input.task, goal: input.goal, constraints },
-    {}
+    retryLLMOptions
   );
 
   // Step 3: Phase 1a — Re-run manifest matching

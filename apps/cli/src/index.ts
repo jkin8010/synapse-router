@@ -6,7 +6,8 @@ import { join, dirname } from "node:path";
 import { homedir } from "node:os";
 import { findPacksDir, loadProviderCard, USER_PACKS_DIR, LOCAL_PACKS_DIR } from "./utils/packs.js";
 import { createVault } from "@synapse-router/vault";
-import { loadMergedConfig, saveGlobalConfig } from "./utils/config.js";
+import { loadMergedConfig, saveGlobalConfig, getVaultDir } from "./utils/config.js";
+import type { SynapseConfig } from "./utils/config.js";
 import {
   HELP_BANNER, GROUP_CORE, GROUP_CONFIG, GROUP_ADVANCED,
   CORE_COMMANDS, CONFIG_COMMANDS, ADVANCED_COMMANDS,
@@ -14,14 +15,10 @@ import {
   HELP_VAULT, HELP_CONFIG, HELP_PACK, HELP_BILLING,
   HELP_LOCK, HELP_ROUTE, HELP_SDK,
   HELP_SMOKE, HELP_WATCHDOG, HELP_PROVIDER,
-  HELP_EXPORT, HELP_IMPORT, HELP_INIT, HELP_PROFILE,
 } from "./utils/help.js";
 import { handleConnectCommand, printConnectHelp } from "./commands/connect.js";
-import { handleSmokeCommand, printSmokeHelp } from "./commands/smoke.js";
-import { handleInitCommand, printInitHelp } from "./commands/init.js";
+import { printSmokeHelp } from "./commands/smoke.js";
 import { handleWatchdogCommand, printWatchdogHelp } from "./commands/watchdog.js";
-import { handleProfileCommand, printProfileHelp } from "./commands/profile.js";
-import { handleExportCommand, printExportHelp, handleImportCommand, printImportHelp } from "./commands/export.js";
 import { handleSetupCommand, printSetupHelp } from "./commands/setup.js";
 import { handleConfigCommand, printConfigHelp } from "./commands/config.js";
 import { handleBillingCommand, printBillingHelp } from "./commands/billing.js";
@@ -37,14 +34,22 @@ import { readFileSync, existsSync } from "node:fs";
 // Load .env files
 // ---------------------------------------------------------------------------
 
-function loadDotEnv(): void {
-  const cwd = process.cwd();
+/**
+ * Load `.env` / `.env.local` from `cwd` into the given env object.
+ *
+ * Exported (not run at import time) so tests and other entry points can decide
+ * when — and for which directory — environment loading happens.
+ */
+export function loadDotEnv(
+  cwd: string = process.cwd(),
+  env: NodeJS.ProcessEnv = process.env,
+): void {
   const files = [".env.local", ".env"]; // .env.local overrides .env
   for (const name of files) {
-    const path = join(cwd, name);
-    if (!existsSync(path)) continue;
+    const envPath = join(cwd, name);
+    if (!existsSync(envPath)) continue;
     try {
-      const content = readFileSync(path, "utf8");
+      const content = readFileSync(envPath, "utf8");
       for (const line of content.split("\n")) {
         const trimmed = line.trim();
         if (!trimmed || trimmed.startsWith("#")) continue;
@@ -57,8 +62,8 @@ function loadDotEnv(): void {
             (value.startsWith("'") && value.endsWith("'"))) {
           value = value.slice(1, -1);
         }
-        if (key && !(key in process.env)) {
-          process.env[key] = value;
+        if (key && !(key in env)) {
+          env[key] = value;
         }
       }
     } catch {
@@ -66,8 +71,6 @@ function loadDotEnv(): void {
     }
   }
 }
-
-loadDotEnv();
 
 // ---------------------------------------------------------------------------
 // Argument parsing
@@ -77,27 +80,126 @@ interface ParsedArgs {
   command: string;
   args: string[];
   flags: Set<string>;
+  /** Values passed as `--key value`, `--key=value`, `-k value` or `-k=value` */
+  options: Map<string, string>;
 }
+
+/**
+ * Options that take a value. Keeping this explicit avoids guessing from argv:
+ * `--base-url https://x` must not leak "https://x" into positional args.
+ */
+const VALUE_OPTIONS = new Set([
+  "input",
+  "input-file",
+  "provider",
+  "intent",
+  "schema",
+  "format",
+  "base-url",
+  "api-key",
+  "lock",
+  "strategy",
+  "exclude",
+  "region",
+  "min-version",
+  "output",
+  "pack",
+  "lang",
+  "billing",
+  "timeout",
+  "limit",
+  "name",
+  "url",
+  "port",
+  "queries",
+  "provider-id",
+]);
+
+/** Single-dash aliases for value options (`-p openai`). */
+const SHORT_VALUE_OPTIONS: Record<string, string> = {
+  o: "output",
+  p: "provider",
+  f: "format",
+  i: "input",
+  t: "timeout",
+  l: "lang",
+};
+
+/** Single-dash aliases for boolean flags (`-h`, `-v`). */
+const SHORT_BOOLEAN_FLAGS: Record<string, string> = {
+  h: "help",
+  v: "version",
+  r: "remote",
+};
 
 function parseArgs(argv: string[]): ParsedArgs {
   const args = argv.slice(2);
   const flags = new Set<string>();
+  const options = new Map<string, string>();
   const positional: string[] = [];
 
-  for (const arg of args) {
+  for (let i = 0; i < args.length; i++) {
+    const arg = args[i];
+
     if (arg.startsWith("--")) {
-      flags.add(arg.slice(2));
-    } else if (arg.startsWith("-")) {
-      for (const ch of arg.slice(1)) flags.add(ch);
-    } else {
-      positional.push(arg);
+      const body = arg.slice(2);
+      const eqIdx = body.indexOf("=");
+      const name = eqIdx === -1 ? body : body.slice(0, eqIdx);
+
+      if (eqIdx !== -1) {
+        // --key=value
+        flags.add(name);
+        options.set(name, body.slice(eqIdx + 1));
+      } else if (VALUE_OPTIONS.has(name) && args[i + 1] !== undefined && !args[i + 1].startsWith("-")) {
+        // --key value
+        flags.add(name);
+        options.set(name, args[++i]);
+      } else {
+        flags.add(name);
+      }
+      continue;
     }
+
+    if (arg.startsWith("-") && arg.length > 1) {
+      const body = arg.slice(1);
+      const eqIdx = body.indexOf("=");
+      const name = eqIdx === -1 ? body : body.slice(0, eqIdx);
+      const longName = SHORT_VALUE_OPTIONS[name];
+
+      if (longName !== undefined) {
+        if (eqIdx !== -1) {
+          flags.add(longName);
+          options.set(longName, body.slice(eqIdx + 1));
+        } else if (args[i + 1] !== undefined && !args[i + 1].startsWith("-")) {
+          flags.add(longName);
+          options.set(longName, args[++i]);
+        } else {
+          flags.add(longName);
+        }
+        continue;
+      }
+
+      // Short boolean flags: -h, -v, -r
+      if (SHORT_BOOLEAN_FLAGS[name] !== undefined && eqIdx === -1) {
+        flags.add(SHORT_BOOLEAN_FLAGS[name]);
+        continue;
+      }
+
+      // Combined short flags, e.g. -hv
+      for (const ch of name) {
+        flags.add(SHORT_BOOLEAN_FLAGS[ch] ?? ch);
+      }
+      continue;
+    }
+
+    positional.push(arg);
   }
 
   return {
     command: positional[0] ?? "help",
     args: positional.slice(1),
     flags,
+    options,
   };
 }
 
@@ -164,7 +266,16 @@ interface ProviderEntry {
   source: ProviderSource;
 }
 
-async function loadProvidersFromDir(dir: string): Promise<ProviderEntry[]> {
+/**
+ * Load provider cards from one directory and tag them with their source.
+ *
+ * The source is a parameter (not hardcoded) so every caller gets a truthful
+ * `source` without having to overwrite it afterwards.
+ */
+async function loadProvidersFromDir(
+  dir: string,
+  source: ProviderSource,
+): Promise<ProviderEntry[]> {
   const results: ProviderEntry[] = [];
   let entries;
   try {
@@ -179,7 +290,7 @@ async function loadProvidersFromDir(dir: string): Promise<ProviderEntry[]> {
       const content = await readFile(cardPath, "utf8");
       const card = JSON.parse(content);
       if (card.provider?.id) {
-        results.push({ card, source: "builtin" as ProviderSource });
+        results.push({ card, source });
       }
     } catch {
       // skip malformed packs
@@ -196,14 +307,14 @@ async function loadAllProviders(): Promise<Map<string, ProviderEntry>> {
   const localDir = join(process.cwd(), ".synapse", "packs");
 
   // Priority low to high: builtin < registry < local
-  for (const entry of await loadProvidersFromDir(builtinDir)) {
-    providers.set(entry.card.provider.id as string, { ...entry, source: "builtin" });
+  for (const entry of await loadProvidersFromDir(builtinDir, "builtin")) {
+    providers.set(entry.card.provider.id as string, entry);
   }
-  for (const entry of await loadProvidersFromDir(registryDir)) {
-    providers.set(entry.card.provider.id as string, { ...entry, source: "registry" });
+  for (const entry of await loadProvidersFromDir(registryDir, "registry")) {
+    providers.set(entry.card.provider.id as string, entry);
   }
-  for (const entry of await loadProvidersFromDir(localDir)) {
-    providers.set(entry.card.provider.id as string, { ...entry, source: "local" });
+  for (const entry of await loadProvidersFromDir(localDir, "local")) {
+    providers.set(entry.card.provider.id as string, entry);
   }
 
   return providers;
@@ -322,31 +433,24 @@ async function providerShow(id: string, remote = false): Promise<void> {
 // ---------------------------------------------------------------------------
 
 function makeVault(): ReturnType<typeof createVault> {
-  return createVault({ vaultDir: join(homedir(), ".synapse", "keys") });
+  return createVault({ vaultDir: getVaultDir() });
 }
 
-// Config helpers for vault set --base-url / --pack
-const SYNAPSE_DIR = join(homedir(), ".synapse");
-const CONFIG_PATH = join(SYNAPSE_DIR, "config.json");
-
-interface SynapseConfig {
-  providers?: Record<string, {
-    base_url?: string;
-    pack?: string;
-    auth_type?: string;
-  }>;
-  defaults?: Record<string, string>;
-}
-
+// Config helpers for vault set --base-url / --pack — the config model itself
+// lives in utils/config so the CLI never keeps a second copy of it.
 async function loadConfig(): Promise<SynapseConfig> {
-  return loadMergedConfig() as Promise<SynapseConfig>;
+  return loadMergedConfig();
 }
 
 async function saveConfig(config: SynapseConfig): Promise<void> {
-  await saveGlobalConfig(config as Record<string, unknown>);
+  await saveGlobalConfig(config);
 }
 
-async function vaultSet(provider: string, key: string, extraArgs: string[]): Promise<void> {
+async function vaultSet(
+  provider: string,
+  key: string,
+  options: { baseUrl?: string; pack?: string },
+): Promise<void> {
   if (!provider || !key) {
     console.error("Error: both provider and key are required");
     console.error("Usage: synapse vault set <provider> <key> [--base-url <url>] [--pack <id>]");
@@ -368,16 +472,8 @@ async function vaultSet(provider: string, key: string, extraArgs: string[]): Pro
     // provider card not found — use default
   }
 
-  // Parse extra options
-  let baseUrl: string | undefined;
-  let pack: string | undefined;
-  for (let i = 0; i < extraArgs.length; i++) {
-    if (extraArgs[i] === "--base-url" && extraArgs[i + 1]) {
-      baseUrl = extraArgs[++i];
-    } else if (extraArgs[i] === "--pack" && extraArgs[i + 1]) {
-      pack = extraArgs[++i];
-    }
-  }
+  // Options are already parsed centrally (--base-url <url> / --pack <id>)
+  const { baseUrl, pack } = options;
 
   try {
     await vault.setKey(provider, key, authType);
@@ -462,7 +558,11 @@ async function vaultRotate(provider: string): Promise<void> {
 // ---------------------------------------------------------------------------
 
 async function main(): Promise<void> {
-  const { command, args, flags } = parseArgs(process.argv);
+  // Environment loading is an explicit entry-point concern (not an import
+  // side effect), so tests and embedded use stay isolated.
+  loadDotEnv();
+
+  const { command, args, flags, options } = parseArgs(process.argv);
 
   // Raw args after the command name — for sub-commands that do their own flag parsing
   // e.g. "synapse connect deepseek chat --input '{...}'" → rawArgs = ["deepseek", "chat", "--input", "{...}"]
@@ -498,10 +598,6 @@ async function main(): Promise<void> {
         smoke: HELP_SMOKE,
         watchdog: HELP_WATCHDOG,
         provider: HELP_PROVIDER,
-        export: HELP_EXPORT,
-        import: HELP_IMPORT,
-        init: HELP_INIT,
-        profile: HELP_PROFILE,
       };
       if (helpMap[args[0]]) {
         console.log(helpMap[args[0]]);
@@ -512,7 +608,42 @@ async function main(): Promise<void> {
     return;
   }
 
+  // Commands that were merged into another entry point. They are handled in one
+  // place so no legacy top-level alias carries its own copy of the logic.
+  const DEPRECATED_COMMANDS: Record<
+    string,
+    { hint: string; run: (argv: string[]) => Promise<void> }
+  > = {
+    smoke: {
+      hint: "`synapse smoke` has been merged into `synapse connect --smoke`.",
+      run: (argv) => handleConnectCommand(["--smoke", ...argv]),
+    },
+    init: {
+      hint: "`synapse init` has been merged into `synapse setup` (SDK scaffolding: `synapse setup --sdk`).",
+      run: (argv) => handleSetupCommand(argv),
+    },
+    profile: {
+      hint: "`synapse profile` has been merged into `synapse config profile`.",
+      run: (argv) => handleConfigCommand(["profile", ...argv]),
+    },
+    export: {
+      hint: "`synapse export` has been merged into `synapse config export`.",
+      run: (argv) => handleConfigCommand(["export", ...argv]),
+    },
+    import: {
+      hint: "`synapse import` has been merged into `synapse config import`.",
+      run: (argv) => handleConfigCommand(["import", ...argv]),
+    },
+  };
+
   try {
+    const deprecated = DEPRECATED_COMMANDS[command];
+    if (deprecated !== undefined) {
+      console.error(`Note: ${deprecated.hint} Use that instead.`);
+      await deprecated.run(rawArgs);
+      return;
+    }
+
     switch (command) {
       case "provider": {
         if (flags.has("help") || args.includes("--help") || args.includes("-h")) {
@@ -529,9 +660,10 @@ async function main(): Promise<void> {
         if (flags.has("help") || args.includes("--help") || args.includes("-h")) {
           printVaultHelp();
         } else if (args[0] === "set") {
-          // Use rawArgs for vault set to preserve --base-url and --pack flags
-          const vaultArgs = process.argv.slice(4);  // skip [node, script, "vault", "set"]
-          await vaultSet(args[1], args[2], vaultArgs);
+          await vaultSet(args[1], args[2], {
+            baseUrl: options.get("base-url"),
+            pack: options.get("pack"),
+          });
         }
         else if (args[0] === "list") await vaultList();
         else if (args[0] === "get") await vaultGet(args[1]);
@@ -606,22 +738,6 @@ async function main(): Promise<void> {
           await handlePackCommand(args, flags);
         }
         break;
-      case "smoke":
-        if (flags.has("help") || args.includes("--help") || args.includes("-h")) {
-          console.log(HELP_SMOKE);
-        } else {
-          console.error("Note: `synapse smoke` has been merged into `synapse connect --smoke`. Use that instead.");
-          await handleConnectCommand(["--smoke", ...rawArgs]);
-        }
-        break;
-      case "init":
-        if (flags.has("help") || args.includes("--help") || args.includes("-h")) {
-          console.log(HELP_INIT);
-        } else {
-          console.error("Note: `synapse init` has been merged into `synapse setup`. Use that instead.");
-          await handleSetupCommand(rawArgs);
-        }
-        break;
       case "watchdog":
         if (flags.has("help") || args.includes("--help") || args.includes("-h")) {
           printWatchdogHelp();
@@ -629,35 +745,11 @@ async function main(): Promise<void> {
           await handleWatchdogCommand(rawArgs);
         }
         break;
-      case "profile":
-        if (flags.has("help") || args.includes("--help") || args.includes("-h")) {
-          console.log(HELP_PROFILE);
-        } else {
-          console.error("Note: `synapse profile` has been merged into `synapse config profile`. Use that instead.");
-          await handleConfigCommand(["profile", ...rawArgs]);
-        }
-        break;
-      case "export":
-        if (flags.has("help") || args.includes("--help") || args.includes("-h")) {
-          console.log(HELP_EXPORT);
-        } else {
-          console.error("Note: `synapse export` has been merged into `synapse config export`. Use that instead.");
-          await handleConfigCommand(["export", ...rawArgs]);
-        }
-        break;
       case "route":
         if (flags.has("help") || args.includes("--help") || args.includes("-h")) {
           printRouteHelp();
         } else {
           await handleRouteCommand(rawArgs);
-        }
-        break;
-      case "import":
-        if (flags.has("help") || args.includes("--help") || args.includes("-h")) {
-          console.log(HELP_IMPORT);
-        } else {
-          console.error("Note: `synapse import` has been merged into `synapse config import`. Use that instead.");
-          await handleConfigCommand(["import", ...rawArgs]);
         }
         break;
       case "execute":

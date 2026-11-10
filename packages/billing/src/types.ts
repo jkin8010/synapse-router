@@ -69,7 +69,8 @@ export interface ConnectLock {
 
 export interface ConnectResult {
   output: Record<string, unknown>;
-  raw: unknown;
+  /** Provider raw response — diagnostic only, mirrors @synapse-router/connector */
+  raw?: unknown;
   meta: {
     provider: string;
     feature_id: string;

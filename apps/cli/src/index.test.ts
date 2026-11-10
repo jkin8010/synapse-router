@@ -1,6 +1,8 @@
 import { describe, it } from "node:test";
 import assert from "node:assert/strict";
 import { spawnSync } from "node:child_process";
+import { existsSync, mkdtempSync, readFileSync, rmSync } from "node:fs";
+import { tmpdir } from "node:os";
 import { join, dirname } from "node:path";
 import { fileURLToPath } from "node:url";
 
@@ -84,9 +86,10 @@ describe("help", () => {
     assert.strictEqual(result.code, 0);
   });
 
-  it("synapse help generate prints generate help text", () => {
+  it("synapse help generate falls back to top-level help (command removed)", () => {
     const result = runCli(["help", "generate"]);
-    assert.ok(result.stdout.includes("Generate a Provider Pack from OpenAPI spec"), `got: ${result.stdout}`);
+    // `generate` was removed in favour of `sdk generate`; there is no help page.
+    assert.ok(result.stdout.includes("Synapse Router CLI"), `got: ${result.stdout}`);
     assert.strictEqual(result.code, 0);
   });
 
@@ -104,7 +107,7 @@ describe("help", () => {
 describe("smoke → connect --smoke redirect", () => {
   it("synapse smoke --help shows deprecation notice", () => {
     const result = runCli(["smoke", "--help"]);
-    assert.ok(result.stdout.includes("merged into"), `should show merge notice, got stdout: ${result.stdout}`);
+    assert.ok(result.stderr.includes("merged into"), `should show merge notice, got stderr: ${result.stderr}`);
     assert.strictEqual(result.code, 0);
   });
 
@@ -124,16 +127,44 @@ describe("smoke → connect --smoke redirect", () => {
 // Init → setup redirect (Task 2: 19-02)
 // ---------------------------------------------------------------------------
 
+describe("setup --sdk (scaffolding inherited from removed `init`)", () => {
+  it("writes synapse.json and the SDK output directory", () => {
+    const tmp = mkdtempSync(join(tmpdir(), "synapse-setup-sdk-"));
+    try {
+      const result = spawnSync(
+        "node",
+        [join(dirname(fileURLToPath(import.meta.url)), "..", "dist", "index.js"),
+         "setup", "--sdk", "--provider", "openai", "--out-dir", "./out"],
+        { encoding: "utf8", cwd: tmp },
+      );
+      assert.strictEqual(result.status, 0, `stderr: ${result.stderr}`);
+
+      const cfg = JSON.parse(readFileSync(join(tmp, "synapse.json"), "utf8"));
+      assert.strictEqual(cfg.default_provider, "openai");
+      assert.strictEqual(cfg.sdk_output_dir, "./out");
+      assert.ok(existsSync(join(tmp, "out", "README.md")), "should scaffold SDK dir");
+    } finally {
+      rmSync(tmp, { recursive: true, force: true });
+    }
+  });
+});
+
 describe("init → setup redirect", () => {
-  it("synapse init --help shows deprecation notice", () => {
+  it("synapse init --help redirects to setup help", () => {
     const result = runCli(["init", "--help"]);
-    assert.ok(result.stdout.includes("merged into"), `should show merge notice, got stdout: ${result.stdout}`);
+    assert.ok(result.stderr.includes("merged into"), `should show merge notice, got stderr: ${result.stderr}`);
+    assert.ok(result.stdout.includes("synapse setup"), `should print setup help, got: ${result.stdout}`);
     assert.strictEqual(result.code, 0);
   });
 
   it("synapse init shows deprecation warning on stderr", () => {
     const result = runCli(["init"]);
     assert.ok(result.stderr.includes("merged into"), `stderr should contain deprecation warning, got: ${result.stderr}`);
+  });
+
+  it("synapse init points at setup --sdk for SDK scaffolding", () => {
+    const result = runCli(["init"]);
+    assert.ok(result.stderr.includes("--sdk"), `stderr should mention setup --sdk, got: ${result.stderr}`);
   });
 });
 
@@ -144,7 +175,7 @@ describe("init → setup redirect", () => {
 describe("profile → config profile redirect", () => {
   it("synapse profile --help shows deprecation notice", () => {
     const result = runCli(["profile", "--help"]);
-    assert.ok(result.stdout.includes("merged into"), `should show merge notice, got: ${result.stdout}`);
+    assert.ok(result.stderr.includes("merged into"), `should show merge notice, got: ${result.stderr}`);
     assert.strictEqual(result.code, 0);
   });
 
@@ -157,7 +188,7 @@ describe("profile → config profile redirect", () => {
 describe("export → config export redirect", () => {
   it("synapse export --help shows deprecation notice", () => {
     const result = runCli(["export", "--help"]);
-    assert.ok(result.stdout.includes("merged into"), `should show merge notice, got: ${result.stdout}`);
+    assert.ok(result.stderr.includes("merged into"), `should show merge notice, got: ${result.stderr}`);
     assert.strictEqual(result.code, 0);
   });
 
@@ -170,7 +201,7 @@ describe("export → config export redirect", () => {
 describe("import → config import redirect", () => {
   it("synapse import --help shows deprecation notice", () => {
     const result = runCli(["import", "--help"]);
-    assert.ok(result.stdout.includes("merged into"), `should show merge notice, got: ${result.stdout}`);
+    assert.ok(result.stderr.includes("merged into"), `should show merge notice, got: ${result.stderr}`);
     assert.strictEqual(result.code, 0);
   });
 

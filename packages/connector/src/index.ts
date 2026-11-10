@@ -5,6 +5,7 @@
  * 唯一职责：映射 + HTTP 调用 + 反向映射
  */
 
+import { buildAuthHeaders } from "./auth.js";
 import { mapInput, mapOutput } from "./mapper.js";
 import { callProvider, type HttpRequest } from "./http.js";
 import { deriveApiPath } from "./path.js";
@@ -13,6 +14,8 @@ import type { ConnectLock, ConnectParams, ConnectResult } from "./types.js";
 export type { ConnectLock, ConnectParams, ConnectResult } from "./types.js";
 export type { HttpRequest } from "./http.js";
 export { mapInput, mapOutput } from "./mapper.js";
+export { buildAuthHeaders } from "./auth.js";
+export type { AuthType } from "./auth.js";
 export { deriveApiPath } from "./path.js";
 export { callProvider, ConnectorHttpError } from "./http.js";
 
@@ -39,19 +42,8 @@ export async function connect(params: ConnectParams): Promise<ConnectResult> {
   // 3. 构建 HTTP 请求
   const headers: Record<string, string> = {
     "Content-Type": "application/json",
+    ...buildAuthHeaders(connection),
   };
-
-  switch (connection.auth_type) {
-    case "Bearer":
-      headers["Authorization"] = `Bearer ${connection.api_key}`;
-      break;
-    case "APIKey":
-      headers["X-API-Key"] = connection.api_key;
-      break;
-    case "OAuth2":
-      headers["Authorization"] = `Bearer ${connection.api_key}`;
-      break;
-  }
 
   let normalizedBase = connection.base_url.replace(/\/+$/, "");  // 去掉结尾的斜杠
   let normalizedPath = path.replace(/^\/*/, "/");  // 确保以 / 开头
@@ -92,7 +84,8 @@ export async function connect(params: ConnectParams): Promise<ConnectResult> {
 
   return {
     output,
-    raw: rawResponse,
+    // raw 只在显式诊断模式下透出，避免 provider 私有结构穿透 canonical 边界
+    ...(params.includeRaw ? { raw: rawResponse } : {}),
     meta: {
       provider: lock.provider,
       feature_id: lock.feature_id,

@@ -5,6 +5,8 @@ import { hashSchema, type Schema } from "@synapse-router/core";
 
 import {
   createOpenAICompatibleClient,
+  intentsMatch,
+  normalizeIntent,
   negotiateSchema,
   type LLMClient,
   type LLMMessage
@@ -118,5 +120,64 @@ describe("negotiateSchema", () => {
         response_format: { type: "json_object" }
       }
     ]);
+  });
+});
+
+describe("intentsMatch", () => {
+  test("treats separators and case as insignificant", () => {
+    assert.equal(intentsMatch("text_to_image", "text-to-image"), true);
+    assert.equal(intentsMatch("Chat", "chat"), true);
+  });
+
+  test("matches container intents in both directions", () => {
+    assert.equal(intentsMatch("chat", "chat-completions"), true);
+    assert.equal(intentsMatch("chat-completions", "chat"), true);
+  });
+
+  test("rejects unrelated intents", () => {
+    assert.equal(intentsMatch("chat", "text-to-image"), false);
+  });
+
+  test("normalizeIntent is exported and strips separators", () => {
+    assert.equal(normalizeIntent("Text-_To_Image"), "texttoimage");
+  });
+});
+
+describe("negotiateSchema without an injected LLM", () => {
+  const originalApiKey = process.env.OPENAI_API_KEY;
+
+  function clearApiKey(): void {
+    delete process.env.OPENAI_API_KEY;
+  }
+
+  function restoreApiKey(): void {
+    if (originalApiKey === undefined) delete process.env.OPENAI_API_KEY;
+    else process.env.OPENAI_API_KEY = originalApiKey;
+  }
+
+  test("fails loudly when no LLM client and no API key are configured", async () => {
+    clearApiKey();
+    try {
+      await assert.rejects(
+        negotiateSchema({ task: "route", goal: "chat" }),
+        /OPENAI_API_KEY is required/
+      );
+    } finally {
+      restoreApiKey();
+    }
+  });
+
+  test("uses the deterministic stub only when allowMockLLM is requested", async () => {
+    clearApiKey();
+    try {
+      const result = await negotiateSchema(
+        { task: "route", goal: "chat" },
+        { allowMockLLM: true }
+      );
+      assert.equal(result.schema.name, "negotiated-schema");
+      assert.ok(result.schema_id.length > 0);
+    } finally {
+      restoreApiKey();
+    }
   });
 });

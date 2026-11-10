@@ -6,6 +6,7 @@ import { homedir } from "node:os";
 import { randomUUID } from "node:crypto";
 import { createVault } from "@synapse-router/vault";
 import {
+  intentsMatch,
   negotiateAndVerify,
   type NegotiateAndVerifyInput,
   type NegotiationResult,
@@ -103,6 +104,25 @@ interface RejectedMatch {
 
 // ─── Route Matching ───────────────────────────────────────────────────────────
 
+function safeDecode(value: string): string {
+  try {
+    return decodeURIComponent(value);
+  } catch {
+    return value;
+  }
+}
+
+/**
+ * Decode each path segment once, up front, so route params (`:id`,
+ * `:provider`) never leak percent-encoded characters into downstream lookups.
+ */
+function decodePathname(pathname: string): string {
+  return pathname
+    .split("/")
+    .map((segment, index) => (index === 0 ? segment : safeDecode(segment)))
+    .join("/");
+}
+
 function matchRoute(pattern: string, pathname: string): Record<string, string> | null {
   const patternParts = pattern.split("/");
   const pathParts = pathname.split("/");
@@ -116,6 +136,8 @@ function matchRoute(pattern: string, pathname: string): Record<string, string> |
     const a = pathParts[i];
 
     if (p.startsWith(":")) {
+      // An empty segment is not a valid parameter value
+      if (a === undefined || a.length === 0) return null;
       params[p.slice(1)] = a;
     } else if (p !== a) {
       return null;
@@ -125,17 +147,81 @@ function matchRoute(pattern: string, pathname: string): Record<string, string> |
   return params;
 }
 
+// ─── Vault route guard ──────────────────────────────────────────────────────
+
+interface AuthFailure {
+  status: number;
+  code: string;
+  message: string;
+}
+
+/**
+ * Vault routes hold secrets, so they are gated independently of the public API:
+ *   - cross-site origins are rejected outright (browsers always send Origin on
+ *     cross-origin reads, so this blocks CSRF / malicious pages);
+ *   - when API_TOKEN / SYNAPSE_API_TOKEN is configured, a matching
+ *     `Authorization: Bearer <token>` is required.
+ */
+function authorizeVaultRequest(
+  req: http.IncomingMessage,
+  origin: string | undefined,
+): AuthFailure | null {
+  if (origin !== undefined && !isAllowedOrigin(origin)) {
+    return {
+      status: 403,
+      code: "ORIGIN_NOT_ALLOWED",
+      message: `Origin '${origin}' is not allowed to access vault endpoints`,
+    };
+  }
+
+  const token = process.env.API_TOKEN ?? process.env.SYNAPSE_API_TOKEN;
+  if (token === undefined || token.trim().length === 0) {
+    return null;
+  }
+
+  const header = req.headers.authorization;
+  const expected = `Bearer ${token}`;
+  if (header !== expected) {
+    return {
+      status: 401,
+      code: "UNAUTHORIZED",
+      message: "A valid bearer token is required for vault endpoints",
+    };
+  }
+
+  return null;
+}
+
+const MAX_BODY_BYTES = 1_000_000;
+
 function parseBody(req: http.IncomingMessage): Promise<unknown> {
   return new Promise((resolve, reject) => {
+    // Reject early on declared size, before buffering anything
+    const contentLength = Number(req.headers["content-length"] ?? "0");
+    if (Number.isFinite(contentLength) && contentLength > MAX_BODY_BYTES) {
+      reject(new Error("Request body too large"));
+      req.resume();
+      return;
+    }
+
     let body = "";
+    let settled = false;
+
     req.on("data", (chunk) => {
+      // Stop accumulating once the limit has been hit — do not keep growing
+      // the buffer while the request is being torn down.
+      if (settled) return;
       body += chunk;
-      if (body.length > 1_000_000) {
+      if (body.length > MAX_BODY_BYTES) {
+        settled = true;
+        body = "";
         reject(new Error("Request body too large"));
         req.destroy();
       }
     });
     req.on("end", () => {
+      if (settled) return;
+      settled = true;
       if (body.length === 0) {
         resolve({});
         return;
@@ -146,14 +232,52 @@ function parseBody(req: http.IncomingMessage): Promise<unknown> {
         reject(new Error("Invalid JSON"));
       }
     });
-    req.on("error", reject);
+    req.on("error", (err) => {
+      if (settled) return;
+      settled = true;
+      reject(err);
+    });
   });
 }
 
 // ─── Response Helpers ─────────────────────────────────────────────────────────
 
-function setCorsHeaders(res: http.ServerResponse): void {
-  res.setHeader("Access-Control-Allow-Origin", "*");
+/**
+ * CORS origin allow-list (`ALLOWED_ORIGINS`, comma separated), read once.
+ *
+ * - allow-list configured → only those origins get an echoed `ACAO`;
+ * - no allow-list → same-machine (loopback) origins are trusted, and requests
+ *   without an `Origin` header (curl, server-to-server) keep the historical
+ *   `ACAO: *` so non-browser clients are unaffected.
+ *
+ * Vault routes additionally reject any origin that is not allowed, so a random
+ * web page can never read or mutate stored keys.
+ */
+const ALLOWED_ORIGINS = (process.env.ALLOWED_ORIGINS ?? "")
+  .split(",")
+  .map((origin) => origin.trim())
+  .filter(Boolean);
+
+const LOOPBACK_ORIGIN = /^https?:\/\/(localhost|127\.0\.0\.1|\[::1\])(:\d+)?$/i;
+
+function isAllowedOrigin(origin: string | undefined): boolean {
+  if (origin === undefined) return false;
+  if (ALLOWED_ORIGINS.includes(origin)) return true;
+  // No allow-list configured → only same-machine origins (the local dev
+  // setup) are trusted; any remote site stays outside the CORS boundary.
+  return ALLOWED_ORIGINS.length === 0 && LOOPBACK_ORIGIN.test(origin);
+}
+
+function setCorsHeaders(res: http.ServerResponse, origin?: string): void {
+  // Never echo `*` when a specific origin was allowed: browsers treat the pair
+  // (`ACAO: *` + cookies) as a security hole and the wildcard would also let
+  // any site read vault metadata.
+  if (origin !== undefined && isAllowedOrigin(origin)) {
+    res.setHeader("Access-Control-Allow-Origin", origin);
+    res.setHeader("Vary", "Origin");
+  } else if (origin === undefined && ALLOWED_ORIGINS.length === 0) {
+    res.setHeader("Access-Control-Allow-Origin", "*");
+  }
   res.setHeader("Access-Control-Allow-Methods", "GET, POST, DELETE, OPTIONS");
   res.setHeader("Access-Control-Allow-Headers", "Content-Type, Authorization");
 }
@@ -175,33 +299,89 @@ function sendError(
 
 // ─── Provider Loading ────────────────────────────────────────────────────────
 
-async function loadProvidersFromDir(dir: string): Promise<ProviderCard[]> {
+interface ProviderLoadFailure {
+  dir: string;
+  pack: string;
+  reason: "missing" | "invalid" | "read_error";
+  message: string;
+}
+
+async function loadProvidersFromDir(
+  dir: string,
+  failures: ProviderLoadFailure[] = [],
+): Promise<ProviderCard[]> {
   const cards: ProviderCard[] = [];
 
   let entries: fs.Dirent[];
   try {
     entries = await fs.promises.readdir(dir, { withFileTypes: true });
-  } catch {
+  } catch (err) {
+    // A missing directory is expected (e.g. no local packs); anything else is
+    // worth surfacing so a broken deployment is not mistaken for "0 packs".
+    const code = (err as NodeJS.ErrnoException).code;
+    if (code !== "ENOENT" && code !== "ENOTDIR") {
+      failures.push({
+        dir,
+        pack: "",
+        reason: "read_error",
+        message: err instanceof Error ? err.message : String(err),
+      });
+    }
     return cards;
   }
 
   for (const entry of entries) {
     if (!entry.isDirectory()) continue;
+
+    let cardPath = path.join(dir, entry.name, "provider-card.json");
     try {
-      let cardPath = path.join(dir, entry.name, "provider-card.json");
-      try {
-        await fs.promises.stat(cardPath);
-      } catch {
-        cardPath = path.join(dir, entry.name, "pack.json");
-      }
-      const content = await fs.promises.readFile(cardPath, "utf8");
-      const card = JSON.parse(content) as ProviderCard;
-      if (card.provider?.id) {
-        cards.push(card);
-      }
+      await fs.promises.stat(cardPath);
     } catch {
-      // Skip invalid packs
+      cardPath = path.join(dir, entry.name, "pack.json");
     }
+
+    let content: string;
+    try {
+      content = await fs.promises.readFile(cardPath, "utf8");
+    } catch (err) {
+      const code = (err as NodeJS.ErrnoException).code;
+      failures.push({
+        dir,
+        pack: entry.name,
+        reason: code === "ENOENT" ? "missing" : "read_error",
+        message: code === "ENOENT"
+          ? "neither provider-card.json nor pack.json found"
+          : err instanceof Error ? err.message : String(err),
+      });
+      continue;
+    }
+
+    let card: ProviderCard;
+    try {
+      card = JSON.parse(content) as ProviderCard;
+    } catch (err) {
+      failures.push({
+        dir,
+        pack: entry.name,
+        reason: "invalid",
+        message: `invalid JSON in ${path.basename(cardPath)}: ${
+          err instanceof Error ? err.message : String(err)
+        }`,
+      });
+      continue;
+    }
+
+    if (!card.provider?.id) {
+      failures.push({
+        dir,
+        pack: entry.name,
+        reason: "invalid",
+        message: "provider.id is missing",
+      });
+      continue;
+    }
+
+    cards.push(card);
   }
 
   return cards;
@@ -214,6 +394,7 @@ async function loadAllProviders(opts: {
 }): Promise<{
   providers: Map<string, ProviderEntry>;
   sourceCounts: Record<ProviderSource, number>;
+  failures: ProviderLoadFailure[];
 }> {
   const providers = new Map<string, ProviderEntry>();
   const sourceCounts: Record<ProviderSource, number> = {
@@ -224,17 +405,19 @@ async function loadAllProviders(opts: {
 
   // Priority: low to high — local > registry > builtin
 
-  const builtinCards = await loadProvidersFromDir(opts.builtinDir);
+  const failures: ProviderLoadFailure[] = [];
+
+  const builtinCards = await loadProvidersFromDir(opts.builtinDir, failures);
   for (const card of builtinCards) {
     providers.set(card.provider.id, { card, source: "builtin" });
   }
 
-  const registryCards = await loadProvidersFromDir(opts.registryDir);
+  const registryCards = await loadProvidersFromDir(opts.registryDir, failures);
   for (const card of registryCards) {
     providers.set(card.provider.id, { card, source: "registry" });
   }
 
-  const localCards = await loadProvidersFromDir(opts.localDir);
+  const localCards = await loadProvidersFromDir(opts.localDir, failures);
   for (const card of localCards) {
     providers.set(card.provider.id, { card, source: "local" });
   }
@@ -243,19 +426,18 @@ async function loadAllProviders(opts: {
     sourceCounts[entry.source]++;
   }
 
-  return { providers, sourceCounts };
+  return { providers, sourceCounts, failures };
 }
 
 // ─── Negotiation Logic ───────────────────────────────────────────────────────
 
-function intentMatches(agentIntent: string, featureIntent: string): boolean {
-  const normalized = (s: string) => s.toLowerCase().replace(/[_-]/g, "");
-  return (
-    normalized(agentIntent).includes(normalized(featureIntent)) ||
-    normalized(featureIntent).includes(normalized(agentIntent))
-  );
-}
-
+/**
+ * Build the API-level negotiation record for an agent schema.
+ *
+ * Only request/response adaptation lives here: intent matching is delegated to
+ * @synapse-router/negotiator (`intentsMatch`) so API and package behaviour stay
+ * identical when the negotiation rules change.
+ */
 function negotiate(
   agentSchema: AgentSchema,
   providers: Map<string, ProviderEntry>,
@@ -279,7 +461,7 @@ function negotiate(
 
     for (const feature of card.features) {
       for (const agentFeature of agentSchema.features) {
-        if (intentMatches(agentFeature.intent, feature.intent)) {
+        if (intentsMatch(agentFeature.intent, feature.intent)) {
           if (
             !bestMatch ||
             (feature.field_mappings?.length ?? 0) > (bestMatch.mapping.length ?? 0)
@@ -327,7 +509,8 @@ async function handleRequest(
   res: http.ServerResponse,
   ctx: RouteContext,
 ): Promise<void> {
-  setCorsHeaders(res);
+  const origin = typeof req.headers.origin === "string" ? req.headers.origin : undefined;
+  setCorsHeaders(res, origin);
 
   if (req.method === "OPTIONS") {
     res.writeHead(204);
@@ -336,7 +519,20 @@ async function handleRequest(
   }
 
   const url = req.url ?? "/";
-  const [pathname] = url.split("?");
+  const [rawPathname] = url.split("?");
+  const pathname = decodePathname(rawPathname);
+
+  // ── Vault routes are not public API ─────────────────────────────────────
+  // Secret management must never be reachable from a browser page: require a
+  // bearer token whenever one is configured, and reject requests whose Origin
+  // is not on the allow-list (CSRF / cross-site reads).
+  if (pathname.startsWith("/vault/") || pathname === "/vault") {
+    const authError = authorizeVaultRequest(req, origin);
+    if (authError !== null) {
+      sendError(res, authError.status, authError.code, authError.message);
+      return;
+    }
+  }
 
   try {
     // ── GET /health ──────────────────────────────────────────────────────────
@@ -635,8 +831,19 @@ export function createServer(options: ServerOptions = {}): http.Server {
       for (const [id, entry] of result.providers) {
         providers.set(id, entry);
       }
+      // Loading a pack must never crash the server, but it must not be silent
+      // either — without these records a broken pack only shows up as a lower
+      // provider count.
+      for (const failure of result.failures) {
+        console.warn(
+          `[api] skipped provider pack '${failure.pack || "<dir>"}' in ${failure.dir} (${failure.reason}): ${failure.message}`,
+        );
+      }
     })
-    .catch(() => {
+    .catch((err) => {
+      console.warn(
+        `[api] provider loading failed: ${err instanceof Error ? err.message : String(err)}`,
+      );
       // Non-fatal: server starts without providers
     });
 

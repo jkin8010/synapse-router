@@ -439,6 +439,24 @@ describe("Concurrent writes", () => {
     assert.equal(k2, "sk-bbb-concurrent-test-1234567890ab");
   });
 
+  it("two instances created concurrently share one salt — first write stays decryptable", async () => {
+    // Both vaults start on a brand-new directory, so both would need to create
+    // the salt. Without single-flight init + a lock around "read salt → write
+    // salt", the later writer overwrites the salt and the first key becomes
+    // undecryptable.
+    const vault1 = createVault({ vaultDir: dir, encryptionKey: "race-pw", audit: false });
+    const vault2 = createVault({ vaultDir: dir, encryptionKey: "race-pw", audit: false });
+
+    await Promise.all([
+      vault1.setKey("provider-a", "sk-first-writer-key-1234567890ab", "Bearer"),
+      vault2.setKey("provider-b", "sk-second-writer-key-1234567890ab", "Bearer"),
+    ]);
+
+    const reader = createVault({ vaultDir: dir, encryptionKey: "race-pw", audit: false });
+    assert.equal(await reader.getKey("provider-a"), "sk-first-writer-key-1234567890ab");
+    assert.equal(await reader.getKey("provider-b"), "sk-second-writer-key-1234567890ab");
+  });
+
   it("many concurrent setKey calls — all keys persisted", async () => {
     const vault = createVault({ vaultDir: dir, encryptionKey: "many-pw" });
     const count = 10;

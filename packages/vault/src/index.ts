@@ -165,14 +165,18 @@ export function createVault(config?: Partial<VaultConfig>): Vault {
 
   let derivedKey: string | null = null;
   let salt: string | null = null;
-  let initialized = false;
-  let initError: Error | null = null;
+  // Single-flight cache: concurrent callers share the same initialization
+  // promise instead of racing through the read-salt/write-salt window.
+  let initPromise: Promise<void> | null = null;
 
-  async function ensureInitialized(): Promise<void> {
-    if (initialized) {
-      if (initError) throw initError;
-      return;
+  function ensureInitialized(): Promise<void> {
+    if (initPromise === null) {
+      initPromise = doInitialize();
     }
+    return initPromise;
+  }
+
+  async function doInitialize(): Promise<void> {
     try {
       const preferKeychain = config?.preferKeychain ?? true;
 
@@ -205,8 +209,26 @@ export function createVault(config?: Partial<VaultConfig>): Vault {
         if (!derivedKey) {
           ({ key: derivedKey } = deriveKey(password, salt, machineId));
         }
-      } else {
-        // vault.json does not exist yet.  We are the first writer.
+        return;
+      }
+
+      // vault.json does not exist yet.  We are the first writer, so the
+      // "read salt → write salt" window must be covered by the file lock:
+      // another instance may be initializing concurrently, and a second salt
+      // would make this instance's ciphertext undecryptable.
+      const unlock = await acquireLock(vaultDir, instanceId);
+      try {
+        const raced = await readVaultDataAsync(vaultDir);
+        if (raced) {
+          // Someone else created the vault while we waited for the lock —
+          // adopt their salt (the canonical one).
+          salt = raced.salt;
+          if (!derivedKey) {
+            ({ key: derivedKey } = deriveKey(password, salt, machineId));
+          }
+          return;
+        }
+
         // deriveKey with undefined salt generates a random salt internally —
         // use that returned salt so derivedKey and vault.json.salt are always consistent.
         ({ key: derivedKey, salt } = deriveKey(password, undefined, machineId));
@@ -221,17 +243,21 @@ export function createVault(config?: Partial<VaultConfig>): Vault {
             // Keychain store failed — not fatal, continue with derived key
           }
         }
+      } finally {
+        await unlock();
       }
-
-      initialized = true;
     } catch (err) {
-      initError = err as Error;
+      // Do not cache the failure: a transient error (lock timeout, keychain
+      // hiccup) should be retryable by the next call.
+      initPromise = null;
       throw err;
     }
   }
 
-  // Use a simple semaphore to ensure only one persist call is active at a time
-  let persistActive = false;
+  // In-process write queue: persists run strictly one after another.  Callers
+  // await the previous promise directly (no polling), and the chain always
+  // keeps a settled tail so one failure cannot wedge later writes.
+  let persistQueue: Promise<void> = Promise.resolve();
 
   async function loadData(): Promise<VaultData> {
     await ensureInitialized();
@@ -241,51 +267,48 @@ export function createVault(config?: Partial<VaultConfig>): Vault {
   }
 
   async function persist(transform: (currentData: VaultData, currentDerivedKey: string) => VaultData): Promise<void> {
-    // Wait until previous persist completes
-    while (persistActive) {
-      await new Promise(r => setTimeout(r, 50));
-    }
-    
-    persistActive = true;
+    const run = persistQueue.then(() => runPersist(transform));
+    // Chain regardless of outcome so a failed write does not block the queue.
+    persistQueue = run.catch(() => undefined);
+    return run;
+  }
+
+  async function runPersist(transform: (currentData: VaultData, currentDerivedKey: string) => VaultData): Promise<void> {
+    await ensureInitialized();
+    const unlock = await acquireLock(vaultDir, instanceId);
     try {
-      await ensureInitialized();
-      const unlock = await acquireLock(vaultDir, instanceId);
-      try {
-        audit.log({ action: "lock_acquired", success: true });
-        const current = await readVaultDataAsync(vaultDir);
-        const baseData: VaultData = current 
-          ? current 
-          : { salt: salt!, entries: {} };
-        
-        let currentDerivedKey = derivedKey!;
-        // If read salt differs from our existing salt, re-derive the key
-        if (baseData.salt && baseData.salt !== salt) {
-          const password = await passwordPromise;
-          const machineId = (await getMachineIdAsync()) ?? undefined;
-          const derivation = deriveKey(password, baseData.salt, machineId);
-          currentDerivedKey = derivation.key;
-          // Update instance variables only after verification
-          derivedKey = currentDerivedKey;
-          salt = derivation.salt;
-        }
-        
-        const newData = transform(baseData, currentDerivedKey);
-        const merged: VaultData = {
-          ...newData,
-          salt: newData.salt ?? baseData.salt
-        };
-        
-        await writeVaultDataAtomic(vaultDir, merged);
-      } finally {
-        await unlock();
-        try {
-          audit.log({ action: "lock_released", success: true });
-        } catch {
-          // best-effort
-        }
+      audit.log({ action: "lock_acquired", success: true });
+      const current = await readVaultDataAsync(vaultDir);
+      const baseData: VaultData = current 
+        ? current 
+        : { salt: salt!, entries: {} };
+      
+      let currentDerivedKey = derivedKey!;
+      // If read salt differs from our existing salt, re-derive the key
+      if (baseData.salt && baseData.salt !== salt) {
+        const password = await passwordPromise;
+        const machineId = (await getMachineIdAsync()) ?? undefined;
+        const derivation = deriveKey(password, baseData.salt, machineId);
+        currentDerivedKey = derivation.key;
+        // Update instance variables only after verification
+        derivedKey = currentDerivedKey;
+        salt = derivation.salt;
       }
+      
+      const newData = transform(baseData, currentDerivedKey);
+      const merged: VaultData = {
+        ...newData,
+        salt: newData.salt ?? baseData.salt
+      };
+      
+      await writeVaultDataAtomic(vaultDir, merged);
     } finally {
-      persistActive = false;
+      await unlock();
+      try {
+        audit.log({ action: "lock_released", success: true });
+      } catch {
+        // best-effort
+      }
     }
   }
 
