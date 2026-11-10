@@ -78,19 +78,19 @@ synapse connect deepseek chat --input '{"messages":[]}' --billing preCall
 
 ### 4. Generate SDK
 
-After connection is verified, the next step is to use `synapse evolve` to generate a zero-dependency SDK. This command converts Schema Negotiation results into pure function SDK code — your application code no longer needs the Router, it only references the generated SDK.
+After connection is verified, the next step is to use `synapse sdk generate` to generate a zero-dependency SDK. This command converts Schema Negotiation results into pure function SDK code — your application code no longer needs the Router, it only references the generated SDK.
 
 ```bash
-synapse evolve
+synapse sdk generate --pack openai --lang typescript --output ./synapse-sdk
 ```
 
 To include usage tracking capabilities:
 
 ```bash
-synapse evolve --with-billing
+synapse sdk generate --pack openai --lang typescript --output ./synapse-sdk --with-billing
 ```
 
-For detailed evolve usage instructions, see the [SDK Guide](/docs/sdk).
+For detailed usage instructions, see the [SDK Guide](/docs/sdk).
 
 ## Core Position
 
@@ -104,7 +104,7 @@ The entire system workflow is divided into three stages:
 
 1. **Schema Negotiation** — Intent matching + capability verification + field-level Manifest constraint checking. The negotiation engine matches the Agent's intent to a Provider's Feature and generates a Schema Contract.
 2. **Provider Routing** — A multi-dimensional scoring routing engine scores, filters, and sorts candidate Providers based on strategy (cheap/fast/quality/balanced/cost-capped) to select the optimal Provider.
-3. **SDK Generation** — Converts Schema Locks into pure function SDK code (TypeScript / Python) with zero external dependencies via `synapse evolve`.
+3. **SDK Generation** — Converts Schema Locks into pure function SDK code (TypeScript / Python) with zero external dependencies via `synapse sdk generate`.
 
 The Synapse CLI provides a unified entry point for all of the above capabilities. See the [CLI Reference](/docs/cli) for detailed command documentation.
 

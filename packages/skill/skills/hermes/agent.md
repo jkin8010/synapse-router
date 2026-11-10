@@ -42,7 +42,7 @@ All CLI commands are accessed via the `synapse` binary. Every command supports `
 | `synapse billing config` | View or modify billing configuration |
 | `synapse billing status [--format json\|table]` | View quota status and cost estimates |
 | `synapse route <intent> [--strategy <s>]` | Multi-dimensional provider routing |
-| `synapse evolve [--output <dir>] [--with-billing]` | Generate zero-dependency SDK from all packs |
+| `synapse sdk generate --pack <id> --lang <lang> --output <dir>` | Generate zero-dependency SDK from a Provider Pack |
 | `synapse vault set <provider> <key>` | Store encrypted API key |
 | `synapse vault list` | List stored providers |
 | `synapse vault get <provider>` | Retrieve stored API key |
@@ -57,7 +57,7 @@ All CLI commands are accessed via the `synapse` binary. Every command supports `
 | `synapse provider show <id>` | Show provider card details |
 | `synapse negotiate <schema-file>` | Run schema negotiation |
 | `synapse sdk generate --pack <id>` | Generate SDK from a specific Pack |
-| `synapse generate <source>` | Generate a Provider Pack from OpenAPI spec |
+| `@synapse-router/pack-generator` (`generatePackFromURL`) | Generate a Provider Pack from OpenAPI spec |
 | `synapse smoke --provider <name>` | Run provider smoke tests |
 
 ## Architecture Principles
@@ -123,9 +123,9 @@ synapse connect deepseek chat --input '{}'  # Test connection
 
 ### Generating an SDK
 ```bash
-synapse evolve                              # Generate TypeScript SDK for all providers
-synapse evolve --output ./my-sdk            # Specify output directory
-synapse evolve --with-billing               # Include BillingTracker in SDK
+synapse sdk generate --pack openai --lang typescript --output ./synapse-sdk
+synapse sdk generate --pack openai --lang python --output ./synapse-sdk
+synapse sdk generate --pack openai --lang typescript --output ./synapse-sdk --with-billing
 ```
 
 ### Managing Billing
@@ -149,7 +149,7 @@ synapse provider list                       # Verify loaded providers
 synapse negotiate --intent chat --provider openai
 
 # 2. Generate SDK with new config
-synapse evolve --tune
+synapse sdk generate --pack openai --lang typescript --output ./synapse-sdk
 
 # 3. Test the result
 synapse connect openai chat --input '{"messages":[{"role":"user","content":"test"}]}'

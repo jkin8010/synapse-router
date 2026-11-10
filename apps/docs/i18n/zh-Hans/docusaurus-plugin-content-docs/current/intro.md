@@ -78,19 +78,19 @@ synapse connect deepseek chat --input '{"messages":[]}' --billing preCall
 
 ### 4. 生成 SDK (Generate SDK)
 
-连接验证成功后，下一步是使用 `synapse evolve` 生成零依赖 SDK。此命令将 Schema 协商结果转换为纯函数 SDK 代码，应用代码中不再需要 Router，只引用生成的 SDK。
+连接验证成功后，下一步是使用 `synapse sdk generate` 生成零依赖 SDK。此命令将 Schema 协商结果转换为纯函数 SDK 代码，应用代码中不再需要 Router，只引用生成的 SDK。
 
 ```bash
-synapse evolve
+synapse sdk generate --pack openai --lang typescript --output ./synapse-sdk
 ```
 
 如需包含用量追踪能力：
 
 ```bash
-synapse evolve --with-billing
+synapse sdk generate --pack openai --lang typescript --output ./synapse-sdk --with-billing
 ```
 
-详细的 evolve 使用说明请参考 [SDK Guide](/docs/sdk)。
+详细的使用说明请参考 [SDK Guide](/docs/sdk)。
 
 ## 核心定位 (Core Position)
 
@@ -104,7 +104,7 @@ Router 不是运行时中间件，而是**开发时 SDK 生成引擎**。应用�
 
 1. **Schema 协商（Schema Negotiation）** — Intent 匹配 + 能力验证 + 字段级 Manifest 约束检查。协商引擎将 Agent 的意图匹配到 Provider 的 Feature，生成 Schema 契约（Contract）。
 2. **Provider 路由（Provider Routing）** — 多维评分路由引擎根据策略（cheap/fast/quality/balanced/cost-capped）对候选 Provider 进行评分、过滤、排序，选择最优 Provider。
-3. **SDK 生成（SDK Generation）** — 通过 `synapse evolve` 将 Schema Lock 转换为纯函数 SDK 代码（TypeScript / Python），零外部依赖。
+3. **SDK 生成（SDK Generation）** — 通过 `synapse sdk generate` 将 Schema Lock 转换为纯函数 SDK 代码（TypeScript / Python），零外部依赖。
 
 Synapse CLI 提供了上述所有能力的统一入口。详细命令说明见 [CLI Reference](/docs/cli)。
 

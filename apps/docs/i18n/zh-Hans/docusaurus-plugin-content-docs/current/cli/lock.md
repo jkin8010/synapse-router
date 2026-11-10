@@ -47,5 +47,5 @@ synapse lock migrate chat_deepseek_v1.0.0 deepseek-v3
 
 ## 相关命令 (Related Commands)
 
-- [synapse evolve --tune](/docs/cli/evolve) — 重新协商并更新所有 Lock
+- [synapse lock outdated](/docs/cli/lock) — 检测需要重新协商的 Lock
 - [synapse pack](/docs/cli/pack) — 管理 Provider Pack

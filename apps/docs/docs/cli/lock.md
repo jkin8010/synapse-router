@@ -48,5 +48,5 @@ synapse lock migrate chat_deepseek_v1.0.0 deepseek-v3
 ## Related Commands
 
 - [synapse negotiate](/docs/cli/negotiate) — Explicitly trigger Schema negotiation and create Schema Locks
-- [synapse evolve --tune](/docs/cli/evolve) — Renegotiate and update all Locks
+- [synapse lock outdated](/docs/cli/lock) — Detect Locks that need re-negotiation
 - [synapse pack](/docs/cli/pack) — Manage Provider Packs

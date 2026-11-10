@@ -379,15 +379,12 @@ cat > packs/my-provider/dsl/generate_image.json << 'EOF'
 EOF
 ```
 
-## 如何使用 synapse generate 自动生成
+## 如何自动生成 Pack（Pack Generator 库 API）
 
 Pack Generator 从 OpenAPI 3.0 Spec 自动生成 Provider Pack，省去手动编写。
 
-### CLI 方式
-
-```bash
-npx @synapse-router/pack-generator --from-url https://api.example.com/openapi.json
-```
+> `synapse generate` 命令已下线，`@synapse-router/pack-generator` 也不提供 CLI 入口。
+> 请通过其编程 API 生成 Pack（本包只导出函数，没有 `bin`）。
 
 ### 编程方式
 

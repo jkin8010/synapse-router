@@ -129,32 +129,29 @@ Learn more in the [connect command documentation](/docs/cli/connect).
 
 Once negotiation and connection are verified, generate a zero-dependency SDK.
 
-### Generate SDK for All Providers
+### Generate an SDK
 
 ```bash
-synapse evolve
+synapse sdk generate --pack openai --lang typescript --output ./synapse-sdk
 ```
 
-This reads all installed provider packs and generates TypeScript SDK files into `./synapse-sdk/`.
+This reads the specified provider pack and generates TypeScript SDK code into the output directory.
 
 ### Options
 
 ```bash
 # Include billing tracking
-synapse evolve --with-billing
+synapse sdk generate --pack openai --lang typescript --output ./synapse-sdk --with-billing
 
-# Include production profile data
-synapse evolve --with-profile
+# Generate Python instead of TypeScript
+synapse sdk generate --pack openai --lang python --output ./synapse-sdk
 
-# Tune strategy weights from profile data
-synapse evolve --tune
-
-# Specify output directory
-synapse evolve --output ./my-sdk
-
-# Generate for a single provider only
-synapse evolve --provider deepseek
+# Reuse one compatible pack for another provider
+synapse sdk generate --pack openai --lang typescript --provider deepseek \
+  --base-url https://api.deepseek.com/v1 --output ./synapse-sdk
 ```
+
+Run one `sdk generate` per pack; loop over packs to cover all providers.
 
 ### SDK Output Structure
 
@@ -217,7 +214,7 @@ Monitor production events:
 synapse watchdog
 ```
 
-Learn more about the production workflow in the [evolve command documentation](/docs/cli/evolve).
+Learn more about the production workflow in the [SDK Guide](/docs/sdk).
 
 > **Next:** [Stage 6: Continuous Improvement](#stage-6-continuous-improvement)
 
@@ -233,7 +230,7 @@ The Synapse Router workflow is designed for continuous feedback loops. Productio
 2. **Refresh profiles** -> `synapse config profile refresh` aggregates events
 3. **Export** -> `synapse config export` packages `.synapse/` as tar.gz
 4. **Import** -> `synapse config import` restores data in dev environment
-5. **Re-evolve** -> `synapse evolve --with-profile --tune` generates improved SDK
+5. **Regenerate** -> `synapse sdk generate --pack <id> --lang <lang> --output <dir>` regenerates the SDK with updated packs
 
 ### Lock Health
 
@@ -272,18 +269,18 @@ Monthly: Profile-driven tuning -> Strategy adjustment -> Full pipeline
 ## Complete Workflow Summary
 
 ```
-install -> setup -> negotiate -> connect -> evolve -> deploy
+install -> setup -> negotiate -> connect -> sdk generate -> deploy
                                                   |
                       continuous <- profile <- collect logs
                         |
-                   re-negotiate -> re-evolve -> re-deploy
+                   re-negotiate -> regenerate -> re-deploy
 ```
 
 Related documentation:
-- [CLI Command Reference](/docs/cli/index)
+- [CLI Command Reference](/docs/cli)
 - [synapse negotiate](/docs/cli/negotiate)
 - [synapse connect](/docs/cli/connect)
-- [synapse evolve](/docs/cli/evolve)
+- [SDK Guide](/docs/sdk)
 - [synapse lock](/docs/cli/lock)
 - [synapse pack](/docs/cli/pack)
 - [synapse config](/docs/cli/config)

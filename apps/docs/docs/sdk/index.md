@@ -5,50 +5,56 @@ title: SDK Guide
 
 # SDK Guide
 
-Synapse Router uses the `synapse evolve` command to convert Schema Negotiation results into zero-dependency, pure-function SDK code. The generated SDK does not depend on any `@synapse-router/*` packages and only uses the built-in `fetch`, making it runnable in any JavaScript/TypeScript environment.
+Synapse Router uses the `synapse sdk generate` command to convert Schema Negotiation results into zero-dependency, pure-function SDK code. The generated SDK does not depend on any `@synapse-router/*` packages and only uses the built-in `fetch`, making it runnable in any JavaScript/TypeScript environment.
 
-## Evolve Workflow
+## Generation Workflow
 
-The evolve command processes through four steps:
+The command processes through four steps:
 
-1. **Load Provider Pack** — Loads all Provider Packs from `packs/`, Registry, and local directories
-2. **Negotiate Schema Lock** — Performs negotiation on each Provider's Feature, creating a frozen Schema Lock (similar to `package-lock.json`)
-3. **Generate Code** — Generates TypeScript / Python SDK code based on the Field Mappings in the Lock
-4. **Output** — Writes to the `--output` directory (default `./synapse-sdk`), zero external dependencies
+1. **Load Provider Pack** — Loads the specified Provider Pack (by pack id or path)
+2. **Read Schema Lock** — Uses the Field Mappings in the Lock to build the canonical ↔ provider mapping
+3. **Generate Code** — Generates TypeScript / Python SDK code based on those Field Mappings
+4. **Output** — Writes to the `--output` directory, zero external dependencies
 
 ## Command Parameters
 
 | Parameter | Type | Required | Default | Description |
 |------|------|------|--------|------|
-| `--output <dir>` | string | no | `./synapse-sdk` | SDK output directory |
-| `--tune` | flag | no | false | Re-negotiate all Schema Locks |
-| `--with-billing` | flag | no | false | Include BillingTracker usage tracking class in the generated SDK |
+| `--pack <id>` | string | yes | — | Pack ID or path (e.g. `openai`, `./packs/openai`) |
+| `--lang <lang>` | string | yes | — | Target language: `typescript` \| `python` |
+| `--output <dir>` | string | yes | — | SDK output directory |
+| `--provider <id>` | string | no | pack's provider | Override provider name in the generated SDK |
+| `--base-url <url>` | string | no | pack default | Override the default base URL |
+| `--with-billing` | flag | no | false | Include the BillingTracker class in the generated SDK |
 
 ## Usage Examples
 
 ### Example 1 — Basic Generation
 
 ```bash
-synapse evolve
+synapse sdk generate --pack openai --lang typescript --output ./synapse-sdk
 ```
 
-Running this creates a `./synapse-sdk/` directory in the current folder containing TypeScript SDK code that can be directly imported into your project.
+Running this creates a `./synapse-sdk/` directory containing TypeScript SDK code that can be directly imported into your project.
 
 ### Example 2 — With Billing Tracking
 
 ```bash
-synapse evolve --with-billing
+synapse sdk generate --pack openai --lang typescript --output ./synapse-sdk --with-billing
 ```
 
 The generated SDK includes a `BillingTracker` class that automatically tracks usage for each API call. Suitable for production environments requiring billing and quota management.
 
-### Example 3 — Custom Output + Re-negotiate
+### Example 3 — Reuse one Pack for another Provider
 
 ```bash
-synapse evolve --output ./my-sdk --tune
+synapse sdk generate --pack openai --lang typescript \
+  --provider deepseek \
+  --base-url https://api.deepseek.com/v1 \
+  --output ./synapse-sdk
 ```
 
-Outputs to a custom directory `./my-sdk` and forces re-negotiation of all Schema Locks. This is particularly useful after updating Provider Packs, ensuring the SDK reflects the latest Provider capabilities.
+Generates a DeepSeek SDK from the OpenAI-compatible pack. Useful when a provider exposes an OpenAI-compatible API.
 
 ## Generated SDK Structure
 
@@ -77,10 +83,7 @@ synapse-sdk/
 
 ## Related Commands
 
-- [/docs/cli/lock](/docs/cli/lock) — Manage Schema Locks (list, migrate, detect expiration)
-- [/docs/cli/pack](/docs/cli/pack) — Manage Provider Packs (install, update, search)
-- [/docs/cli](/docs/cli) — Complete CLI command reference
-
-- [/docs/cli/lock](/docs/cli/lock) — 管理 Schema Lock（列出、迁移、检测过期）
-- [/docs/cli/pack](/docs/cli/pack) — 管理 Provider Pack（安装、更新、搜索）
-- [/docs/cli](/docs/cli) — 完整 CLI 命令参考
+- [synapse setup](/docs/cli/setup) — Scaffold an SDK project (`synapse setup --sdk`)
+- [synapse lock](/docs/cli/lock) — Manage Schema Locks (list, migrate, detect expiration)
+- [synapse pack](/docs/cli/pack) — Manage Provider Packs (install, update, search)
+- [CLI command reference](/docs/cli) — Complete CLI command reference

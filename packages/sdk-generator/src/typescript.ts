@@ -533,7 +533,7 @@ function generateReadme(
   lines.push("");
   lines.push("**@synapse-router/sdk-generator** — [synapse-router](https://github.com/useeclaw/synapse-router)");
   lines.push("");
-  lines.push(`*This SDK was auto-generated on ${now}. Regenerate with \`synapse evolve\` to pick up provider updates.*`);
+  lines.push(`*This SDK was auto-generated on ${now}. Regenerate with \`synapse sdk generate\` to pick up provider updates.*`);
 
   return lines.join("\n");
 }

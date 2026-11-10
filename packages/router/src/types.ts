@@ -4,7 +4,7 @@
  * 三范式路由架构：
  *   Paradigm 层: 声明式规则（策略 → Provider 偏好映射）
  *   Adaptation 层: 实时感知（failover/downgrade，基于多维度评分）
- *   Evolution 层: 离线学习（synapse evolve，不在本包中）
+ *   Evolution 层: 离线学习（synapse sdk generate / config profile，不在本包中）
  */
 
 // ─── 路由请求 ────────────────────────────────────────────────────────────────

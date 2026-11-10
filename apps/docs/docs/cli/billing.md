@@ -50,4 +50,4 @@ synapse billing status --format json
 
 - [synapse connect](/docs/cli/connect) — Billing is automatically wrapped around connect calls
 - [synapse config](/docs/cli/config) — Manage billing configuration via `synapse config set billing.*`
-- [synapse evolve --with-billing](/docs/cli/evolve) — Generate an SDK with BillingTracker included
+- [SDK Guide](/docs/sdk) — Generate an SDK with BillingTracker included (`--with-billing`)

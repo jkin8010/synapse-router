@@ -129,31 +129,32 @@ synapse connect deepseek chat --input '{"messages":[]}' --billing preCall
 
 协商和连接验证通过后，生成零依赖的 SDK。
 
-### 为所有 Provider 生成 SDK
+### 生成 SDK
 
 ```bash
-synapse evolve
+synapse sdk generate --pack openai --lang typescript --output ./synapse-sdk
 ```
 
-这将读取所有已安装的 Provider Pack 并生成 TypeScript SDK 文件到 `./synapse-sdk/`。
+这将读取指定的 Provider Pack 并生成 TypeScript SDK 代码到输出目录。
 
 ### 选项
 
 ```bash
 # 包含计费追踪
-synapse evolve --with-billing
+synapse sdk generate --pack openai --lang typescript --output ./synapse-sdk --with-billing
 
 # 包含生产 Profile 数据
-synapse evolve --with-profile
+synapse sdk generate --pack openai --lang python --output ./synapse-sdk
 
 # 根据 Profile 数据调优策略权重
-synapse evolve --tune
+synapse sdk generate --pack openai --lang typescript --provider deepseek \
+  --base-url https://api.deepseek.com/v1 --output ./synapse-sdk
 
 # 指定输出目录
-synapse evolve --output ./my-sdk
+# 每次针对一个 Pack 生成；遍历 Pack 即可覆盖所有 Provider
 
 # 仅生成单个 Provider 的 SDK
-synapse evolve --provider deepseek
+
 ```
 
 ### SDK 输出结构
@@ -217,7 +218,7 @@ synapse config export --stdout | ssh dev "synapse config import --stdin --merge"
 synapse watchdog
 ```
 
-在[生成 SDK 命令文档](/docs/cli/evolve)中了解更多关于生产工作流的信息。
+在 [SDK 使用指南](/docs/sdk) 中了解更多关于生产工作流的信息。
 
 > **下一步：** [第 6 阶段：持续改进](#第-6-阶段持续改进-continuous-improvement)
 
@@ -233,7 +234,7 @@ Synapse Router 工作流专为持续反馈循环设计。生产数据回流到�
 2. **刷新 Profile** -> `synapse config profile refresh` 聚合事件
 3. **导出** -> `synapse config export` 打包 `.synapse/` 为 tar.gz
 4. **导入** -> `synapse config import` 在开发环境恢复数据
-5. **重新生成** -> `synapse evolve --with-profile --tune` 生成改进的 SDK
+5. **重新生成** -> `synapse sdk generate --pack <id> --lang <lang> --output <dir>` 用更新后的 Pack 重新生成 SDK
 
 ### Lock 健康检查
 
@@ -280,10 +281,10 @@ synapse pack update openai
 ```
 
 相关文档：
-- [CLI 命令参考](/docs/cli/index)
+- [CLI 命令参考](/docs/cli)
 - [synapse negotiate](/docs/cli/negotiate)
 - [synapse connect](/docs/cli/connect)
-- [synapse evolve](/docs/cli/evolve)
+- [SDK 使用指南](/docs/sdk)
 - [synapse lock](/docs/cli/lock)
 - [synapse pack](/docs/cli/pack)
 - [synapse config](/docs/cli/config)

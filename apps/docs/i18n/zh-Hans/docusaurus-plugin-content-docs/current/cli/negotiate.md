@@ -19,7 +19,7 @@ Schema 协商发生在工作流的以下节点：
 | `synapse negotiate --intent <x> --provider <y>` | 显式，非交互式 | 手动触发协商并查看锁的详细信息 |
 | `synapse connect <x> <y>` | 隐式（首次调用） | 如果无缓存的 Schema Lock，自动执行协商 |
 | `synapse connect <x> <y> --no-cache` | 隐式（强制） | 即使存在有效缓存锁也强制重新协商 |
-| `synapse evolve --tune` | 批量 | 批量生成 SDK 时重新协商所有 Schema Lock |
+| `synapse sdk generate --pack <id>` | 批量 | 从更新后的 Pack 重新生成 SDK（按 Pack 逐个执行） |
 
 ## 交互模式 (Interactive Mode)
 
@@ -153,13 +153,13 @@ Schema 协商发生在工作流的以下节点：
 ```
 ? Select an action:
   ❯ Test connection  (synapse connect)
-    Generate SDK (synapse evolve)
+    Generate SDK (synapse sdk generate)
     Show SDK integration code
     Open in Playground
     Save and exit
 ```
 
-每个选项显示对应的命令或代码片段。选择"Test connection"显示可运行的 `synapse connect` 命令。选择"Generate SDK"显示 `synapse evolve` 命令。"Show SDK integration code"显示导入和使用示例。"Open in Playground"在默认浏览器中打开 Playground（[http://localhost:5173](http://localhost:5173)）：
+每个选项显示对应的命令或代码片段。选择"Test connection"显示可运行的 `synapse connect` 命令。选择"Generate SDK"显示 `synapse sdk generate` 命令。"Show SDK integration code"显示导入和使用示例。"Open in Playground"在默认浏览器中打开 Playground（[http://localhost:5173](http://localhost:5173)）：
 
 ```
   Run this command to test:
@@ -365,5 +365,5 @@ synapse lock show chat_openai_v1.2.3_def67890
 
 - [synapse lock](/docs/cli/lock) — 查看、管理和迁移现有的 Schema Lock
 - [synapse connect](/docs/cli/connect) — 连接 Provider 执行 Intent（隐式协商）
-- [synapse evolve --tune](/docs/cli/evolve) — 批量生成 SDK 时重新协商所有 Schema Lock
+- [SDK 使用指南](/docs/sdk) — 从 Provider Pack 生成零依赖 SDK
 - [synapse pack](/docs/cli/pack) — 管理已安装的 Provider Pack

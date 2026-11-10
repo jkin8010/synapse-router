@@ -31,7 +31,7 @@ The project provides:
 | 命令 | 用途 |
 |------|------|
 | `synapse connect <provider> <intent>` | 连接 Provider 执行功能 |
-| `synapse evolve [--output <dir>]` | 生成零依赖 SDK |
+| `synapse sdk generate --pack <id> --lang <lang> --output <dir>` | 从 Provider Pack 生成零依赖 SDK |
 | `synapse route <intent> [--strategy <s>]` | 多维评分路由 |
 | `synapse billing init [--strategy <s>]` | 初始化计费配置 |
 | `synapse billing status [--format json\|table]` | 查看配额和费用概览 |
@@ -67,7 +67,7 @@ synapse-router/
 │   ├── observability/           # Trace/Span/Event recording with configurable outputs
 │   └── registry-client/         # HTTP client for Registry API
 ├── apps/                        # Application entry points (6 total)
-│   ├── cli/                     # CLI tool (connect/setup/config/vault/lock/sdk/pack/evolve/route)
+│   ├── cli/                     # CLI tool (connect/setup/config/vault/lock/sdk/pack/route/watchdog)
 │   ├── api/                     # HTTP API Server
 │   ├── mcp-server/              # MCP Server (Model Context Protocol)
 │   ├── playground/              # Local visual debug interface (stub)
@@ -94,7 +94,7 @@ When users ask about Synapse Router:
 
 4. **Billing**: Help configure and monitor API usage billing. Support 4 pricing strategies (flat, per-token, per-unit, tiered) and 4 degradation behaviors (warn, reject, downgrade, notify).
 
-5. **SDK Generation**: Help generate zero-dependency SDKs with `synapse evolve`. Explain the `--with-billing` flag for including BillingTracker. Generated code is deterministic, human-readable, and uses only native `fetch`.
+5. **SDK Generation**: Help generate zero-dependency SDKs with `synapse sdk generate`. Explain the `--with-billing` flag for including BillingTracker. Generated code is deterministic, human-readable, and uses only native `fetch`.
 
 6. **API Key Management**: Help store, list, verify, and rotate API keys via `synapse vault`. Keys are encrypted with AES-256-GCM and never stored as plaintext.
 

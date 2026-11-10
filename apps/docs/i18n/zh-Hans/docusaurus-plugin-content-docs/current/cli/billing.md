@@ -50,4 +50,4 @@ synapse billing status --format json
 
 - [synapse connect](/docs/cli/connect) — billing 自动包裹 connect 调用
 - [synapse config](/docs/cli/config) — 通过 `synapse config set billing.*` 管理计费配置
-- [synapse evolve --with-billing](/docs/cli/evolve) — 生成含 BillingTracker 的 SDK
+- [SDK 使用指南](/docs/sdk) — 生成含 BillingTracker 的 SDK（`--with-billing`）

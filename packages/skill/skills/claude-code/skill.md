@@ -110,22 +110,22 @@ synapse route chat --strategy quality
 synapse route chat --exclude openai --region apac --min-version 3.5
 ```
 
-### evolve — 生成零依赖 SDK
+### sdk generate — 生成零依赖 SDK
 
 ```bash
-synapse evolve [--output <dir>] [--tune] [--with-billing]
+synapse sdk generate --pack <pack> --lang <lang> --output <dir> [--with-billing]
 ```
 
 **参数：**
-- `--output <dir>` — 输出目录（默认 `./synapse-sdk`）
-- `--tune` — 重新协商 Schema Lock
+- `--pack <id>` — Pack ID 或路径（必填）
+- `--lang <lang>` — `typescript` | `python`（必填）
+- `--output <dir>` — 输出目录（必填）
 - `--with-billing` — 包含 BillingTracker 类
 
 **示例：**
 ```bash
-synapse evolve
-synapse evolve --with-billing
-synapse evolve --output ./my-sdk --tune
+synapse sdk generate --pack openai --lang typescript --output ./synapse-sdk
+synapse sdk generate --pack openai --lang typescript --output ./synapse-sdk --with-billing
 ```
 
 ### pack — 从 Registry 管理 Provider Pack
@@ -233,16 +233,18 @@ synapse sdk generate --pack openai --lang typescript --output ./sdk
 synapse sdk generate --pack deepseek --lang python
 ```
 
-### generate — 从 OpenAPI Spec 生成 Provider Pack
+### 从 OpenAPI Spec 生成 Provider Pack（库 API）
 
-```bash
-synapse generate <source> [--provider <id>] [--name <name>] [--output <dir>] [--no-validate] [--no-tarball]
-```
+`synapse generate` 命令已下线，请使用 `@synapse-router/pack-generator` 的编程 API：
 
-**示例：**
-```bash
-synapse generate https://api.example.com/openapi.json
-synapse generate ./openapi.json --provider myapi --output ./my-packs/custom
+```typescript
+import { generatePackFromURL, writePack } from "@synapse-router/pack-generator";
+
+const { providerCard, dslFiles } = await generatePackFromURL(
+  "https://api.example.com/openapi.json",
+  { providerId: "myapi", providerName: "My API", authType: "Bearer" }
+);
+await writePack("./packs/myapi", providerCard, dslFiles);
 ```
 
 ### smoke — Provider 冒烟测试
@@ -328,7 +330,7 @@ packs/<provider-id>/
 
 ### SDK 生成流程
 
-`synapse evolve` 是 SDK 生成的入口，其处理流程：
+`synapse sdk generate` 是 SDK 生成的入口，其处理流程：
 
 1. **读取 Provider Pack** — 从 `packs/`、Registry 和本地目录加载所有 Provider Pack
 2. **协商 Schema Lock** — 对每个 Provider 的 Feature 执行协商，创建 Schema Lock
@@ -381,7 +383,7 @@ Schema Lock 类似 `package-lock.json`，是对 Schema 契约的冻结：
 
 ### 运行时无路由
 
-路由决策在开发时通过 `synapse evolve` 完成，运行时路径不包含路由引擎。生成的 SDK 直接调用选定的 Provider，零决策开销。
+路由决策在开发时通过 `synapse sdk generate` 完成，运行时路径不包含路由引擎。生成的 SDK 直接调用选定的 Provider，零决策开销。
 
 ## Billing 集成
 

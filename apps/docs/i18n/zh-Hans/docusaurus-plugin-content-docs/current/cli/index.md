@@ -16,7 +16,6 @@ Synapse CLI 是 Router 的开发者工具入口。所有 Schema 协商（Schema 
 | `synapse connect` | 连接 Provider 并执行功能（intent），支持 `--smoke` 测试 | [/docs/cli/connect](/docs/cli/connect) |
 | `synapse vault` | 管理加密 API Key（AES-256-GCM） | [/docs/cli/vault](/docs/cli/vault) |
 | `synapse negotiate` | Schema 协商（Intent 匹配与 Schema Lock 创建） | [/docs/cli/negotiate](/docs/cli/negotiate) |
-| `synapse evolve` | 生成零依赖 SDK | [/docs/cli/evolve](/docs/cli/evolve) |
 | `synapse sdk` | 从单个 Provider Pack 生成 SDK | [/docs/cli/sdk](/docs/cli/sdk) |
 | `synapse route` | 多维评分路由 | [/docs/cli/route](/docs/cli/route) |
 | `synapse billing` | 账单管理与配额查看 | [/docs/cli/billing](/docs/cli/billing) |
@@ -29,7 +28,7 @@ Synapse CLI 是 Router 的开发者工具入口。所有 Schema 协商（Schema 
 
 按使用类别分组，便于快速定位：
 
-- **核心工作流 (Core Workflow):** [connect](/docs/cli/connect)、[negotiate](/docs/cli/negotiate)、[route](/docs/cli/route)、[evolve](/docs/cli/evolve)、[sdk](/docs/cli/sdk)
+- **核心工作流 (Core Workflow):** [connect](/docs/cli/connect)、[negotiate](/docs/cli/negotiate)、[route](/docs/cli/route)、[sdk](/docs/cli/sdk)
 - **配置 (Configuration):** [setup](/docs/cli/setup)、[config](/docs/cli/config)、[vault](/docs/cli/vault)、[billing](/docs/cli/billing)、[pack](/docs/cli/pack)、[lock](/docs/cli/lock)
 - **高级 (Advanced):** 运行 `synapse --help` 查看其他命令（`generate`、`provider`、`watchdog`——`init`/`smoke`/`profile`/`export`/`import` 已合并到 `config`/`connect`/`setup`）
 
@@ -79,7 +78,6 @@ v5.0 引入以下命令变更：
 - [vault](/docs/cli/vault)
 - [negotiate](/docs/cli/negotiate)
 - [route](/docs/cli/route)
-- [evolve](/docs/cli/evolve)
 - [sdk](/docs/cli/sdk)
 - [billing](/docs/cli/billing)
 - [pack](/docs/cli/pack)

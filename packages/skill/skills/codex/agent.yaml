@@ -60,13 +60,13 @@ commands:
       - synapse route chat --strategy quality
       - synapse route text-to-image --strategy fast --region us-east
 
-  evolve:
-    description: Generate zero-dependency SDK from all provider packs
-    usage: synapse evolve [--output <dir>] [--tune] [--with-billing]
+  sdk-generate:
+    description: Generate a zero-dependency SDK from a Provider Pack
+    usage: synapse sdk generate --pack <id> --lang <lang> --output <dir> [--with-billing]
     examples:
-      - synapse evolve
-      - synapse evolve --output ./generated-sdk --with-billing
-      - synapse evolve --tune
+      - synapse sdk generate --pack openai --lang typescript --output ./generated-sdk
+      - synapse sdk generate --pack openai --lang typescript --output ./generated-sdk --with-billing
+      - synapse sdk generate --pack openai --lang python --output ./generated-sdk
 
   vault:
     description: Manage encrypted API keys
@@ -156,12 +156,11 @@ commands:
     examples:
       - synapse smoke --provider deepseek
 
-  generate:
-    description: Generate a Provider Pack from OpenAPI spec
-    usage: synapse generate <source> [--provider <id>] [--name <name>] [--output <dir>]
+  pack-generator:
+    description: Generate a Provider Pack from OpenAPI spec via the @synapse-router/pack-generator library API
+    usage: (library) generatePackFromURL(url, { providerId, providerName, authType }) then writePack(dir, card, dsls)
     examples:
-      - synapse generate https://api.example.com/openapi.json
-      - synapse generate ./openapi.json --provider myapi --output ./packs
+      - "import { generatePackFromURL, writePack } from '@synapse-router/pack-generator'"
 
   negotiate:
     description: Run schema negotiation

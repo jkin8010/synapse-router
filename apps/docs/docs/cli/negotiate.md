@@ -19,7 +19,7 @@ Schema negotiation happens at the following points in the workflow:
 | `synapse negotiate --intent <x> --provider <y>` | Explicit, non-interactive | Manually trigger negotiation and view detailed lock information |
 | `synapse connect <x> <y>` | Implicit (first call) | If no cached Schema Lock exists, negotiation runs automatically |
 | `synapse connect <x> <y> --no-cache` | Implicit (forced) | Forces re-negotiation even if a valid cached lock exists |
-| `synapse evolve --tune` | Batch | Re-negotiates all Schema Locks during batch SDK generation |
+| `synapse sdk generate --pack <id>` | Batch | Regenerates the SDK from updated Packs (run per Pack) |
 
 ## Interactive Mode
 
@@ -153,13 +153,13 @@ After successful negotiation, a 5-option menu lets you choose the next action:
 ```
 ? Select an action:
   ❯ Test connection  (synapse connect)
-    Generate SDK (synapse evolve)
+    Generate SDK (synapse sdk generate)
     Show SDK integration code
     Open in Playground
     Save and exit
 ```
 
-Each option displays the corresponding command or code snippet. Selecting "Test connection" shows a ready-to-run `synapse connect` command. Selecting "Generate SDK" shows a `synapse evolve` command. "Show SDK integration code" displays import and usage examples. "Open in Playground" opens the web Playground ([http://localhost:5173](http://localhost:5173)) in your default browser:
+Each option displays the corresponding command or code snippet. Selecting "Test connection" shows a ready-to-run `synapse connect` command. Selecting "Generate SDK" shows a `synapse sdk generate` command. "Show SDK integration code" displays import and usage examples. "Open in Playground" opens the web Playground ([http://localhost:5173](http://localhost:5173)) in your default browser:
 
 ```
   Run this command to test:
@@ -365,5 +365,5 @@ synapse lock show chat_openai_v1.2.3_def67890
 
 - [synapse lock](/docs/cli/lock) — View, manage, and migrate existing Schema Locks
 - [synapse connect](/docs/cli/connect) — Connect to a Provider and execute an intent (implicit negotiation)
-- [synapse evolve --tune](/docs/cli/evolve) — Batch re-negotiate all Schema Locks during SDK generation
+- [SDK Guide](/docs/sdk) — Generate a zero-dependency SDK from a Provider Pack
 - [synapse pack](/docs/cli/pack) — Manage installed Provider Packs

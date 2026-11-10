@@ -379,15 +379,12 @@ cat > packs/my-provider/dsl/generate_image.json << 'EOF'
 EOF
 ```
 
-## How to Auto-Generate with synapse generate
+## How to Auto-Generate Packs (Pack Generator library API)
 
 The Pack Generator automatically creates a Provider Pack from an OpenAPI 3.0 Spec, eliminating the need for manual authoring.
 
-### CLI Method
-
-```bash
-npx @synapse-router/pack-generator --from-url https://api.example.com/openapi.json
-```
+> The `synapse generate` command has been removed, and `@synapse-router/pack-generator`
+> does not ship a CLI entry point. Use its programmatic API instead.
 
 ### Programmatic Method
 

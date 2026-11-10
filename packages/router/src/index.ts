@@ -11,7 +11,7 @@
  * 架构定位：
  *   - Paradigm 层: 声明式策略 → 权重向量
  *   - Adaptation 层: 实时评分 + failover
- *   - Evolution 层: 由 `synapse evolve` 离线完成（不在本包）
+ *   - Evolution 层: 由 `synapse sdk generate` 离线完成（不在本包）
  *
  * 核心约束：
  *   - 纯函数，无运行时 LLM

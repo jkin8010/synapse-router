@@ -5,23 +5,26 @@ title: SDK Guide
 
 # SDK 使用指南 (SDK Guide)
 
-Synapse Router 通过 `synapse evolve` 命令将 Schema 协商（Schema Negotiation）结果转换为零依赖（Zero-Dependency）的纯函数 SDK 代码。生成的 SDK 不依赖任何 `@synapse-router/*` 包，只使用内置 `fetch`，可在任何 JavaScript/TypeScript 环境中运行。
+Synapse Router 通过 `synapse sdk generate` 命令将 Schema 协商（Schema Negotiation）结果转换为零依赖（Zero-Dependency）的纯函数 SDK 代码。生成的 SDK 不依赖任何 `@synapse-router/*` 包，只使用内置 `fetch`，可在任何 JavaScript/TypeScript 环境中运行。
 
-## evolve 工作流程 (Evolve Workflow)
+## 生成工作流程 (Generation Workflow)
 
-evolve 命令的处理流程包含四个步骤：
+`sdk generate` 命令的处理流程包含四个步骤：
 
-1. **读取 Provider Pack（Load Provider Pack）** — 从 `packs/`、Registry 和本地目录加载所有 Provider Pack
-2. **协商 Schema Lock（Negotiate Schema Lock）** — 对每个 Provider 的 Feature 执行协商，创建冻结的 Schema Lock（类似 `package-lock.json`）
-3. **生成代码（Generate Code）** — 根据 Lock 中的字段映射（Field Mappings）生成 TypeScript / Python SDK 代码
-4. **输出（Output）** — 写入 `--output` 目录（默认 `./synapse-sdk`），零外部依赖
+1. **读取 Provider Pack（Load Provider Pack）** — 按 pack id 或路径加载指定的 Provider Pack
+2. **读取 Schema Lock（Read Schema Lock）** — 使用 Lock 中的字段映射（Field Mappings）建立 canonical ↔ provider 映射
+3. **生成代码（Generate Code）** — 根据字段映射生成 TypeScript / Python SDK 代码
+4. **输出（Output）** — 写入 `--output` 目录，零外部依赖
 
 ## 命令参数 (Command Parameters)
 
 | 参数 | 类型 | 必需 | 默认值 | 说明 |
 |------|------|------|--------|------|
-| `--output <dir>` | string | 否 | `./synapse-sdk` | SDK 输出目录 |
-| `--tune` | flag | 否 | false | 重新协商所有 Schema Lock（Re-negotiate all locks） |
+| `--pack <id>` | string | 是 | — | Pack ID 或路径（如 `openai`、`./packs/openai`） |
+| `--lang <lang>` | string | 是 | — | 目标语言：`typescript` \| `python` |
+| `--output <dir>` | string | 是 | — | SDK 输出目录 |
+| `--provider <id>` | string | 否 | Pack 自带 | 覆盖生成 SDK 中的 Provider 名称 |
+| `--base-url <url>` | string | 否 | Pack 默认值 | 覆盖默认 base URL |
 | `--with-billing` | flag | 否 | false | 在生成的 SDK 中包含 BillingTracker 用量追踪类 |
 
 ## 使用示例 (Usage Examples)
@@ -29,7 +32,7 @@ evolve 命令的处理流程包含四个步骤：
 ### Example 1 — 基础生成 (Basic Generation)
 
 ```bash
-synapse evolve
+synapse sdk generate --pack openai --lang typescript --output ./synapse-sdk
 ```
 
 执行后会在当前目录下生成 `./synapse-sdk/` 目录，包含 TypeScript SDK 代码，可直接在项目中引用。
@@ -37,18 +40,21 @@ synapse evolve
 ### Example 2 — 包含 Billing 追踪 (With Billing Tracking)
 
 ```bash
-synapse evolve --with-billing
+synapse sdk generate --pack openai --lang typescript --output ./synapse-sdk --with-billing
 ```
 
 生成的 SDK 中包含 `BillingTracker` 类，自动追踪每次 API 调用的用量。适用于需要计费和配额管理的生产环境。
 
-### Example 3 — 自定义输出目录并重新协商 (Custom Output + Re-negotiate)
+### Example 3 — 复用同一 Pack 生成其他 Provider 的 SDK
 
 ```bash
-synapse evolve --output ./my-sdk --tune
+synapse sdk generate --pack openai --lang typescript \
+  --provider deepseek \
+  --base-url https://api.deepseek.com/v1 \
+  --output ./synapse-sdk
 ```
 
-输出到自定义目录 `./my-sdk`，并强制重新协商所有 Schema Lock。此功能在更新 Provider Pack 后特别有用，确保 SDK 反映最新的 Provider 能力。
+从 OpenAI 兼容 Pack 生成 DeepSeek SDK，适用于提供 OpenAI 兼容 API 的厂商。
 
 ## 生成的 SDK 结构 (Generated SDK Structure)
 
