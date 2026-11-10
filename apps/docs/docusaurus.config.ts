@@ -52,7 +52,7 @@ const config: Config = {
           // Please change this to your repo.
           // Remove this to remove the "edit this page" links.
           editUrl:
-            'https://github.com/useeclaw/synapse-router/edit/main/apps/docs/',
+            'https://github.com/jkin8010/synapse-router/edit/master/apps/docs/',
         },
         blog: false,
         theme: {
@@ -105,7 +105,7 @@ const config: Config = {
           position: 'right',
         },
         {
-          href: 'https://github.com/useeclaw/synapse-router',
+          href: 'https://github.com/jkin8010/synapse-router',
           label: 'GitHub',
           position: 'right',
         },
@@ -140,7 +140,7 @@ const config: Config = {
             },
             {
               label: 'GitHub',
-              href: 'https://github.com/useeclaw/synapse-router',
+              href: 'https://github.com/jkin8010/synapse-router',
             },
           ],
         },

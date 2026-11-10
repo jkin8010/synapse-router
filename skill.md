@@ -15,7 +15,7 @@
 
 npm 安装: `npm install @synapse-router/skill`
 
-GitHub raw URL 安装: `skills add https://raw.githubusercontent.com/useeclaw/synapse-router/main/skill.md`
+GitHub raw URL 安装: `skills add https://raw.githubusercontent.com/jkin8010/synapse-router/master/skill.md`
 
 ## 核心能力
 
@@ -58,5 +58,5 @@ GitHub raw URL 安装: `skills add https://raw.githubusercontent.com/useeclaw/sy
 
 ## 更多信息
 
-- 项目仓库: https://github.com/useeclaw/synapse-router
+- 项目仓库: https://github.com/jkin8010/synapse-router
 - 文档: docs/API.md, docs/PACKS.md

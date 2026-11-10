@@ -10,7 +10,7 @@
 
 ```bash
 # 从源码安装
-git clone https://github.com/useeclaw/synapse-router.git
+git clone https://github.com/jkin8010/synapse-router.git
 cd synapse-router
 pnpm install
 pnpm build

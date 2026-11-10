@@ -23,7 +23,7 @@ Synapse Router 是一个本地运行的多 Provider AI 路由层。核心价值�
 
 ```bash
 # 从源码
-git clone https://github.com/useeclaw/synapse-router.git
+git clone https://github.com/jkin8010/synapse-router.git
 cd synapse-router && pnpm install && pnpm build
 cd apps/cli && pnpm link --global
 

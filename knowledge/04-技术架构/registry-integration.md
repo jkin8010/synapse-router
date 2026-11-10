@@ -536,7 +536,7 @@ $ synapse pack add openai
   
   This may indicate a network error or tampered download.
   Please retry. If the problem persists, report at:
-  https://github.com/useeclaw/synapse-router/issues
+  https://github.com/jkin8010/synapse-router/issues
 ```
 
 ---

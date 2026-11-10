@@ -21,7 +21,7 @@
   },
   "link.item.label.GitHub": {
     "message": "GitHub",
-    "description": "The label of footer link with label=GitHub linking to https://github.com/useeclaw/synapse-router"
+    "description": "The label of footer link with label=GitHub linking to https://github.com/jkin8010/synapse-router"
   },
   "copyright": {
     "message": "Copyright © 2026 Synapse Router. Built with Docusaurus.",

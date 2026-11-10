@@ -52,7 +52,7 @@ export default function Home(): ReactNode {
             </Link>
             <Link
               className="synapse-button"
-              to="https://github.com/useeclaw/synapse-router">
+              to="https://github.com/jkin8010/synapse-router">
               <Translate>View on GitHub</Translate>
             </Link>
           </div>
