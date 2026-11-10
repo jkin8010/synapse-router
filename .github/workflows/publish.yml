@@ -1,9 +1,23 @@
 name: Publish to npm
 
+# NOTE: publishing is intentionally manual.
+# Pushing a `v*` tag used to trigger this workflow, which force-set the tag
+# version into packages/skill and packages/install-skill and published them to
+# the public npm registry. Accidental tags (e.g. a doc/support release) would
+# have pushed unreviewed public packages, so the trigger is now explicit.
+#
+# To release:
+#   1. bump package versions and commit
+#   2. tag the commit: git tag -a v0.x.y -m "..."
+#   3. push the tag:    git push origin v0.x.y
+#   4. run this workflow manually and enter that exact tag as the ref
 on:
-  push:
-    tags:
-      - 'v*'
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: 'Existing tag to publish (e.g. v0.2.0)'
+        required: true
+        type: string
 
 jobs:
   publish:
@@ -14,6 +28,9 @@ jobs:
 
     steps:
       - uses: actions/checkout@v6
+        with:
+          ref: ${{ inputs.tag }}
+          fetch-depth: 0
 
       - uses: actions/setup-node@v4
         with:
@@ -36,7 +53,8 @@ jobs:
       - name: Derive version from git tag
         id: version
         run: |
-          VERSION="${GITHUB_REF_NAME#v}"
+          VERSION="${{ inputs.tag }}"
+          VERSION="${VERSION#v}"
           echo "Publishing version: $VERSION"
           echo "version=$VERSION" >> $GITHUB_OUTPUT
 
@@ -58,6 +76,6 @@ jobs:
 
       - name: Create GitHub Release
         run: |
-          gh release create ${{ github.ref_name }} --generate-notes
+          gh release create ${{ inputs.tag }} --generate-notes
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}

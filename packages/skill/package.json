@@ -1,6 +1,6 @@
 {
   "name": "@synapse-router/skill",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "type": "module",
   "description": "Synapse Router AI Agent Skill — multi-platform agent configuration for Synapse Router CLI, API, and SDK guidance",
   "keywords": [

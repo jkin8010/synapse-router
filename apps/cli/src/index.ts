@@ -570,7 +570,7 @@ async function main(): Promise<void> {
 
   // Handle --version / -v / version command first
   if (flags.has("version") || flags.has("v") || command === "version") {
-    console.log("synapse-router CLI v0.1.0");
+    console.log("synapse-router CLI v0.2.0");
     return;
   }
 
@@ -759,7 +759,7 @@ async function main(): Promise<void> {
         process.exit(1);
         break;
       case "version":
-        console.log("synapse-router CLI v0.1.0");
+        console.log("synapse-router CLI v0.2.0");
         break;
       default:
         printHelp();

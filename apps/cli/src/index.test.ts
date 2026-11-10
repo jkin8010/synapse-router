@@ -225,13 +225,13 @@ describe("config set|get|list still works normally", () => {
 describe("version", () => {
   it("--version prints version", () => {
     const result = runCli(["--version"]);
-    assert.ok(result.stdout.includes("synapse-router CLI v0.1.0"), `got: ${result.stdout}`);
+    assert.ok(result.stdout.includes("synapse-router CLI v0.2.0"), `got: ${result.stdout}`);
     assert.strictEqual(result.code, 0);
   });
 
   it("-v prints version", () => {
     const result = runCli(["-v"]);
-    assert.ok(result.stdout.includes("synapse-router CLI v0.1.0"), `got: ${result.stdout}`);
+    assert.ok(result.stdout.includes("synapse-router CLI v0.2.0"), `got: ${result.stdout}`);
     assert.strictEqual(result.code, 0);
   });
 });

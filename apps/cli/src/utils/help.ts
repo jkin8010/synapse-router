@@ -5,7 +5,7 @@
 // Part A -- Category labels and grouping
 // ---------------------------------------------------------------------------
 
-export const HELP_BANNER = `Synapse Router CLI v0.1.0 — Multi-Provider Schema Negotiation Router`;
+export const HELP_BANNER = `Synapse Router CLI v0.2.0 — Multi-Provider Schema Negotiation Router`;
 
 export const GROUP_CORE = "Core Workflow";
 export const GROUP_CONFIG = "Configuration";

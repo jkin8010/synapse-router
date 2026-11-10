@@ -1,6 +1,6 @@
 {
   "name": "@synapse-router/install-skill",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "type": "module",
   "description": "Synapse Router Skill Installer — one-command skill install for AI Agent platforms",
   "license": "MIT",

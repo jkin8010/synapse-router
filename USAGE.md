@@ -23,7 +23,7 @@ cd apps/cli && pnpm link --global
 
 ```bash
 synapse --version
-# synapse-router CLI v0.1.0
+# synapse-router CLI v0.2.0
 ```
 
 ### 2. 首次配置
