@@ -216,15 +216,17 @@ Registry                          Router
 
 ## 状态
 
+> 下表的「里程碑」是开发阶段划分，与发布 tag 无关；发布版本见 `git tag`（当前 `v0.2.0`）。
+
 | 里程碑 | Phase | 状态 | 完成日 |
 |--------|-------|------|--------|
-| v1.0 Negotiator Reliability | 1. 协商可靠性 | ✅ Complete | 2026-05-07 |
-| v1.1 Testing & Playground | 2. E2E 测试 | ✅ Complete | 2026-05-08 |
-| v1.1 Testing & Playground | 3. 可视化调试 | ✅ Complete | 2026-05-09 |
-| v1.1 Testing & Playground | 4. Provider 冒烟测试 | ✅ Complete | 2026-05-09 |
-| v1.2 Router Integration | 5. Router SDK 生成 | ✅ Complete | 2026-05-09 |
-| v2.0 离线演化 | 6. 本地演化引擎 | ✅ Complete | 2026-05-09 |
-| v2.0 离线演化 | 7. Registry 协作 | ✅ Complete | 2026-05-09 |
+| M1 Negotiator Reliability | 1. 协商可靠性 | ✅ Complete | 2026-05-07 |
+| M2 Testing & Playground | 2. E2E 测试 | ✅ Complete | 2026-05-08 |
+| M2 Testing & Playground | 3. 可视化调试 | ✅ Complete | 2026-05-09 |
+| M2 Testing & Playground | 4. Provider 冒烟测试 | ✅ Complete | 2026-05-09 |
+| M3 Router Integration | 5. Router SDK 生成 | ✅ Complete | 2026-05-09 |
+| M4 离线演化 | 6. 本地演化引擎 | ✅ Complete | 2026-05-09 |
+| M4 离线演化 | 7. Registry 协作 | ✅ Complete | 2026-05-09 |
 
 **最新**: `packages/router` 从 45 行存根重写为 1,400+ 行多维度评分路由引擎。55 tests all pass。
 
